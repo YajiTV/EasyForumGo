@@ -1,0 +1,18 @@
+services:
+  forum:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: forum_app
+    ports:
+      - "8080:8080"
+    volumes:
+      - db_data:/app/data        # persistance SQLite
+      - uploads:/app/uploads     # persistance images uploadées
+    environment:
+      - DB_PATH=/app/data/forum.db
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  uploads:
