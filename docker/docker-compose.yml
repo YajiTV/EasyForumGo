@@ -5,7 +5,7 @@ services:
       dockerfile: docker/Dockerfile
     container_name: forum_app
     ports:
-      - "8080:8080"
+      - "3000:3000"
     volumes:
       - db_data:/app/data        # persistance SQLite
       - uploads:/app/uploads     # persistance images uploadées
