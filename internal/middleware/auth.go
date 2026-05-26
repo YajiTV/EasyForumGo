@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"time"
 )
 
 const sessionCookieName = "session_token"
@@ -28,8 +29,9 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		userID, err := m.findSessionUserID(cookie.Value)
+		userID, err := m.findValidSessionUserID(cookie.Value)
 		if err != nil {
+			clearSessionCookie(w)
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
@@ -44,11 +46,60 @@ func CurrentUserID(r *http.Request) (string, bool) {
 	return userID, ok && userID != ""
 }
 
-func (m *AuthMiddleware) findSessionUserID(sessionToken string) (string, error) {
+func (m *AuthMiddleware) findValidSessionUserID(sessionToken string) (string, error) {
 	var userID string
+	var rawExpiresAt string
 	err := m.db.QueryRow(
-		"SELECT user_id FROM sessions WHERE session_token = ? LIMIT 1",
+		"SELECT user_id, expires_at FROM sessions WHERE session_token = ? LIMIT 1",
 		sessionToken,
-	).Scan(&userID)
-	return userID, err
+	).Scan(&userID, &rawExpiresAt)
+	if err != nil {
+		return "", err
+	}
+
+	expiresAt, err := parseSQLiteTime(rawExpiresAt)
+	if err != nil {
+		return "", err
+	}
+
+	if !expiresAt.After(time.Now()) {
+		_, _ = m.db.Exec("DELETE FROM sessions WHERE session_token = ?", sessionToken)
+		return "", sql.ErrNoRows
+	}
+
+	return userID, nil
+}
+
+func parseSQLiteTime(value string) (time.Time, error) {
+	layouts := []string{
+		time.RFC3339Nano,
+		"2006-01-02 15:04:05.999999999-07:00",
+		"2006-01-02 15:04:05.999999999Z07:00",
+		"2006-01-02 15:04:05-07:00",
+		"2006-01-02 15:04:05Z07:00",
+		"2006-01-02 15:04:05",
+	}
+
+	var lastErr error
+	for _, layout := range layouts {
+		parsedTime, err := time.Parse(layout, value)
+		if err == nil {
+			return parsedTime, nil
+		}
+		lastErr = err
+	}
+
+	return time.Time{}, lastErr
+}
+
+func clearSessionCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 }
