@@ -69,6 +69,13 @@
                     <div class="comment-meta">
                         <strong>{{.Username}}</strong>
                         <span>{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
+                        {{if $.User}}
+                            {{if eq $.User.ID .UserID}}
+                            <form action="/comment/{{.ID}}/delete" method="POST" style="display:inline" onsubmit="return confirm('Supprimer ce commentaire ?')">
+                                <button type="submit" class="btn-delete btn-delete-sm">Supprimer</button>
+                            </form>
+                            {{end}}
+                        {{end}}
                     </div>
                     <p class="comment-content">{{.Content}}</p>
                 </div>
