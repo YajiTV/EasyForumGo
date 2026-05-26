@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{block "title" .}}ForumJS{{end}}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/" class="nav-logo">ForumJS</a>
+            <div class="nav-links">
+                {{if .User}}
+                    <span>Bonjour, {{.User.Username}}</span>
+                    <a href="/post/new">Nouveau post</a>
+                    <a href="/profile">Profil</a>
+                    <a href="/logout">Déconnexion</a>
+                {{else}}
+                    <a href="/login">Connexion</a>
+                    <a href="/register">Inscription</a>
+                {{end}}
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        {{block "content" .}}{{end}}
+    </main>
+
+    <footer>
+        <p>ForumJS &copy; 2026</p>
+    </footer>
+</body>
+</html>

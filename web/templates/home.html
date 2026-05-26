@@ -1,0 +1,59 @@
+{{template "base" .}}
+
+{{define "title"}}Accueil — ForumJS{{end}}
+
+{{define "content"}}
+<div class="home">
+
+    <div class="home-filters">
+        <a href="/" class="filter-btn">Tous les posts</a>
+        {{if .User}}
+            <a href="/?filter=mine" class="filter-btn">Mes posts</a>
+            <a href="/?filter=liked" class="filter-btn">Posts aimés</a>
+        {{end}}
+        {{range .Categories}}
+            <a href="/?category={{.ID}}" class="filter-btn">{{.Name}}</a>
+        {{end}}
+    </div>
+
+    <div class="posts-list">
+        {{if .Posts}}
+            {{range .Posts}}
+            <article class="post-card">
+
+                {{if .ImagePath}}
+                <div class="post-card-image">
+                    <img src="/uploads/{{.ImagePath}}" alt="Image du post">
+                </div>
+                {{end}}
+
+                <div class="post-card-body">
+                    <h2 class="post-card-title">
+                        <a href="/post/{{.ID}}">{{.Title}}</a>
+                    </h2>
+
+                    <p class="post-card-excerpt">
+                        {{if gt (len .Content) 200}}
+                            {{slice .Content 0 200}}...
+                        {{else}}
+                            {{.Content}}
+                        {{end}}
+                    </p>
+
+                    <div class="post-card-meta">
+                        <span>Par {{.Username}}</span>
+                        <span>{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
+                        <span class="post-likes">👍 {{.LikeCount}}</span>
+                        <span class="post-dislikes">👎 {{.DislikeCount}}</span>
+                    </div>
+                </div>
+
+            </article>
+            {{end}}
+        {{else}}
+            <p class="empty">Aucun post pour le moment.</p>
+        {{end}}
+    </div>
+
+</div>
+{{end}}
