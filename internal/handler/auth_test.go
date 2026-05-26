@@ -75,6 +75,7 @@ func newAuthTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
+	db.SetMaxOpenConns(1)
 	t.Cleanup(func() {
 		db.Close()
 	})
