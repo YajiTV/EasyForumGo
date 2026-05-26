@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,13 +12,12 @@ import (
 )
 
 const (
-	sessionCookieName     = "session_token"
-	defaultSessionHours   = 24
-	sessionDurationEnvKey = "SESSION_DURATION_H"
+	sessionCookieName = "session_token"
 )
 
 type AuthHandler struct {
-	db *sql.DB
+	db              *sql.DB
+	sessionDuration time.Duration
 }
 
 type userCredentials struct {
@@ -28,8 +25,15 @@ type userCredentials struct {
 	hashedPassword string
 }
 
-func NewAuthHandler(db *sql.DB) *AuthHandler {
-	return &AuthHandler{db: db}
+func NewAuthHandler(db *sql.DB, sessionDuration time.Duration) *AuthHandler {
+	if sessionDuration <= 0 {
+		sessionDuration = 24 * time.Hour
+	}
+
+	return &AuthHandler{
+		db:              db,
+		sessionDuration: sessionDuration,
+	}
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
@@ -173,7 +177,7 @@ func (h *AuthHandler) findUserCredentials(email string) (userCredentials, error)
 
 func (h *AuthHandler) createSession(userID string) (string, time.Time, error) {
 	sessionToken := utils.NewSessionToken()
-	expiresAt := time.Now().Add(sessionDuration())
+	expiresAt := time.Now().Add(h.sessionDuration)
 
 	tx, err := h.db.Begin()
 	if err != nil {
@@ -212,20 +216,6 @@ func (h *AuthHandler) createUser(email, username, hashedPassword string) error {
 		hashedPassword,
 	)
 	return err
-}
-
-func sessionDuration() time.Duration {
-	rawDuration := strings.TrimSpace(os.Getenv(sessionDurationEnvKey))
-	if rawDuration == "" {
-		return defaultSessionHours * time.Hour
-	}
-
-	durationHours, err := strconv.Atoi(rawDuration)
-	if err != nil || durationHours <= 0 {
-		return defaultSessionHours * time.Hour
-	}
-
-	return time.Duration(durationHours) * time.Hour
 }
 
 func writeValidationError(w http.ResponseWriter, validationErrors validator.ValidationErrors) {
