@@ -1,0 +1,83 @@
+{{define "title"}}{{.Post.Title}} — ForumJS{{end}}
+
+{{define "content"}}
+<div class="post-detail">
+
+    <article class="post-full">
+
+        <div class="post-full-header">
+            <div class="post-full-categories">
+                {{range .Categories}}
+                <a href="/?category={{.ID}}" class="category-tag">{{.Name}}</a>
+                {{end}}
+            </div>
+
+            <h1 class="post-full-title">{{.Post.Title}}</h1>
+
+            <div class="post-full-meta">
+                <span>Par <strong>{{.Author}}</strong></span>
+                <span>{{.Post.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
+            </div>
+        </div>
+
+        {{if .Post.ImagePath}}
+        <div class="post-full-image">
+            <img src="/uploads/{{.Post.ImagePath}}" alt="Image du post">
+        </div>
+        {{end}}
+
+        <div class="post-full-content">
+            {{.Post.Content}}
+        </div>
+
+        <div class="post-full-actions">
+            <form action="/post/{{.Post.ID}}/like" method="POST">
+                <button type="submit" class="btn-like">👍 {{.LikeCount}}</button>
+            </form>
+            <form action="/post/{{.Post.ID}}/dislike" method="POST">
+                <button type="submit" class="btn-dislike">👎 {{.DislikeCount}}</button>
+            </form>
+
+            {{if .User}}
+                {{if eq .User.ID .Post.UserID}}
+                <a href="/post/{{.Post.ID}}/edit" class="btn-secondary">Modifier</a>
+                <form action="/post/{{.Post.ID}}/delete" method="POST" onsubmit="return confirm('Supprimer ce post ?')">
+                    <button type="submit" class="btn-delete">Supprimer</button>
+                </form>
+                {{end}}
+            {{end}}
+        </div>
+
+    </article>
+
+    <section class="comments-section">
+        <h2 class="comments-title">{{len .Comments}} commentaire{{if gt (len .Comments) 1}}s{{end}}</h2>
+
+        {{if .User}}
+        <form action="/post/{{.Post.ID}}/comment" method="POST" class="comment-form">
+            <textarea name="content" rows="4" placeholder="Écrire un commentaire..." required></textarea>
+            <button type="submit" class="btn-primary">Commenter</button>
+        </form>
+        {{else}}
+        <p class="login-hint"><a href="/login">Connectez-vous</a> pour laisser un commentaire.</p>
+        {{end}}
+
+        <div class="comments-list">
+            {{if .Comments}}
+                {{range .Comments}}
+                <div class="comment-card">
+                    <div class="comment-meta">
+                        <strong>{{.Username}}</strong>
+                        <span>{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
+                    </div>
+                    <p class="comment-content">{{.Content}}</p>
+                </div>
+                {{end}}
+            {{else}}
+                <p class="empty">Aucun commentaire pour le moment.</p>
+            {{end}}
+        </div>
+    </section>
+
+</div>
+{{end}}
