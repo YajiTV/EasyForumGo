@@ -152,7 +152,17 @@ func (h *AuthHandler) createSession(userID string) (string, time.Time, error) {
 	sessionToken := utils.NewSessionToken()
 	expiresAt := time.Now().Add(sessionDuration())
 
-	_, err := h.db.Exec(
+	tx, err := h.db.Begin()
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec("DELETE FROM sessions WHERE user_id = ?", userID); err != nil {
+		return "", time.Time{}, err
+	}
+
+	_, err = tx.Exec(
 		"INSERT INTO sessions (id, user_id, session_token, expires_at) VALUES (?, ?, ?, ?)",
 		utils.NewUUID(),
 		userID,
@@ -160,6 +170,10 @@ func (h *AuthHandler) createSession(userID string) (string, time.Time, error) {
 		expiresAt.UTC(),
 	)
 	if err != nil {
+		return "", time.Time{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
 		return "", time.Time{}, err
 	}
 
