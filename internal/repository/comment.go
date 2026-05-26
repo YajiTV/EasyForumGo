@@ -43,16 +43,6 @@ func (r *CommentRepository) Update(c *model.Comment) error {
 	return err
 }
 
-func (r *CommentRepository) GetByID(id string) (*model.Comment, error) {
-	var c model.Comment
-	err := r.db.QueryRow(`SELECT id, post_id, user_id, content, created_at, updated_at FROM comments WHERE id = ?`, id).
-		Scan(&c.ID, &c.PostID, &c.UserID, &c.Content, &c.CreatedAt, &c.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &c, nil
-}
-
 func (r *CommentRepository) Delete(id string) error {
 	_, err := r.db.Exec(`DELETE FROM comments WHERE id = ?`, id)
 	return err
