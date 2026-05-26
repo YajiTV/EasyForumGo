@@ -2,10 +2,9 @@ package handler
 
 import (
 	"database/sql"
+	"errors"
 	"html/template"
-	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,7 +14,7 @@ import (
 	"ForumJS/pkg/utils"
 )
 
-const maxImageSize = 20 << 20 // 20 MB
+const maxImageSize = 5 << 20
 
 type PostHandler struct {
 	posts          *repository.PostRepository
@@ -25,9 +24,10 @@ type PostHandler struct {
 	users          *repository.UserRepository
 	comments       *repository.CommentRepository
 	likes          *repository.LikeRepository
+	uploadDir      string
 }
 
-func NewPostHandler(db *sql.DB) *PostHandler {
+func NewPostHandler(db *sql.DB, uploadDir string) *PostHandler {
 	return &PostHandler{
 		posts:          repository.NewPostRepository(db),
 		categories:     repository.NewCategoryRepository(db),
@@ -36,6 +36,7 @@ func NewPostHandler(db *sql.DB) *PostHandler {
 		users:          repository.NewUserRepository(db),
 		comments:       repository.NewCommentRepository(db),
 		likes:          repository.NewLikeRepository(db),
+		uploadDir:      uploadDir,
 	}
 }
 
@@ -97,26 +98,19 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Image (optionnel)
 	imagePath := ""
 	file, header, err := r.FormFile("image")
 	if err == nil {
 		defer file.Close()
-
-		ext := strings.ToLower(filepath.Ext(header.Filename))
-		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
-			h.renderError(w, r, user, "Format d'image invalide (JPEG, PNG, GIF uniquement).")
+		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
+		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrFileTooLarge) {
+			h.renderError(w, r, user, err.Error())
 			return
 		}
-
-		filename := utils.NewUUID() + ext
-		dst, err := os.Create(filepath.Join("uploads", filename))
 		if err != nil {
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
-		defer dst.Close()
-		io.Copy(dst, file)
 		imagePath = filename
 	}
 
