@@ -10,12 +10,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func InitDB(migrationsDir string) (*sql.DB, error) {
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "./forum.db"
-	}
-
+func InitDB(dbPath, migrationsDir string) (*sql.DB, error) {
 	if dir := filepath.Dir(dbPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return nil, fmt.Errorf("create db dir: %w", err)
