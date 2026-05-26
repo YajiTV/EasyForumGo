@@ -79,8 +79,17 @@
                     </div>
                     <p class="comment-content">{{.Content}}</p>
                     <div class="comment-actions">
+                        {{if $.User}}
+                        <form action="/comment/{{.ID}}/like" method="POST" style="display:inline">
+                            <button type="submit" class="btn-like">👍 {{.LikeCount}}</button>
+                        </form>
+                        <form action="/comment/{{.ID}}/dislike" method="POST" style="display:inline">
+                            <button type="submit" class="btn-dislike">👎 {{.DislikeCount}}</button>
+                        </form>
+                        {{else}}
                         <span class="count-like">👍 {{.LikeCount}}</span>
                         <span class="count-dislike">👎 {{.DislikeCount}}</span>
+                        {{end}}
                     </div>
                 </div>
                 {{end}}
