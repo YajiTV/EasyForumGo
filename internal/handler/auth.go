@@ -14,6 +14,11 @@ type AuthHandler struct {
 	db *sql.DB
 }
 
+type userCredentials struct {
+	id             string
+	hashedPassword string
+}
+
 func NewAuthHandler(db *sql.DB) *AuthHandler {
 	return &AuthHandler{db: db}
 }
@@ -59,6 +64,40 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
+func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Méthode non autorisée.", http.StatusMethodNotAllowed)
+		return
+	}
+
+	input := validator.AuthInput{
+		Email:    strings.TrimSpace(strings.ToLower(r.FormValue("email"))),
+		Password: r.FormValue("password"),
+	}
+
+	if validationErrors := validator.ValidateLogin(input); validationErrors.HasErrors() {
+		writeValidationError(w, validationErrors)
+		return
+	}
+
+	user, err := h.findUserCredentials(input.Email)
+	if errors.Is(err, sql.ErrNoRows) {
+		http.Error(w, "Identifiants invalides.", http.StatusUnauthorized)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Une erreur est survenue.", http.StatusInternalServerError)
+		return
+	}
+
+	if !utils.CheckPasswordHash(input.Password, user.hashedPassword) {
+		http.Error(w, "Identifiants invalides.", http.StatusUnauthorized)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *AuthHandler) userExists(email, username string) (bool, error) {
 	var id string
 	err := h.db.QueryRow(
@@ -74,6 +113,15 @@ func (h *AuthHandler) userExists(email, username string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func (h *AuthHandler) findUserCredentials(email string) (userCredentials, error) {
+	var user userCredentials
+	err := h.db.QueryRow(
+		"SELECT id, password FROM users WHERE email = ? LIMIT 1",
+		email,
+	).Scan(&user.id, &user.hashedPassword)
+	return user, err
 }
 
 func (h *AuthHandler) createUser(email, username, hashedPassword string) error {
