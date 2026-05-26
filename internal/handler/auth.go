@@ -38,6 +38,10 @@ func (h *AuthHandler) ShowLoginForm(w http.ResponseWriter, r *http.Request) {
 	renderAuthTemplate(w, "login.html", nil)
 }
 
+func (h *AuthHandler) ShowRegisterForm(w http.ResponseWriter, r *http.Request) {
+	renderAuthTemplate(w, "register.html", nil)
+}
+
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Méthode non autorisée.", http.StatusMethodNotAllowed)
