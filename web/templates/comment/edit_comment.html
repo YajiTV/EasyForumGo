@@ -1,0 +1,25 @@
+{{define "title"}}Modifier le commentaire — ForumJS{{end}}
+
+{{define "content"}}
+<div class="form-page">
+    <h1 class="form-title">Modifier le commentaire</h1>
+
+    {{if .Error}}
+        <p class="form-error">{{.Error}}</p>
+    {{end}}
+
+    <form action="/comment/{{.Comment.ID}}/edit" method="POST" class="post-form">
+
+        <div class="form-group">
+            <label for="content">Contenu</label>
+            <textarea id="content" name="content" rows="6" required>{{.Comment.Content}}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <a href="/post/{{.Comment.PostID}}" class="btn-secondary">Annuler</a>
+            <button type="submit" class="btn-primary">Enregistrer</button>
+        </div>
+
+    </form>
+</div>
+{{end}}

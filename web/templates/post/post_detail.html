@@ -71,6 +71,7 @@
                         <span>{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
                         {{if $.User}}
                             {{if eq $.User.ID .UserID}}
+                            <a href="/comment/{{.ID}}/edit" class="btn-secondary btn-sm">Modifier</a>
                             <form action="/comment/{{.ID}}/delete" method="POST" style="display:inline" onsubmit="return confirm('Supprimer ce commentaire ?')">
                                 <button type="submit" class="btn-delete btn-delete-sm">Supprimer</button>
                             </form>
