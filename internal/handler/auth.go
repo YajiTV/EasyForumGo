@@ -3,8 +3,10 @@ package handler
 import (
 	"database/sql"
 	"errors"
+	"html/template"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -30,6 +32,10 @@ type userCredentials struct {
 
 func NewAuthHandler(db *sql.DB) *AuthHandler {
 	return &AuthHandler{db: db}
+}
+
+func (h *AuthHandler) ShowLoginForm(w http.ResponseWriter, r *http.Request) {
+	renderAuthTemplate(w, "login.html", nil)
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
@@ -233,6 +239,14 @@ func writeValidationError(w http.ResponseWriter, validationErrors validator.Vali
 		http.Error(w, message, http.StatusBadRequest)
 		return
 	}
-
 	http.Error(w, "Formulaire invalide.", http.StatusBadRequest)
+}
+
+func renderAuthTemplate(w http.ResponseWriter, filename string, data any) {
+	tmpl, err := template.ParseFiles(filepath.Join("web", "templates", "auth", filename))
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, data)
 }

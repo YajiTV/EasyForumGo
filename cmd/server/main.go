@@ -24,6 +24,7 @@ func main() {
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 	authHandler := handler.NewAuthHandler(db)
 
+	mux.HandleFunc("GET /login", authHandler.ShowLoginForm)
 	mux.HandleFunc("POST /signup", authHandler.Signup)
 	mux.HandleFunc("POST /login", authHandler.Login)
 	mux.HandleFunc("POST /logout", authHandler.Logout)
