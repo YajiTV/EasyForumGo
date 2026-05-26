@@ -27,7 +27,7 @@ func main() {
 	mux.HandleFunc("POST /signup", authHandler.Signup)
 	mux.HandleFunc("POST /login", authHandler.Login)
 	mux.HandleFunc("POST /logout", authHandler.Logout)
-	homeHandler := handler.NewHomeHandler()
+	homeHandler := handler.NewHomeHandler(db)
 	mux.HandleFunc("/", homeHandler.Home)
 
 	log.Printf("Server starting on :%s", port)
