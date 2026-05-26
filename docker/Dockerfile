@@ -21,6 +21,7 @@ WORKDIR /app
 
 COPY --from=builder /app/forum .
 COPY --from=builder /app/web ./web
+COPY --from=builder /app/migrations ./migrations
 
 RUN mkdir -p /app/data /app/uploads
 
