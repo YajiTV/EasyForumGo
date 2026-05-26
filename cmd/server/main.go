@@ -19,6 +19,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
 	errorRenderer := handler.NewErrorRenderer(cfg.TemplatesDir)
 	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration, errorRenderer)
 
@@ -28,7 +29,7 @@ func main() {
 	mux.HandleFunc("POST /register", authHandler.Signup)
 	mux.HandleFunc("POST /logout", authHandler.Logout)
 
-	postHandler := handler.NewPostHandler(db)
+	postHandler := handler.NewPostHandler(db, cfg.UploadDir)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
 	mux.HandleFunc("POST /post/new", postHandler.CreatePost)
 	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
