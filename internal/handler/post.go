@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -137,6 +138,159 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/post/"+post.ID, http.StatusSeeOther)
+}
+
+type editPostData struct {
+	User              *model.User
+	Post              *model.Post
+	Categories        []model.Category
+	SelectedCategories map[string]bool
+	Error             string
+}
+
+func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := r.PathValue("id")
+	post, err := h.posts.GetByID(postID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if post.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	categories, _ := h.categories.GetAll()
+	selected, _ := h.postCategories.GetCategoriesByPostID(postID)
+
+	selectedMap := make(map[string]bool)
+	for _, c := range selected {
+		selectedMap[c.ID] = true
+	}
+
+	h.renderEditForm(w, editPostData{
+		User:               user,
+		Post:               post,
+		Categories:         categories,
+		SelectedCategories: selectedMap,
+	})
+}
+
+func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := r.PathValue("id")
+	post, err := h.posts.GetByID(postID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if post.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxImageSize)
+	if err := r.ParseMultipartForm(maxImageSize); err != nil {
+		http.Error(w, "Fichier trop volumineux", http.StatusBadRequest)
+		return
+	}
+
+	title := strings.TrimSpace(r.FormValue("title"))
+	content := strings.TrimSpace(r.FormValue("content"))
+	categoryIDs := r.Form["categories"]
+
+	categories, _ := h.categories.GetAll()
+	selected, _ := h.postCategories.GetCategoriesByPostID(postID)
+	selectedMap := make(map[string]bool)
+	for _, c := range selected {
+		selectedMap[c.ID] = true
+	}
+
+	renderErr := func(msg string) {
+		h.renderEditForm(w, editPostData{
+			User:               user,
+			Post:               post,
+			Categories:         categories,
+			SelectedCategories: selectedMap,
+			Error:              msg,
+		})
+	}
+
+	if title == "" {
+		renderErr("Le titre est obligatoire.")
+		return
+	}
+	if len(title) > 200 {
+		renderErr("Le titre ne peut pas dépasser 200 caractères.")
+		return
+	}
+	if content == "" {
+		renderErr("Le contenu est obligatoire.")
+		return
+	}
+	if len(categoryIDs) == 0 {
+		renderErr("Sélectionnez au moins une catégorie.")
+		return
+	}
+
+	file, header, err := r.FormFile("image")
+	if err == nil {
+		defer file.Close()
+		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
+		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrFileTooLarge) {
+			renderErr(err.Error())
+			return
+		}
+		if err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+		if post.ImagePath != "" {
+			os.Remove(filepath.Join(h.uploadDir, post.ImagePath))
+		}
+		post.ImagePath = filename
+	}
+
+	post.Title = title
+	post.Content = content
+	post.UpdatedAt = time.Now()
+
+	if err := h.posts.Update(post); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	h.postCategories.DeleteByPostID(postID)
+	for _, catID := range categoryIDs {
+		h.postCategories.AddCategory(postID, catID)
+	}
+
+	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
+}
+
+func (h *PostHandler) renderEditForm(w http.ResponseWriter, data editPostData) {
+	tmpl, err := template.ParseFiles(
+		filepath.Join("web", "templates", "layout", "base.html"),
+		filepath.Join("web", "templates", "post", "edit_post.html"),
+	)
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "base", data)
 }
 
 // --- helpers ---

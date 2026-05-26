@@ -33,6 +33,8 @@ func main() {
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
 	mux.HandleFunc("POST /post/new", postHandler.CreatePost)
 	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
+	mux.HandleFunc("GET /post/{id}/edit", postHandler.ShowEditForm)
+	mux.HandleFunc("POST /post/{id}/edit", postHandler.EditPost)
 
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)
