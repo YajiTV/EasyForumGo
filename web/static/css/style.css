@@ -328,6 +328,51 @@ footer {
     color: #242424;
 }
 
+/* ── ERRORS ── */
+.error-page {
+    grid-column: 1 / -1;
+    min-height: 58vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid #e6e6e6;
+    border-bottom: 1px solid #e6e6e6;
+}
+
+.error-content {
+    width: min(100%, 620px);
+    padding: 56px 0;
+}
+
+.error-code {
+    color: #6b6b6b;
+    font-size: 14px;
+    letter-spacing: 0;
+    margin-bottom: 12px;
+}
+
+.error-content h1 {
+    font-family: Georgia, serif;
+    font-size: 42px;
+    line-height: 1.15;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.error-message {
+    color: #6b6b6b;
+    font-size: 18px;
+    line-height: 1.5;
+    max-width: 520px;
+    margin-bottom: 28px;
+}
+
+.error-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) {
     main {
@@ -341,5 +386,13 @@ footer {
 
     .post-card-title {
         font-size: 17px;
+    }
+
+    .error-content h1 {
+        font-size: 32px;
+    }
+
+    .error-message {
+        font-size: 16px;
     }
 }
