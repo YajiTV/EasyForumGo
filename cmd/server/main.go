@@ -27,6 +27,11 @@ func main() {
 	mux.HandleFunc("POST /signup", authHandler.Signup)
 	mux.HandleFunc("POST /login", authHandler.Login)
 	mux.HandleFunc("POST /logout", authHandler.Logout)
+	postHandler := handler.NewPostHandler(db)
+	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
+	mux.HandleFunc("POST /post/new", postHandler.CreatePost)
+	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
+
 	homeHandler := handler.NewHomeHandler(db)
 	mux.HandleFunc("/", homeHandler.Home)
 
