@@ -37,6 +37,10 @@ func main() {
 	mux.HandleFunc("POST /post/{id}/edit", postHandler.EditPost)
 	mux.HandleFunc("POST /post/{id}/delete", postHandler.DeletePost)
 
+	commentHandler := handler.NewCommentHandler(db)
+	mux.HandleFunc("POST /post/{id}/comment", commentHandler.CreateComment)
+	mux.HandleFunc("POST /comment/{id}/delete", commentHandler.DeleteComment)
+
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)
 
