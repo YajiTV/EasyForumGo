@@ -3,7 +3,9 @@ package handler
 import (
 	"database/sql"
 	"errors"
+	"html/template"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -39,6 +41,14 @@ func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRend
 		sessionDuration: sessionDuration,
 		errors:          errors,
 	}
+}
+
+func (h *AuthHandler) ShowLoginForm(w http.ResponseWriter, r *http.Request) {
+	renderAuthTemplate(w, "login.html", nil)
+}
+
+func (h *AuthHandler) ShowRegisterForm(w http.ResponseWriter, r *http.Request) {
+	renderAuthTemplate(w, "register.html", nil)
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
@@ -230,4 +240,13 @@ func (h *AuthHandler) writeValidationError(w http.ResponseWriter, validationErro
 	}
 
 	h.errors.BadRequest(w, "Formulaire invalide.")
+}
+
+func renderAuthTemplate(w http.ResponseWriter, filename string, data any) {
+	tmpl, err := template.ParseFiles(filepath.Join("web", "templates", "auth", filename))
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	tmpl.Execute(w, data)
 }

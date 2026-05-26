@@ -22,9 +22,17 @@ func main() {
 	errorRenderer := handler.NewErrorRenderer(cfg.TemplatesDir)
 	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration, errorRenderer)
 
-	mux.HandleFunc("POST /signup", authHandler.Signup)
+	mux.HandleFunc("GET /login", authHandler.ShowLoginForm)
 	mux.HandleFunc("POST /login", authHandler.Login)
+	mux.HandleFunc("GET /register", authHandler.ShowRegisterForm)
+	mux.HandleFunc("POST /register", authHandler.Signup)
 	mux.HandleFunc("POST /logout", authHandler.Logout)
+
+	postHandler := handler.NewPostHandler(db)
+	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
+	mux.HandleFunc("POST /post/new", postHandler.CreatePost)
+	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
+
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)
 
