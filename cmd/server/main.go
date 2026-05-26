@@ -19,12 +19,13 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
-	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration)
+	errorRenderer := handler.NewErrorRenderer(cfg.TemplatesDir)
+	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration, errorRenderer)
 
 	mux.HandleFunc("POST /signup", authHandler.Signup)
 	mux.HandleFunc("POST /login", authHandler.Login)
 	mux.HandleFunc("POST /logout", authHandler.Logout)
-	homeHandler := handler.NewHomeHandler(db)
+	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)
 
 	log.Printf("Server starting on :%s", cfg.Port)

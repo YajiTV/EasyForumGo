@@ -34,21 +34,32 @@ type HomeHandler struct {
 	users      *repository.UserRepository
 	likes      *repository.LikeRepository
 	categories *repository.CategoryRepository
+	errors     *ErrorRenderer
 }
 
-func NewHomeHandler(db *sql.DB) *HomeHandler {
+func NewHomeHandler(db *sql.DB, errors *ErrorRenderer) *HomeHandler {
+	if errors == nil {
+		errors = NewErrorRenderer("web/templates")
+	}
+
 	return &HomeHandler{
 		posts:      repository.NewPostRepository(db),
 		users:      repository.NewUserRepository(db),
 		likes:      repository.NewLikeRepository(db),
 		categories: repository.NewCategoryRepository(db),
+		errors:     errors,
 	}
 }
 
 func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		h.errors.NotFound(w, "La page demandée est introuvable.")
+		return
+	}
+
 	posts, err := h.posts.GetAll()
 	if err != nil {
-		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		h.errors.InternalServerError(w)
 		return
 	}
 
@@ -91,9 +102,11 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		filepath.Join("web", "templates", "home.html"),
 	)
 	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		h.errors.InternalServerError(w)
 		return
 	}
 
-	tmpl.ExecuteTemplate(w, "base", data)
+	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
+		h.errors.InternalServerError(w)
+	}
 }

@@ -18,6 +18,7 @@ const (
 type AuthHandler struct {
 	db              *sql.DB
 	sessionDuration time.Duration
+	errors          *ErrorRenderer
 }
 
 type userCredentials struct {
@@ -25,20 +26,24 @@ type userCredentials struct {
 	hashedPassword string
 }
 
-func NewAuthHandler(db *sql.DB, sessionDuration time.Duration) *AuthHandler {
+func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRenderer) *AuthHandler {
 	if sessionDuration <= 0 {
 		sessionDuration = 24 * time.Hour
+	}
+	if errors == nil {
+		errors = NewErrorRenderer("web/templates")
 	}
 
 	return &AuthHandler{
 		db:              db,
 		sessionDuration: sessionDuration,
+		errors:          errors,
 	}
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Méthode non autorisée.", http.StatusMethodNotAllowed)
+		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
 		return
 	}
 
@@ -49,28 +54,28 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if validationErrors := validator.ValidateSignup(input); validationErrors.HasErrors() {
-		writeValidationError(w, validationErrors)
+		h.writeValidationError(w, validationErrors)
 		return
 	}
 
 	exists, err := h.userExists(input.Email, input.Username)
 	if err != nil {
-		http.Error(w, "Une erreur est survenue.", http.StatusInternalServerError)
+		h.errors.InternalServerError(w)
 		return
 	}
 	if exists {
-		http.Error(w, "Cette adresse e-mail ou ce nom d'utilisateur est déjà utilisé.", http.StatusConflict)
+		h.errors.Render(w, http.StatusConflict, "Cette adresse e-mail ou ce nom d'utilisateur est déjà utilisé.")
 		return
 	}
 
 	hashedPassword, err := utils.HashPassword(input.Password)
 	if err != nil {
-		http.Error(w, "Une erreur est survenue.", http.StatusInternalServerError)
+		h.errors.InternalServerError(w)
 		return
 	}
 
 	if err := h.createUser(input.Email, input.Username, hashedPassword); err != nil {
-		http.Error(w, "Une erreur est survenue.", http.StatusInternalServerError)
+		h.errors.InternalServerError(w)
 		return
 	}
 
@@ -79,7 +84,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Méthode non autorisée.", http.StatusMethodNotAllowed)
+		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
 		return
 	}
 
@@ -89,28 +94,28 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if validationErrors := validator.ValidateLogin(input); validationErrors.HasErrors() {
-		writeValidationError(w, validationErrors)
+		h.writeValidationError(w, validationErrors)
 		return
 	}
 
 	user, err := h.findUserCredentials(input.Email)
 	if errors.Is(err, sql.ErrNoRows) {
-		http.Error(w, "Identifiants invalides.", http.StatusUnauthorized)
+		h.errors.Unauthorized(w, "Identifiants invalides.")
 		return
 	}
 	if err != nil {
-		http.Error(w, "Une erreur est survenue.", http.StatusInternalServerError)
+		h.errors.InternalServerError(w)
 		return
 	}
 
 	if !utils.CheckPasswordHash(input.Password, user.hashedPassword) {
-		http.Error(w, "Identifiants invalides.", http.StatusUnauthorized)
+		h.errors.Unauthorized(w, "Identifiants invalides.")
 		return
 	}
 
 	sessionToken, expiresAt, err := h.createSession(user.id)
 	if err != nil {
-		http.Error(w, "Une erreur est survenue.", http.StatusInternalServerError)
+		h.errors.InternalServerError(w)
 		return
 	}
 
@@ -128,7 +133,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Méthode non autorisée.", http.StatusMethodNotAllowed)
+		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
 		return
 	}
 
@@ -218,11 +223,11 @@ func (h *AuthHandler) createUser(email, username, hashedPassword string) error {
 	return err
 }
 
-func writeValidationError(w http.ResponseWriter, validationErrors validator.ValidationErrors) {
+func (h *AuthHandler) writeValidationError(w http.ResponseWriter, validationErrors validator.ValidationErrors) {
 	for _, message := range validationErrors {
-		http.Error(w, message, http.StatusBadRequest)
+		h.errors.BadRequest(w, message)
 		return
 	}
 
-	http.Error(w, "Formulaire invalide.", http.StatusBadRequest)
+	h.errors.BadRequest(w, "Formulaire invalide.")
 }
