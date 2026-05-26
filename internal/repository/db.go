@@ -22,6 +22,11 @@ func InitDB(dbPath, migrationsDir string) (*sql.DB, error) {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
 
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("pragma foreign_keys: %w", err)
+	}
+
 	if err := runMigrations(db, migrationsDir); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("migrations: %w", err)

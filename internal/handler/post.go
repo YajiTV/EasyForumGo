@@ -140,6 +140,37 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/post/"+post.ID, http.StatusSeeOther)
 }
 
+func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := r.PathValue("id")
+	post, err := h.posts.GetByID(postID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if post.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	if post.ImagePath != "" {
+		os.Remove(filepath.Join(h.uploadDir, post.ImagePath))
+	}
+
+	if err := h.posts.Delete(postID); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 type editPostData struct {
 	User              *model.User
 	Post              *model.Post
