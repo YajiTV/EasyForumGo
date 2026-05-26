@@ -369,7 +369,9 @@ func (h *PostHandler) renderError(w http.ResponseWriter, r *http.Request, user *
 
 type CommentWithAuthor struct {
 	model.Comment
-	Username string
+	Username     string
+	LikeCount    int
+	DislikeCount int
 }
 
 type PostDetailData struct {
@@ -412,7 +414,14 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			username = u.Username
 		}
-		comments = append(comments, CommentWithAuthor{Comment: c, Username: username})
+		cLikes, _ := h.likes.CountCommentLikes(c.ID)
+		cDislikes, _ := h.likes.CountCommentDislikes(c.ID)
+		comments = append(comments, CommentWithAuthor{
+			Comment:      c,
+			Username:     username,
+			LikeCount:    cLikes,
+			DislikeCount: cDislikes,
+		})
 	}
 
 	data := PostDetailData{

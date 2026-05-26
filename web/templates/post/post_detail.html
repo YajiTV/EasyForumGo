@@ -78,6 +78,10 @@
                         {{end}}
                     </div>
                     <p class="comment-content">{{.Content}}</p>
+                    <div class="comment-actions">
+                        <span class="count-like">👍 {{.LikeCount}}</span>
+                        <span class="count-dislike">👎 {{.DislikeCount}}</span>
+                    </div>
                 </div>
                 {{end}}
             {{else}}
