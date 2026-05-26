@@ -1,0 +1,47 @@
+{{define "title"}}Nouveau post — ForumJS{{end}}
+
+{{define "content"}}
+<div class="form-page">
+    <h1 class="form-title">Créer un post</h1>
+
+    {{if .Error}}
+        <p class="form-error">{{.Error}}</p>
+    {{end}}
+
+    <form action="/post/new" method="POST" enctype="multipart/form-data" class="post-form">
+
+        <div class="form-group">
+            <label for="title">Titre</label>
+            <input type="text" id="title" name="title" placeholder="Titre de votre post" value="{{.Title}}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="content">Contenu</label>
+            <textarea id="content" name="content" rows="10" placeholder="Écrivez votre post ici..." required>{{.Content}}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Catégories <span class="label-hint">(au moins une)</span></label>
+            <div class="categories-grid">
+                {{range .Categories}}
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="{{.ID}}">
+                    {{.Name}}
+                </label>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="image">Image <span class="label-hint">(optionnel — JPEG, PNG, GIF, max 20 Mo)</span></label>
+            <input type="file" id="image" name="image" accept=".jpg,.jpeg,.png,.gif">
+        </div>
+
+        <div class="form-actions">
+            <a href="/" class="btn-secondary">Annuler</a>
+            <button type="submit" class="btn-primary">Publier</button>
+        </div>
+
+    </form>
+</div>
+{{end}}
