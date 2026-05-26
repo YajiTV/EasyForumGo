@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"html/template"
+	"log"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -48,6 +49,7 @@ func NewHomeHandler(db *sql.DB) *HomeHandler {
 func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	posts, err := h.posts.GetAll()
 	if err != nil {
+		log.Printf("GetAll error: %v", err)
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
