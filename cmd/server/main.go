@@ -16,9 +16,6 @@ func main() {
 	defer db.Close()
 
 	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
 
 	mux := http.NewServeMux()
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))

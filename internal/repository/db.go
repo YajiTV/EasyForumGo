@@ -13,7 +13,7 @@ import (
 func InitDB(migrationsDir string) (*sql.DB, error) {
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
-		dbPath = "./forum.db"
+		dbPath = "./data/forum.db"
 	}
 
 	if dir := filepath.Dir(dbPath); dir != "." {

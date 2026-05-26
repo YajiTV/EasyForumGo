@@ -24,6 +24,6 @@ COPY --from=builder /app/web ./web
 
 RUN mkdir -p /app/data /app/uploads
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["./forum"]

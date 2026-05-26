@@ -30,13 +30,7 @@
                         <a href="/post/{{.ID}}">{{.Title}}</a>
                     </h2>
 
-                    <p class="post-card-excerpt">
-                        {{if gt (len .Content) 200}}
-                            {{slice .Content 0 200}}...
-                        {{else}}
-                            {{.Content}}
-                        {{end}}
-                    </p>
+                    <p class="post-card-excerpt">{{.Content}}</p>
 
                     <div class="post-card-meta">
                         <span>Par {{.Username}}</span>
