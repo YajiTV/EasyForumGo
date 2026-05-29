@@ -4,8 +4,10 @@ import (
 	"ForumJS/config"
 	"ForumJS/internal/handler"
 	"ForumJS/internal/repository"
+	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 )
 
 func main() {
@@ -56,6 +58,18 @@ func main() {
 
 	categoryHandler := handler.NewCategoryHandler(db)
 	mux.HandleFunc("GET /posts/category/{id}", categoryHandler.FilterByCategory)
+
+	mux.HandleFunc("GET /rules", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles(
+			filepath.Join(cfg.TemplatesDir, "layout", "base.html"),
+			filepath.Join(cfg.TemplatesDir, "rules.html"),
+		)
+		if err != nil {
+			http.Error(w, "Erreur template", http.StatusInternalServerError)
+			return
+		}
+		tmpl.ExecuteTemplate(w, "base", nil)
+	})
 
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)
