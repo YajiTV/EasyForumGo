@@ -28,6 +28,11 @@ type userCredentials struct {
 	hashedPassword string
 }
 
+type loginFormData struct {
+	Email string
+	Error string
+}
+
 func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRenderer) *AuthHandler {
 	if sessionDuration <= 0 {
 		sessionDuration = 24 * time.Hour
@@ -104,13 +109,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if validationErrors := validator.ValidateLogin(input); validationErrors.HasErrors() {
-		h.writeValidationError(w, validationErrors)
+		h.renderLoginError(w, input.Email, firstValidationMessage(validationErrors))
 		return
 	}
 
 	user, err := h.findUserCredentials(input.Email)
 	if errors.Is(err, sql.ErrNoRows) {
-		h.errors.Unauthorized(w, "Identifiants invalides.")
+		h.renderLoginError(w, input.Email, "Identifiants invalides.")
 		return
 	}
 	if err != nil {
@@ -119,7 +124,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !utils.CheckPasswordHash(input.Password, user.hashedPassword) {
-		h.errors.Unauthorized(w, "Identifiants invalides.")
+		h.renderLoginError(w, input.Email, "Identifiants invalides.")
 		return
 	}
 
@@ -234,12 +239,25 @@ func (h *AuthHandler) createUser(email, username, hashedPassword string) error {
 }
 
 func (h *AuthHandler) writeValidationError(w http.ResponseWriter, validationErrors validator.ValidationErrors) {
+	h.errors.BadRequest(w, firstValidationMessage(validationErrors))
+}
+
+func (h *AuthHandler) renderLoginError(w http.ResponseWriter, email, message string) {
+	if message == "" {
+		message = "Formulaire invalide."
+	}
+	renderAuthTemplate(w, "login.html", loginFormData{
+		Email: email,
+		Error: message,
+	})
+}
+
+func firstValidationMessage(validationErrors validator.ValidationErrors) string {
 	for _, message := range validationErrors {
-		h.errors.BadRequest(w, message)
-		return
+		return message
 	}
 
-	h.errors.BadRequest(w, "Formulaire invalide.")
+	return "Formulaire invalide."
 }
 
 func renderAuthTemplate(w http.ResponseWriter, filename string, data any) {
