@@ -59,6 +59,18 @@ func main() {
 	categoryHandler := handler.NewCategoryHandler(db)
 	mux.HandleFunc("GET /posts/category/{id}", categoryHandler.FilterByCategory)
 
+	mux.HandleFunc("GET /legal", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles(
+			filepath.Join(cfg.TemplatesDir, "layout", "base.html"),
+			filepath.Join(cfg.TemplatesDir, "legal.html"),
+		)
+		if err != nil {
+			http.Error(w, "Erreur template", http.StatusInternalServerError)
+			return
+		}
+		tmpl.ExecuteTemplate(w, "base", nil)
+	})
+
 	mux.HandleFunc("GET /about", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles(
 			filepath.Join(cfg.TemplatesDir, "layout", "base.html"),
