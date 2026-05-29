@@ -37,9 +37,6 @@ func main() {
 	mux.HandleFunc("POST /post/{id}/edit", postHandler.EditPost)
 	mux.HandleFunc("POST /post/{id}/delete", postHandler.DeletePost)
 
-	categoryHandler := handler.NewCategoryHandler(db)
-	mux.HandleFunc("GET /posts/category/{id}", categoryHandler.FilterByCategory)
-
 	commentHandler := handler.NewCommentHandler(db)
 	mux.HandleFunc("POST /post/{id}/comment", commentHandler.CreateComment)
 	mux.HandleFunc("POST /comment/{id}/delete", commentHandler.DeleteComment)
@@ -49,6 +46,8 @@ func main() {
 	likeHandler := handler.NewLikeHandler(db)
 	mux.HandleFunc("POST /post/{id}/like", likeHandler.LikePost)
 	mux.HandleFunc("POST /post/{id}/dislike", likeHandler.DislikePost)
+	mux.HandleFunc("POST /comment/{id}/like", likeHandler.LikeComment)
+	mux.HandleFunc("POST /comment/{id}/dislike", likeHandler.DislikeComment)
 
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)
