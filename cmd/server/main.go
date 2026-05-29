@@ -21,6 +21,7 @@ func main() {
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
 	errorRenderer := handler.NewErrorRenderer(cfg.TemplatesDir)
+	errorRenderer.SetAuthRepositories(repository.NewSessionRepository(db), repository.NewUserRepository(db))
 	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration, errorRenderer)
 
 	mux.HandleFunc("GET /login", authHandler.ShowLoginForm)
@@ -48,6 +49,9 @@ func main() {
 	mux.HandleFunc("POST /post/{id}/dislike", likeHandler.DislikePost)
 	mux.HandleFunc("POST /comment/{id}/like", likeHandler.LikeComment)
 	mux.HandleFunc("POST /comment/{id}/dislike", likeHandler.DislikeComment)
+
+	categoryHandler := handler.NewCategoryHandler(db)
+	mux.HandleFunc("GET /posts/category/{id}", categoryHandler.FilterByCategory)
 
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)

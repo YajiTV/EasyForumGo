@@ -24,14 +24,16 @@ type PostWithMeta struct {
 }
 
 type HomePageData struct {
-	User       *model.User
-	Posts      []PostWithMeta
-	Categories []model.Category
+	User            *model.User
+	Posts           []PostWithMeta
+	Categories      []model.Category
+	CurrentCategory *model.Category
 }
 
 type HomeHandler struct {
 	posts      *repository.PostRepository
 	users      *repository.UserRepository
+	sessions   *repository.SessionRepository
 	likes      *repository.LikeRepository
 	categories *repository.CategoryRepository
 	errors     *ErrorRenderer
@@ -45,6 +47,7 @@ func NewHomeHandler(db *sql.DB, errors *ErrorRenderer) *HomeHandler {
 	return &HomeHandler{
 		posts:      repository.NewPostRepository(db),
 		users:      repository.NewUserRepository(db),
+		sessions:   repository.NewSessionRepository(db),
 		likes:      repository.NewLikeRepository(db),
 		categories: repository.NewCategoryRepository(db),
 		errors:     errors,
@@ -52,8 +55,10 @@ func NewHomeHandler(db *sql.DB, errors *ErrorRenderer) *HomeHandler {
 }
 
 func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
+	currentUser := h.userFromSession(r)
+
 	if r.URL.Path != "/" {
-		h.errors.NotFound(w, "La page demandée est introuvable.")
+		h.errors.RenderWithRequest(w, r, http.StatusNotFound, "La page demandée est introuvable.")
 		return
 	}
 
@@ -92,7 +97,7 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := HomePageData{
-		User:       nil,
+		User:       currentUser,
 		Posts:      postsWithMeta,
 		Categories: categories,
 	}
@@ -109,4 +114,20 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
 		h.errors.InternalServerError(w)
 	}
+}
+
+func (h *HomeHandler) userFromSession(r *http.Request) *model.User {
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		return nil
+	}
+	session, err := h.sessions.GetByToken(cookie.Value)
+	if err != nil || session.ExpiresAt.Before(time.Now()) {
+		return nil
+	}
+	user, err := h.users.GetByID(session.UserID)
+	if err != nil {
+		return nil
+	}
+	return user
 }

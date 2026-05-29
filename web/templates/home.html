@@ -1,51 +1,93 @@
 {{define "title"}}Accueil — ForumJS{{end}}
 
 {{define "content"}}
-<div class="home">
-
-    <div class="home-filters">
-        <a href="/" class="filter-btn">Tous les posts</a>
-        {{if .User}}
-            <a href="/?filter=mine" class="filter-btn">Mes posts</a>
-            <a href="/?filter=liked" class="filter-btn">Posts aimés</a>
-        {{end}}
-        {{range .Categories}}
-            <a href="/posts/category/{{.ID}}" class="filter-btn">{{.Name}}</a>
-        {{end}}
-    </div>
-
-    <div class="posts-list">
-        {{if .Posts}}
-            {{range .Posts}}
-            <article class="post-card">
-
-                {{if .ImagePath}}
-                <div class="post-card-image">
-                    <img src="/uploads/{{.ImagePath}}" alt="Image du post">
-                </div>
-                {{end}}
-
-                <div class="post-card-body">
-                    <h2 class="post-card-title">
-                        <a href="/post/{{.ID}}">{{.Title}}</a>
-                    </h2>
-
-                    <p class="post-card-excerpt">{{.Content}}</p>
-
-                    <div class="post-card-meta">
-                        <span>Par {{.Username}}</span>
-                        <span>{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
-                        <span class="post-likes">👍 {{.LikeCount}}</span>
-                        <span class="post-dislikes">👎 {{.DislikeCount}}</span>
-                    </div>
-                </div>
-
-            </article>
+<div class="home-layout">
+    <section class="home-feed" aria-label="Liste des posts">
+        <div class="feed-tabs" aria-label="Filtres principaux">
+            <a href="/" class="feed-tab {{if not .CurrentCategory}}active{{end}}">Pour vous</a>
+            {{if .User}}
+                <a href="/?filter=mine" class="feed-tab">Mes posts</a>
+                <a href="/?filter=liked" class="feed-tab">Posts aimés</a>
             {{end}}
-        {{else}}
-            <p class="empty">Aucun post pour le moment.</p>
-        {{end}}
-    </div>
+        </div>
 
+        <div class="home-filters">
+            <a href="/" class="filter-btn {{if not .CurrentCategory}}active{{end}}">Tous</a>
+            {{range .Categories}}
+                <a href="/posts/category/{{.ID}}" class="filter-btn">{{.Name}}</a>
+            {{else}}
+                <a href="/posts/category/general" class="filter-btn">Général</a>
+                <a href="/posts/category/aide" class="filter-btn">Aide</a>
+                <a href="/posts/category/projet" class="filter-btn">Projet</a>
+                <a href="/posts/category/annonce" class="filter-btn">Annonce</a>
+                <a href="/posts/category/hors-sujet" class="filter-btn">Hors sujet</a>
+            {{end}}
+        </div>
+
+        {{if .CurrentCategory}}
+        <div class="feed-context">
+            <span>Catégorie</span>
+            <strong>{{.CurrentCategory.Name}}</strong>
+        </div>
+        {{end}}
+
+        <div class="posts-list">
+            {{if .Posts}}
+                {{range .Posts}}
+                <article class="post-card {{if .ImagePath}}has-image{{end}}">
+
+                    <div class="post-card-body">
+                        <div class="post-card-author">
+                            <span class="author-avatar">{{printf "%.1s" .Username}}</span>
+                            <span>Par {{.Username}}</span>
+                            <span>{{.CreatedAt.Format "02/01/2006"}}</span>
+                        </div>
+
+                        <h2 class="post-card-title">
+                            <a href="/post/{{.ID}}">{{.Title}}</a>
+                        </h2>
+
+                        <p class="post-card-excerpt">{{.Content}}</p>
+
+                        <div class="post-card-meta">
+                            <span class="stat-item stat-like">{{.LikeCount}}</span>
+                            <span class="stat-item stat-dislike">{{.DislikeCount}}</span>
+                            <a href="/post/{{.ID}}" class="read-link">Lire</a>
+                        </div>
+                    </div>
+
+                    {{if .ImagePath}}
+                    <a href="/post/{{.ID}}" class="post-card-image" aria-label="Lire {{.Title}}">
+                        <img src="/uploads/{{.ImagePath}}" alt="Image du post">
+                    </a>
+                    {{end}}
+
+                </article>
+                {{end}}
+            {{else}}
+                <p class="empty">Aucun post pour le moment.</p>
+            {{end}}
+        </div>
+    </section>
+
+    <aside class="right-sidebar" aria-label="Panneau secondaire">
+        <section class="sidebar-section">
+            <h2>Catégories</h2>
+            <div class="topic-list">
+                {{range .Categories}}
+                    <a href="/posts/category/{{.ID}}" class="topic-pill">{{.Name}}</a>
+                {{else}}
+                    <a href="/posts/category/general" class="topic-pill">Général</a>
+                    <a href="/posts/category/aide" class="topic-pill">Aide</a>
+                    <a href="/posts/category/projet" class="topic-pill">Projet</a>
+                    <a href="/posts/category/annonce" class="topic-pill">Annonce</a>
+                    <a href="/posts/category/hors-sujet" class="topic-pill">Hors sujet</a>
+                    <a href="/posts/category/ressources" class="topic-pill">Ressources</a>
+                    <a href="/posts/category/questions" class="topic-pill">Questions</a>
+                {{end}}
+            </div>
+        </section>
+
+    </aside>
 </div>
 {{end}}
