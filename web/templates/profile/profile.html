@@ -7,18 +7,6 @@
 {{define "content"}}
 <div class="profile-layout">
 
-    <nav class="profile-nav">
-        <h2>ForumJS</h2>
-        <ul>
-            <li><a href="/">home</a></li>
-            <li><a href="#">library</a></li>
-            <li><a href="/profile">Profile</a></li>
-            <li><a href="#">Stories</a></li>
-            <li><a href="#">stats</a></li>
-            <li><a href="#">Following</a></li>
-        </ul>
-    </nav>
-
     <main class="profile-main">
         <div class="profile-tabs">
             <a href="/profile">Home</a>
@@ -30,7 +18,7 @@
             <h3>Reading list</h3>
             {{if .Posts}}
                 {{range .Posts}}
-                <article>
+                <article class="profile-post-card">
                     <a href="/post/{{.ID}}">{{.Title}}</a>
                     <span>Par {{.Username}} — 👍 {{.LikeCount}}</span>
                 </article>
