@@ -10,12 +10,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func InitDB(migrationsDir string) (*sql.DB, error) {
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "./forum.db"
-	}
-
+func InitDB(dbPath, migrationsDir string) (*sql.DB, error) {
 	if dir := filepath.Dir(dbPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return nil, fmt.Errorf("create db dir: %w", err)
@@ -25,6 +20,11 @@ func InitDB(migrationsDir string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
+	}
+
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("pragma foreign_keys: %w", err)
 	}
 
 	if err := runMigrations(db, migrationsDir); err != nil {

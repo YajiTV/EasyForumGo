@@ -21,9 +21,10 @@ WORKDIR /app
 
 COPY --from=builder /app/forum .
 COPY --from=builder /app/web ./web
+COPY --from=builder /app/migrations ./migrations
 
 RUN mkdir -p /app/data /app/uploads
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["./forum"]

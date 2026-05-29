@@ -1,28 +1,27 @@
 package main
 
 import (
+	"ForumJS/config"
 	"ForumJS/internal/handler"
 	"ForumJS/internal/repository"
 	"log"
 	"net/http"
-	"os"
 )
 
 func main() {
-	db, err := repository.InitDB("./migrations")
+	cfg := config.Load()
+
+	db, err := repository.InitDB(cfg.DBPath, cfg.MigrationsDir)
 	if err != nil {
 		log.Fatalf("DB init failed: %v", err)
 	}
 	defer db.Close()
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
 	mux := http.NewServeMux()
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
-	authHandler := handler.NewAuthHandler(db)
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
+	errorRenderer := handler.NewErrorRenderer(cfg.TemplatesDir)
+	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration, errorRenderer)
 
 	mux.HandleFunc("GET /login", authHandler.ShowLoginForm)
 	mux.HandleFunc("POST /login", authHandler.Login)
@@ -33,14 +32,29 @@ func main() {
 	profileHandler := handler.NewProfileHandler(db)
 	mux.HandleFunc("GET /profile/liked-posts", profileHandler.LikedPosts)
 
-	postHandler := handler.NewPostHandler(db)
+	postHandler := handler.NewPostHandler(db, cfg.UploadDir)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
 	mux.HandleFunc("POST /post/new", postHandler.CreatePost)
 	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
+	mux.HandleFunc("GET /post/{id}/edit", postHandler.ShowEditForm)
+	mux.HandleFunc("POST /post/{id}/edit", postHandler.EditPost)
+	mux.HandleFunc("POST /post/{id}/delete", postHandler.DeletePost)
 
-	homeHandler := handler.NewHomeHandler(db)
+	commentHandler := handler.NewCommentHandler(db)
+	mux.HandleFunc("POST /post/{id}/comment", commentHandler.CreateComment)
+	mux.HandleFunc("POST /comment/{id}/delete", commentHandler.DeleteComment)
+	mux.HandleFunc("GET /comment/{id}/edit", commentHandler.ShowEditForm)
+	mux.HandleFunc("POST /comment/{id}/edit", commentHandler.EditComment)
+
+	likeHandler := handler.NewLikeHandler(db)
+	mux.HandleFunc("POST /post/{id}/like", likeHandler.LikePost)
+	mux.HandleFunc("POST /post/{id}/dislike", likeHandler.DislikePost)
+	mux.HandleFunc("POST /comment/{id}/like", likeHandler.LikeComment)
+	mux.HandleFunc("POST /comment/{id}/dislike", likeHandler.DislikeComment)
+
+	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)
 
-	log.Printf("Server starting on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	log.Printf("Server starting on :%s", cfg.Port)
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
 }

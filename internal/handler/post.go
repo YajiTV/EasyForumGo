@@ -2,8 +2,8 @@ package handler
 
 import (
 	"database/sql"
+	"errors"
 	"html/template"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,7 +15,7 @@ import (
 	"ForumJS/pkg/utils"
 )
 
-const maxImageSize = 20 << 20 // 20 MB
+const maxImageSize = 5 << 20
 
 type PostHandler struct {
 	posts          *repository.PostRepository
@@ -25,9 +25,10 @@ type PostHandler struct {
 	users          *repository.UserRepository
 	comments       *repository.CommentRepository
 	likes          *repository.LikeRepository
+	uploadDir      string
 }
 
-func NewPostHandler(db *sql.DB) *PostHandler {
+func NewPostHandler(db *sql.DB, uploadDir string) *PostHandler {
 	return &PostHandler{
 		posts:          repository.NewPostRepository(db),
 		categories:     repository.NewCategoryRepository(db),
@@ -36,6 +37,7 @@ func NewPostHandler(db *sql.DB) *PostHandler {
 		users:          repository.NewUserRepository(db),
 		comments:       repository.NewCommentRepository(db),
 		likes:          repository.NewLikeRepository(db),
+		uploadDir:      uploadDir,
 	}
 }
 
@@ -97,26 +99,19 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Image (optionnel)
 	imagePath := ""
 	file, header, err := r.FormFile("image")
 	if err == nil {
 		defer file.Close()
-
-		ext := strings.ToLower(filepath.Ext(header.Filename))
-		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".gif" {
-			h.renderError(w, r, user, "Format d'image invalide (JPEG, PNG, GIF uniquement).")
+		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
+		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrFileTooLarge) {
+			h.renderError(w, r, user, err.Error())
 			return
 		}
-
-		filename := utils.NewUUID() + ext
-		dst, err := os.Create(filepath.Join("uploads", filename))
 		if err != nil {
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
-		defer dst.Close()
-		io.Copy(dst, file)
 		imagePath = filename
 	}
 
@@ -143,6 +138,190 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/post/"+post.ID, http.StatusSeeOther)
+}
+
+func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := r.PathValue("id")
+	post, err := h.posts.GetByID(postID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if post.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	if post.ImagePath != "" {
+		os.Remove(filepath.Join(h.uploadDir, post.ImagePath))
+	}
+
+	if err := h.posts.Delete(postID); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+type editPostData struct {
+	User              *model.User
+	Post              *model.Post
+	Categories        []model.Category
+	SelectedCategories map[string]bool
+	Error             string
+}
+
+func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := r.PathValue("id")
+	post, err := h.posts.GetByID(postID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if post.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	categories, _ := h.categories.GetAll()
+	selected, _ := h.postCategories.GetCategoriesByPostID(postID)
+
+	selectedMap := make(map[string]bool)
+	for _, c := range selected {
+		selectedMap[c.ID] = true
+	}
+
+	h.renderEditForm(w, editPostData{
+		User:               user,
+		Post:               post,
+		Categories:         categories,
+		SelectedCategories: selectedMap,
+	})
+}
+
+func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := r.PathValue("id")
+	post, err := h.posts.GetByID(postID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if post.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxImageSize)
+	if err := r.ParseMultipartForm(maxImageSize); err != nil {
+		http.Error(w, "Fichier trop volumineux", http.StatusBadRequest)
+		return
+	}
+
+	title := strings.TrimSpace(r.FormValue("title"))
+	content := strings.TrimSpace(r.FormValue("content"))
+	categoryIDs := r.Form["categories"]
+
+	categories, _ := h.categories.GetAll()
+	selected, _ := h.postCategories.GetCategoriesByPostID(postID)
+	selectedMap := make(map[string]bool)
+	for _, c := range selected {
+		selectedMap[c.ID] = true
+	}
+
+	renderErr := func(msg string) {
+		h.renderEditForm(w, editPostData{
+			User:               user,
+			Post:               post,
+			Categories:         categories,
+			SelectedCategories: selectedMap,
+			Error:              msg,
+		})
+	}
+
+	if title == "" {
+		renderErr("Le titre est obligatoire.")
+		return
+	}
+	if len(title) > 200 {
+		renderErr("Le titre ne peut pas dépasser 200 caractères.")
+		return
+	}
+	if content == "" {
+		renderErr("Le contenu est obligatoire.")
+		return
+	}
+	if len(categoryIDs) == 0 {
+		renderErr("Sélectionnez au moins une catégorie.")
+		return
+	}
+
+	file, header, err := r.FormFile("image")
+	if err == nil {
+		defer file.Close()
+		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
+		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrFileTooLarge) {
+			renderErr(err.Error())
+			return
+		}
+		if err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+		if post.ImagePath != "" {
+			os.Remove(filepath.Join(h.uploadDir, post.ImagePath))
+		}
+		post.ImagePath = filename
+	}
+
+	post.Title = title
+	post.Content = content
+	post.UpdatedAt = time.Now()
+
+	if err := h.posts.Update(post); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	h.postCategories.DeleteByPostID(postID)
+	for _, catID := range categoryIDs {
+		h.postCategories.AddCategory(postID, catID)
+	}
+
+	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
+}
+
+func (h *PostHandler) renderEditForm(w http.ResponseWriter, data editPostData) {
+	tmpl, err := template.ParseFiles(
+		filepath.Join("web", "templates", "layout", "base.html"),
+		filepath.Join("web", "templates", "post", "edit_post.html"),
+	)
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "base", data)
 }
 
 // --- helpers ---
@@ -190,7 +369,9 @@ func (h *PostHandler) renderError(w http.ResponseWriter, r *http.Request, user *
 
 type CommentWithAuthor struct {
 	model.Comment
-	Username string
+	Username     string
+	LikeCount    int
+	DislikeCount int
 }
 
 type PostDetailData struct {
@@ -233,7 +414,14 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			username = u.Username
 		}
-		comments = append(comments, CommentWithAuthor{Comment: c, Username: username})
+		cLikes, _ := h.likes.CountCommentLikes(c.ID)
+		cDislikes, _ := h.likes.CountCommentDislikes(c.ID)
+		comments = append(comments, CommentWithAuthor{
+			Comment:      c,
+			Username:     username,
+			LikeCount:    cLikes,
+			DislikeCount: cDislikes,
+		})
 	}
 
 	data := PostDetailData{
