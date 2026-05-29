@@ -30,9 +30,14 @@
     </main>
 
     <aside class="profile-aside">
-        <img src="/static/img/photoprofil.jpg" alt="photo de profil">
+        {{if .User.ProfilePicture}}
+            <img src="/uploads/{{.User.ProfilePicture}}" alt="photo de profil">
+        {{else}}
+            <div class="profile-avatar-placeholder">{{printf "%.1s" .User.Username}}</div>
+        {{end}}
+
         <h3>{{.User.Username}}</h3>
-        <a href="#">Edit profile</a>
+        <a href="/profile/edit">Edit profile</a>
     </aside>
 
 </div>

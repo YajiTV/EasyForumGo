@@ -49,3 +49,9 @@ func (r *UserRepository) Delete(id string) error {
 	_, err := r.db.Exec(`DELETE FROM users WHERE id = ?`, id)
 	return err
 }
+
+func (r *UserRepository) UpdateProfile(userID, username, profilePicture string) error {
+	_, err := r.db.Exec(`UPDATE users SET username = ?, profile_picture = ? WHERE id = ?`,
+		username, profilePicture, userID)
+	return err
+}

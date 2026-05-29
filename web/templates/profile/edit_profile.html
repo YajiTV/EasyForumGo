@@ -1,0 +1,26 @@
+{{define "title"}}Modifier le profil — ForumJS{{end}}
+
+{{define "content"}}
+<div style="max-width:500px; margin:3rem auto; padding:2rem;">
+    <h2>Modifier le profil</h2>
+
+    <form action="/profile/edit" method="POST" enctype="multipart/form-data">
+
+        <div style="margin-bottom:1.5rem;">
+            <label>Nom d'utilisateur</label><br>
+            <input type="text" name="username" value="{{.User.Username}}"
+                   style="width:100%; padding:0.5rem; margin-top:0.5rem;">
+        </div>
+
+        <div style="margin-bottom:1.5rem;">
+            <label>Photo de profil</label><br>
+            <input type="file" name="profile_picture" accept=".jpg,.jpeg,.png,.gif"
+                   style="margin-top:0.5rem;">
+        </div>
+
+        <button type="submit">Enregistrer</button>
+        <a href="/profile" style="margin-left:1rem;">Annuler</a>
+
+    </form>
+</div>
+{{end}}

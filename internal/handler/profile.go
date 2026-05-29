@@ -5,23 +5,27 @@ import (
 	"html/template"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"ForumJS/internal/model"
 	"ForumJS/internal/repository"
+	"ForumJS/pkg/utils"
 )
 
 type ProfileHandler struct {
-	users    *repository.UserRepository
-	likes    *repository.LikeRepository
-	sessions *repository.SessionRepository
+	users     *repository.UserRepository
+	likes     *repository.LikeRepository
+	sessions  *repository.SessionRepository
+	uploadDir string
 }
 
-func NewProfileHandler(db *sql.DB) *ProfileHandler {
+func NewProfileHandler(db *sql.DB, uploadDir string) *ProfileHandler {
 	return &ProfileHandler{
-		users:    repository.NewUserRepository(db),
-		likes:    repository.NewLikeRepository(db),
-		sessions: repository.NewSessionRepository(db),
+		users:     repository.NewUserRepository(db),
+		likes:     repository.NewLikeRepository(db),
+		sessions:  repository.NewSessionRepository(db),
+		uploadDir: uploadDir,
 	}
 }
 
@@ -99,4 +103,49 @@ func (h *ProfileHandler) userFromSession(r *http.Request) *model.User {
 		return nil
 	}
 	return user
+}
+
+func (h *ProfileHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	tmpl, err := template.ParseFiles(
+		filepath.Join("web", "templates", "layout", "base.html"),
+		filepath.Join("web", "templates", "profile", "edit_profile.html"),
+	)
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "base", map[string]any{"User": user})
+}
+
+func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	r.ParseMultipartForm(5 << 20)
+	username := strings.TrimSpace(r.FormValue("username"))
+	if username == "" {
+		username = user.Username
+	}
+
+	profilePicture := user.ProfilePicture
+	file, header, err := r.FormFile("profile_picture")
+	if err == nil {
+		defer file.Close()
+		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
+		if err == nil {
+			profilePicture = filename
+		}
+	}
+
+	h.users.UpdateProfile(user.ID, username, profilePicture)
+	http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
