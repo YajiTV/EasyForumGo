@@ -1,11 +1,15 @@
 {{define "title"}}Règles — ForumJS{{end}}
 
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/pages.css">
+{{end}}
+
 {{define "content"}}
-<div style="max-width: 700px; margin: 3rem auto; padding: 0 1rem;">
+<div class="page">
     <h1>Règles du forum</h1>
     <p>Pour que ForumJS reste un espace agréable pour tout le monde, merci de respecter ces quelques règles.</p>
 
-    <ol style="line-height: 2.2rem; margin-top: 1.5rem;">
+    <ol>
         <li>Soyez respectueux envers les autres membres.</li>
         <li>Pas d'insultes, de harcèlement ou de propos haineux.</li>
         <li>Pas de spam ou de publicité non sollicitée.</li>
@@ -14,10 +18,8 @@
         <li>Signalez tout comportement suspect aux modérateurs.</li>
     </ol>
 
-    <p style="margin-top: 2rem; color: #555;">
-        Le non-respect de ces règles peut entraîner la suppression de votre compte.
-    </p>
+    <p>Le non-respect de ces règles peut entraîner la suppression de votre compte.</p>
 
-    <a href="/" style="display: inline-block; margin-top: 1.5rem; color: #1a8917;">Retour à l'accueil</a>
+    <a href="/" class="back-link">Retour à l'accueil</a>
 </div>
 {{end}}
