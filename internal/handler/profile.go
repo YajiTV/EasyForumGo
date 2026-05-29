@@ -2,6 +2,7 @@ package handler
 
 import (
 	"database/sql"
+	"errors"
 	"html/template"
 	"net/http"
 	"path/filepath"
@@ -32,6 +33,11 @@ func NewProfileHandler(db *sql.DB, uploadDir string) *ProfileHandler {
 type ProfilePageData struct {
 	User  *model.User
 	Posts []PostWithMeta // PostWithMeta existe déjà dans home.go
+}
+
+type EditProfilePageData struct {
+	User  *model.User
+	Error string
 }
 
 func (h *ProfileHandler) LikedPosts(w http.ResponseWriter, r *http.Request) {
@@ -112,15 +118,7 @@ func (h *ProfileHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "profile", "edit_profile.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", map[string]any{"User": user})
+	h.renderEditForm(w, EditProfilePageData{User: user})
 }
 
 func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -141,11 +139,35 @@ func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		defer file.Close()
 		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
-		if err == nil {
-			profilePicture = filename
+		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrFileTooLarge) {
+			h.renderEditForm(w, EditProfilePageData{
+				User:  user,
+				Error: err.Error(),
+			})
+			return
 		}
+		if err != nil {
+			h.renderEditForm(w, EditProfilePageData{
+				User:  user,
+				Error: "La photo de profil n'a pas pu être enregistrée.",
+			})
+			return
+		}
+		profilePicture = filename
 	}
 
 	h.users.UpdateProfile(user.ID, username, profilePicture)
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+}
+
+func (h *ProfileHandler) renderEditForm(w http.ResponseWriter, data EditProfilePageData) {
+	tmpl, err := template.ParseFiles(
+		filepath.Join("web", "templates", "layout", "base.html"),
+		filepath.Join("web", "templates", "profile", "edit_profile.html"),
+	)
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "base", data)
 }

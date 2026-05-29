@@ -1,26 +1,52 @@
 {{define "title"}}Modifier le profil — ForumJS{{end}}
 
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/profile.css">
+{{end}}
+
 {{define "content"}}
-<div style="max-width:500px; margin:3rem auto; padding:2rem;">
-    <h2>Modifier le profil</h2>
+<div class="profile-edit-page">
+    <section class="profile-edit-panel">
+        <header class="profile-edit-header">
+            <p class="profile-kicker">Compte</p>
+            <h1>Modifier le profil</h1>
+            <p>Mettez à jour votre nom public et votre photo de profil.</p>
+        </header>
 
-    <form action="/profile/edit" method="POST" enctype="multipart/form-data">
+        {{if .Error}}
+            <p class="profile-error">{{.Error}}</p>
+        {{end}}
 
-        <div style="margin-bottom:1.5rem;">
-            <label>Nom d'utilisateur</label><br>
-            <input type="text" name="username" value="{{.User.Username}}"
-                   style="width:100%; padding:0.5rem; margin-top:0.5rem;">
-        </div>
+        <form action="/profile/edit" method="POST" enctype="multipart/form-data" class="profile-form">
+            <div class="profile-picture-row">
+                {{if .User.ProfilePicture}}
+                    <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil actuelle" class="profile-picture">
+                {{else}}
+                    <div class="profile-avatar-placeholder">{{printf "%.1s" .User.Username}}</div>
+                {{end}}
+                <div>
+                    <strong>{{.User.Username}}</strong>
+                    <span>{{.User.Email}}</span>
+                </div>
+            </div>
 
-        <div style="margin-bottom:1.5rem;">
-            <label>Photo de profil</label><br>
-            <input type="file" name="profile_picture" accept=".jpg,.jpeg,.png,.gif"
-                   style="margin-top:0.5rem;">
-        </div>
+            <div class="profile-form-group">
+                <label for="username">Nom d'utilisateur</label>
+                <input type="text" id="username" name="username" value="{{.User.Username}}" required>
+            </div>
 
-        <button type="submit">Enregistrer</button>
-        <a href="/profile" style="margin-left:1rem;">Annuler</a>
+            <div class="profile-form-group">
+                <label for="profile_picture">Photo de profil</label>
+                <div class="profile-file-field">
+                    <input type="file" id="profile_picture" name="profile_picture" accept=".jpg,.jpeg,.png,.gif">
+                </div>
+            </div>
 
-    </form>
+            <div class="profile-form-actions">
+                <a href="/profile" class="btn-secondary">Annuler</a>
+                <button type="submit" class="btn-primary">Enregistrer</button>
+            </div>
+        </form>
+    </section>
 </div>
 {{end}}
