@@ -1,0 +1,47 @@
+body {
+    display: flex; /*met les element cote a cote*/
+    min-height: 100vh;
+}
+
+nav { flex: 1;
+padding: 2rem; 
+border-right: 1px solid black;
+}
+
+/*espace mes contenu*/
+
+
+main { flex: 3;
+padding: 2rem;}
+
+aside { flex: 1;
+padding: 2rem;
+border-left: 1px solid black;
+}
+
+ul {
+    list-style: none;
+}
+
+a {
+    text-decoration: none; /*met les liens en noir*/ 
+    color: black;
+}
+
+li {
+margin-bottom: 1rem; 
+
+}
+
+img { 
+    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    background-color: #1a8917;
+    overflow: hidden;
+    display: block;
+}
+
+h2 {
+    border-bottom: 1px solid black;
+}
