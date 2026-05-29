@@ -646,16 +646,38 @@ textarea {
 }
 
 .form-page {
-    max-width: 680px;
+    width: min(100%, 760px);
     margin: 0 auto;
-    padding: 52px 24px;
+    padding: 56px 24px 72px;
+}
+
+.form-header {
+    padding-bottom: 26px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--line);
+}
+
+.form-kicker {
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
 }
 
 .form-title {
-    margin-bottom: 32px;
+    margin-bottom: 8px;
     font-family: Georgia, serif;
-    font-size: 28px;
-    font-weight: 700;
+    font-size: 42px;
+    line-height: 1.12;
+    font-weight: 800;
+}
+
+.form-subtitle {
+    max-width: 560px;
+    color: var(--muted);
+    font-size: 17px;
+    line-height: 1.45;
 }
 
 .form-error {
@@ -672,7 +694,7 @@ textarea {
 .comment-form {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 26px;
 }
 
 .form-group {
@@ -684,7 +706,7 @@ textarea {
 .form-group label {
     color: var(--text);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .label-hint {
@@ -695,14 +717,22 @@ textarea {
 .form-group input[type="text"],
 .form-group textarea,
 .comment-form textarea {
-    padding: 12px 14px;
+    width: 100%;
+    padding: 14px 0;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-width: 0 0 1px;
+    border-radius: 0;
     color: var(--text);
-    font-size: 15px;
+    background: transparent;
+    font-size: 18px;
     font-family: inherit;
     resize: vertical;
     transition: border-color 0.15s ease;
+}
+
+.form-group input[type="text"] {
+    font-size: 24px;
+    font-weight: 700;
 }
 
 .form-group input[type="text"]:focus,
@@ -721,17 +751,19 @@ textarea {
 .category-checkbox {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border: 1px solid var(--line);
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 15px;
+    border: 1px solid transparent;
     border-radius: 999px;
+    background: var(--soft);
     font-size: 14px;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .category-checkbox:hover {
-    background: var(--soft);
+    background: #efefef;
 }
 
 .category-checkbox input {
@@ -743,11 +775,34 @@ textarea {
     font-size: 14px;
 }
 
+.file-field {
+    padding: 18px;
+    border: 1px dashed #d6d6d6;
+    border-radius: 8px;
+    background: #fbfbfb;
+}
+
+.current-image-preview {
+    width: min(100%, 260px);
+    margin-bottom: 12px;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--soft);
+}
+
+.current-image-preview img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
+}
+
 .form-actions {
     display: flex;
     gap: 12px;
-    justify-content: flex-end;
-    padding-top: 8px;
+    justify-content: flex-start;
+    padding-top: 14px;
 }
 
 .btn-primary,
@@ -803,32 +858,35 @@ textarea {
 }
 
 .error-page {
-    min-height: 58vh;
+    min-height: calc(100vh - var(--topbar-height) - 74px);
     display: flex;
     align-items: center;
     justify-content: center;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
+    padding: 56px 24px;
 }
 
 .error-content {
-    width: min(100%, 620px);
-    padding: 56px 24px;
+    width: min(100%, 680px);
+    padding: 44px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
 }
 
 .error-code {
     margin-bottom: 12px;
     color: var(--muted);
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 700;
     letter-spacing: 0;
+    text-transform: uppercase;
 }
 
 .error-content h1 {
     margin-bottom: 16px;
     font-family: Georgia, serif;
-    font-size: 42px;
+    font-size: 52px;
     line-height: 1.15;
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .error-message {
