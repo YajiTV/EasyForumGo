@@ -2,32 +2,42 @@ package handler
 
 import (
 	"database/sql"
+	"errors"
 	"html/template"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"ForumJS/internal/model"
 	"ForumJS/internal/repository"
+	"ForumJS/pkg/utils"
 )
 
 type ProfileHandler struct {
-	users    *repository.UserRepository
-	likes    *repository.LikeRepository
-	sessions *repository.SessionRepository
+	users     *repository.UserRepository
+	likes     *repository.LikeRepository
+	sessions  *repository.SessionRepository
+	uploadDir string
 }
 
-func NewProfileHandler(db *sql.DB) *ProfileHandler {
+func NewProfileHandler(db *sql.DB, uploadDir string) *ProfileHandler {
 	return &ProfileHandler{
-		users:    repository.NewUserRepository(db),
-		likes:    repository.NewLikeRepository(db),
-		sessions: repository.NewSessionRepository(db),
+		users:     repository.NewUserRepository(db),
+		likes:     repository.NewLikeRepository(db),
+		sessions:  repository.NewSessionRepository(db),
+		uploadDir: uploadDir,
 	}
 }
 
 type ProfilePageData struct {
 	User  *model.User
 	Posts []PostWithMeta // PostWithMeta existe déjà dans home.go
+}
+
+type EditProfilePageData struct {
+	User  *model.User
+	Error string
 }
 
 func (h *ProfileHandler) LikedPosts(w http.ResponseWriter, r *http.Request) {
@@ -99,4 +109,65 @@ func (h *ProfileHandler) userFromSession(r *http.Request) *model.User {
 		return nil
 	}
 	return user
+}
+
+func (h *ProfileHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	h.renderEditForm(w, EditProfilePageData{User: user})
+}
+
+func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	r.ParseMultipartForm(5 << 20)
+	username := strings.TrimSpace(r.FormValue("username"))
+	if username == "" {
+		username = user.Username
+	}
+
+	profilePicture := user.ProfilePicture
+	file, header, err := r.FormFile("profile_picture")
+	if err == nil {
+		defer file.Close()
+		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
+		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrFileTooLarge) {
+			h.renderEditForm(w, EditProfilePageData{
+				User:  user,
+				Error: err.Error(),
+			})
+			return
+		}
+		if err != nil {
+			h.renderEditForm(w, EditProfilePageData{
+				User:  user,
+				Error: "La photo de profil n'a pas pu être enregistrée.",
+			})
+			return
+		}
+		profilePicture = filename
+	}
+
+	h.users.UpdateProfile(user.ID, username, profilePicture)
+	http.Redirect(w, r, "/profile", http.StatusSeeOther)
+}
+
+func (h *ProfileHandler) renderEditForm(w http.ResponseWriter, data EditProfilePageData) {
+	tmpl, err := template.ParseFiles(
+		filepath.Join("web", "templates", "layout", "base.html"),
+		filepath.Join("web", "templates", "profile", "edit_profile.html"),
+	)
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "base", data)
 }
