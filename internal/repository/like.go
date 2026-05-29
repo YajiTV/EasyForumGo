@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 
 	"ForumJS/internal/model"
 )
@@ -14,8 +15,6 @@ func NewLikeRepository(db *sql.DB) *LikeRepository {
 	return &LikeRepository{db: db}
 }
 
-// --- PostLike ---
-
 func (r *LikeRepository) CreatePostLike(l *model.PostLike) error {
 	_, err := r.db.Exec(`INSERT INTO post_likes (id, post_id, user_id, is_like, created_at) VALUES (?, ?, ?, ?, ?)`,
 		l.ID, l.PostID, l.UserID, l.IsLike, l.CreatedAt)
@@ -24,6 +23,29 @@ func (r *LikeRepository) CreatePostLike(l *model.PostLike) error {
 
 func (r *LikeRepository) DeletePostLike(postID, userID string) error {
 	_, err := r.db.Exec(`DELETE FROM post_likes WHERE post_id = ? AND user_id = ?`, postID, userID)
+	return err
+}
+
+func (r *LikeRepository) GetUserPostLike(postID, userID string) (*model.PostLike, error) {
+	var l model.PostLike
+	err := r.db.QueryRow(
+		`SELECT id, post_id, user_id, is_like, created_at FROM post_likes WHERE post_id = ? AND user_id = ?`,
+		postID, userID,
+	).Scan(&l.ID, &l.PostID, &l.UserID, &l.IsLike, &l.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &l, nil
+}
+
+func (r *LikeRepository) UpdatePostLike(postID, userID string, isLike bool) error {
+	_, err := r.db.Exec(
+		`UPDATE post_likes SET is_like = ? WHERE post_id = ? AND user_id = ?`,
+		isLike, postID, userID,
+	)
 	return err
 }
 
@@ -57,8 +79,6 @@ func (r *LikeRepository) CountPostDislikes(postID string) (int, error) {
 	return count, err
 }
 
-// --- CommentLike ---
-
 func (r *LikeRepository) CreateCommentLike(l *model.CommentLike) error {
 	_, err := r.db.Exec(`INSERT INTO comment_likes (id, comment_id, user_id, is_like, created_at) VALUES (?, ?, ?, ?, ?)`,
 		l.ID, l.CommentID, l.UserID, l.IsLike, l.CreatedAt)
@@ -67,6 +87,29 @@ func (r *LikeRepository) CreateCommentLike(l *model.CommentLike) error {
 
 func (r *LikeRepository) DeleteCommentLike(commentID, userID string) error {
 	_, err := r.db.Exec(`DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?`, commentID, userID)
+	return err
+}
+
+func (r *LikeRepository) GetUserCommentLike(commentID, userID string) (*model.CommentLike, error) {
+	var l model.CommentLike
+	err := r.db.QueryRow(
+		`SELECT id, comment_id, user_id, is_like, created_at FROM comment_likes WHERE comment_id = ? AND user_id = ?`,
+		commentID, userID,
+	).Scan(&l.ID, &l.CommentID, &l.UserID, &l.IsLike, &l.CreatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &l, nil
+}
+
+func (r *LikeRepository) UpdateCommentLike(commentID, userID string, isLike bool) error {
+	_, err := r.db.Exec(
+		`UPDATE comment_likes SET is_like = ? WHERE comment_id = ? AND user_id = ?`,
+		isLike, commentID, userID,
+	)
 	return err
 }
 
