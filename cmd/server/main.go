@@ -43,6 +43,10 @@ func main() {
 	mux.HandleFunc("GET /comment/{id}/edit", commentHandler.ShowEditForm)
 	mux.HandleFunc("POST /comment/{id}/edit", commentHandler.EditComment)
 
+	likeHandler := handler.NewLikeHandler(db)
+	mux.HandleFunc("POST /post/{id}/like", likeHandler.LikePost)
+	mux.HandleFunc("POST /post/{id}/dislike", likeHandler.DislikePost)
+
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)
 
