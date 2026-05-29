@@ -35,11 +35,19 @@
                     <a href="/post/new" class="write-link">Écrire</a>
                     <details class="user-menu">
                         <summary aria-label="Menu utilisateur">
-                            <span class="user-avatar">{{printf "%.1s" .User.Username}}</span>
+                            {{if .User.ProfilePicture}}
+                                <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar">
+                            {{else}}
+                                <span class="user-avatar">{{printf "%.1s" .User.Username}}</span>
+                            {{end}}
                         </summary>
                         <div class="user-menu-panel">
                             <a href="/profile" class="user-menu-profile">
-                                <span class="user-avatar user-avatar-large">{{printf "%.1s" .User.Username}}</span>
+                                {{if .User.ProfilePicture}}
+                                    <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar user-avatar-large">
+                                {{else}}
+                                    <span class="user-avatar user-avatar-large">{{printf "%.1s" .User.Username}}</span>
+                                {{end}}
                                 <span>
                                     <strong>{{.User.Username}}</strong>
                                     <small>Voir le profil</small>

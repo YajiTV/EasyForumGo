@@ -5,35 +5,74 @@
 {{end}}
 
 {{define "content"}}
-<div class="profile-layout">
+<div class="profile-page">
+    <section class="profile-content" aria-label="Profil utilisateur">
+        <header class="profile-hero">
+            <div>
+                <p class="profile-kicker">Profil</p>
+                <h1>{{.User.Username}}</h1>
+                <p>{{.User.Email}}</p>
+            </div>
+        </header>
 
-    <main class="profile-main">
-        <div class="profile-tabs">
-            <a href="/">Home</a>
-            <a href="/profile/liked-posts">Activity</a>
-            <a href="#">About</a>
-        </div>
+        <nav class="profile-tabs" aria-label="Navigation du profil">
+            <a href="/profile/liked-posts" class="active">Posts aimés</a>
+            <a href="/profile/my-posts">Mes posts</a>
+            <a href="/profile/my-comments">Mes commentaires</a>
+        </nav>
 
-        <div class="profile-reading-list">
-            <h3>Reading list</h3>
-            {{if .Posts}}
-                {{range .Posts}}
-                <article class="profile-post-card">
-                    <a href="/post/{{.ID}}">{{.Title}}</a>
-                    <span>Par {{.Username}} — 👍 {{.LikeCount}}</span>
-                </article>
+        <section class="profile-section">
+            <div class="profile-section-header">
+                <h2>Posts aimés</h2>
+                <span>{{len .Posts}} post{{if gt (len .Posts) 1}}s{{end}}</span>
+            </div>
+
+            <div class="profile-posts-list">
+                {{if .Posts}}
+                    {{range .Posts}}
+                    <article class="profile-post-card {{if .ImagePath}}has-image{{end}}">
+                        <div class="profile-post-body">
+                            <div class="profile-post-meta">
+                                <span class="profile-author-avatar">{{printf "%.1s" .Username}}</span>
+                                <span>Par {{.Username}}</span>
+                                <span>{{.CreatedAt.Format "02/01/2006"}}</span>
+                            </div>
+                            <h3><a href="/post/{{.ID}}">{{.Title}}</a></h3>
+                            <p>{{.Content}}</p>
+                            <div class="profile-post-stats">
+                                <span>{{.LikeCount}} j'aime</span>
+                                <span>{{.DislikeCount}} je n'aime pas</span>
+                            </div>
+                        </div>
+
+                        {{if .ImagePath}}
+                        <a href="/post/{{.ID}}" class="profile-post-image" aria-label="Lire {{.Title}}">
+                            <img src="/uploads/{{.ImagePath}}" alt="Image du post">
+                        </a>
+                        {{end}}
+                    </article>
+                    {{end}}
+                {{else}}
+                    <div class="profile-empty">
+                        <h3>Aucun post aimé</h3>
+                        <p>Les posts que vous aimez apparaîtront ici.</p>
+                        <a href="/" class="profile-empty-link">Explorer les posts</a>
+                    </div>
                 {{end}}
-            {{else}}
-                <p>no stories</p>
-            {{end}}
-        </div>
-    </main>
+            </div>
+        </section>
+    </section>
 
-    <aside class="profile-aside">
-        <img src="/static/img/photoprofil.jpg" alt="photo de profil">
-        <h3>{{.User.Username}}</h3>
-        <a href="#">Edit profile</a>
+    <aside class="profile-sidebar" aria-label="Résumé du profil">
+        {{if .User.ProfilePicture}}
+            <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil de {{.User.Username}}" class="profile-picture">
+        {{else}}
+            <div class="profile-avatar-placeholder">{{printf "%.1s" .User.Username}}</div>
+        {{end}}
+
+        <h2>{{.User.Username}}</h2>
+        <p>{{.User.Email}}</p>
+        <a href="/profile/edit">Modifier le profil</a>
     </aside>
-
 </div>
 {{end}}

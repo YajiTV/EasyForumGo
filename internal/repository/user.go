@@ -15,8 +15,8 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) GetByID(id string) (*model.User, error) {
 	var u model.User
-	err := r.db.QueryRow(`SELECT id, email, username, password, created_at FROM users WHERE id = ?`, id).
-		Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.CreatedAt)
+	err := r.db.QueryRow(`SELECT id, email, username, password, profile_picture, created_at FROM users WHERE id = ?`, id).
+		Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.ProfilePicture, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -25,8 +25,8 @@ func (r *UserRepository) GetByID(id string) (*model.User, error) {
 
 func (r *UserRepository) GetByEmail(email string) (*model.User, error) {
 	var u model.User
-	err := r.db.QueryRow(`SELECT id, email, username, password, created_at FROM users WHERE email = ?`, email).
-		Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.CreatedAt)
+	err := r.db.QueryRow(`SELECT id, email, username, password, profile_picture, created_at FROM users WHERE email = ?`, email).
+		Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.ProfilePicture, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -47,5 +47,11 @@ func (r *UserRepository) Update(u *model.User) error {
 
 func (r *UserRepository) Delete(id string) error {
 	_, err := r.db.Exec(`DELETE FROM users WHERE id = ?`, id)
+	return err
+}
+
+func (r *UserRepository) UpdateProfile(userID, username, profilePicture string) error {
+	_, err := r.db.Exec(`UPDATE users SET username = ?, profile_picture = ? WHERE id = ?`,
+		username, profilePicture, userID)
 	return err
 }
