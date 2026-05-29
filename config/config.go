@@ -8,7 +8,7 @@ import (
 
 const (
 	defaultPort                 = "8080"
-	defaultDBPath               = "./forum.db"
+	defaultDBPath               = "./data/forum.db"
 	defaultMigrationsDir        = "./migrations"
 	defaultStaticDir            = "web/static"
 	defaultTemplatesDir         = "web/templates"

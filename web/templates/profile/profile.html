@@ -1,20 +1,51 @@
 {{define "title"}}Profil — ForumJS{{end}}
 
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/profile.css">
+{{end}}
+
 {{define "content"}}
-<div>
-    <a href="/">Home</a>
-    <a href="#">Activity</a>
-    <a href="#">About</a>
-</div>
+<div class="profile-layout">
 
-<div>
-    <h3>Reading list</h3>
-    <p>no stories</p>
-</div>
+    <nav class="profile-nav">
+        <h2>ForumJS</h2>
+        <ul>
+            <li><a href="/">home</a></li>
+            <li><a href="#">library</a></li>
+            <li><a href="/profile">Profile</a></li>
+            <li><a href="#">Stories</a></li>
+            <li><a href="#">stats</a></li>
+            <li><a href="#">Following</a></li>
+        </ul>
+    </nav>
 
-<aside>
-    <img src="/static/img/{{.User.pp}}" alt="photo de profil">
-    <h3>{{.User.Username}}</h3>
-    <a href="#">Edit profile</a>
-</aside>
+    <main class="profile-main">
+        <div class="profile-tabs">
+            <a href="/profile">Home</a>
+            <a href="/profile/liked-posts">Activity</a>
+            <a href="#">About</a>
+        </div>
+
+        <div class="profile-reading-list">
+            <h3>Reading list</h3>
+            {{if .Posts}}
+                {{range .Posts}}
+                <article>
+                    <a href="/post/{{.ID}}">{{.Title}}</a>
+                    <span>Par {{.Username}} — 👍 {{.LikeCount}}</span>
+                </article>
+                {{end}}
+            {{else}}
+                <p>no stories</p>
+            {{end}}
+        </div>
+    </main>
+
+    <aside class="profile-aside">
+        <img src="/static/img/photoprofil.jpg" alt="photo de profil">
+        <h3>{{.User.Username}}</h3>
+        <a href="#">Edit profile</a>
+    </aside>
+
+</div>
 {{end}}
