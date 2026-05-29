@@ -142,3 +142,27 @@ func (r *LikeRepository) CountCommentDislikes(commentID string) (int, error) {
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM comment_likes WHERE comment_id = ? AND is_like = 0`, commentID).Scan(&count)
 	return count, err
 }
+
+func (r *LikeRepository) GetLikedPostsByUserID(userID string) ([]model.Post, error) {
+	rows, err := r.db.Query(`
+		SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
+		FROM posts p
+		JOIN post_likes pl ON p.id = pl.post_id
+		WHERE pl.user_id = ? AND pl.is_like = 1
+		ORDER BY pl.created_at DESC
+	`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []model.Post
+	for rows.Next() {
+		var p model.Post
+		if err := rows.Scan(&p.ID, &p.UserID, &p.Title, &p.Content, &p.ImagePath, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, err
+		}
+		posts = append(posts, p)
+	}
+	return posts, rows.Err()
+}

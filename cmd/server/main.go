@@ -30,6 +30,10 @@ func main() {
 	mux.HandleFunc("POST /register", authHandler.Signup)
 	mux.HandleFunc("POST /logout", authHandler.Logout)
 
+	profileHandler := handler.NewProfileHandler(db)
+	mux.HandleFunc("GET /profile", profileHandler.LikedPosts)
+	mux.HandleFunc("GET /profile/liked-posts", profileHandler.LikedPosts)
+
 	postHandler := handler.NewPostHandler(db, cfg.UploadDir)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
 	mux.HandleFunc("POST /post/new", postHandler.CreatePost)
