@@ -10,7 +10,7 @@
             <a href="/?filter=liked" class="filter-btn">Posts aimés</a>
         {{end}}
         {{range .Categories}}
-            <a href="/?category={{.ID}}" class="filter-btn">{{.Name}}</a>
+            <a href="/posts/category/{{.ID}}" class="filter-btn">{{.Name}}</a>
         {{end}}
     </div>
 
