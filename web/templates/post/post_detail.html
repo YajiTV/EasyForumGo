@@ -32,10 +32,10 @@
 
         <div class="post-full-actions">
             <form action="/post/{{.Post.ID}}/like" method="POST">
-                <button type="submit" class="btn-like">👍 {{.LikeCount}}</button>
+                <button type="submit" class="btn-like">J'aime {{.LikeCount}}</button>
             </form>
             <form action="/post/{{.Post.ID}}/dislike" method="POST">
-                <button type="submit" class="btn-dislike">👎 {{.DislikeCount}}</button>
+                <button type="submit" class="btn-dislike">Je n'aime pas {{.DislikeCount}}</button>
             </form>
 
             {{if .User}}
@@ -82,14 +82,14 @@
                     <div class="comment-actions">
                         {{if $.User}}
                         <form action="/comment/{{.ID}}/like" method="POST" style="display:inline">
-                            <button type="submit" class="btn-like">👍 {{.LikeCount}}</button>
+                            <button type="submit" class="btn-like">J'aime {{.LikeCount}}</button>
                         </form>
                         <form action="/comment/{{.ID}}/dislike" method="POST" style="display:inline">
-                            <button type="submit" class="btn-dislike">👎 {{.DislikeCount}}</button>
+                            <button type="submit" class="btn-dislike">Je n'aime pas {{.DislikeCount}}</button>
                         </form>
                         {{else}}
-                        <span class="count-like">👍 {{.LikeCount}}</span>
-                        <span class="count-dislike">👎 {{.DislikeCount}}</span>
+                        <span class="count-like">J'aime {{.LikeCount}}</span>
+                        <span class="count-dislike">Je n'aime pas {{.DislikeCount}}</span>
                         {{end}}
                     </div>
                 </div>

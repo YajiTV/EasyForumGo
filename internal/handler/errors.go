@@ -6,10 +6,16 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"time"
+
+	"ForumJS/internal/model"
+	"ForumJS/internal/repository"
 )
 
 type ErrorRenderer struct {
 	templatesDir string
+	sessions     *repository.SessionRepository
+	users        *repository.UserRepository
 }
 
 type ErrorPageData struct {
@@ -22,6 +28,11 @@ type ErrorPageData struct {
 
 func NewErrorRenderer(templatesDir string) *ErrorRenderer {
 	return &ErrorRenderer{templatesDir: templatesDir}
+}
+
+func (r *ErrorRenderer) SetAuthRepositories(sessions *repository.SessionRepository, users *repository.UserRepository) {
+	r.sessions = sessions
+	r.users = users
 }
 
 func (r *ErrorRenderer) BadRequest(w http.ResponseWriter, message string) {
@@ -49,11 +60,20 @@ func (r *ErrorRenderer) InternalServerError(w http.ResponseWriter) {
 }
 
 func (r *ErrorRenderer) Render(w http.ResponseWriter, statusCode int, message string) {
+	r.RenderWithUser(w, statusCode, message, nil)
+}
+
+func (r *ErrorRenderer) RenderWithRequest(w http.ResponseWriter, req *http.Request, statusCode int, message string) {
+	r.RenderWithUser(w, statusCode, message, r.userFromRequest(req))
+}
+
+func (r *ErrorRenderer) RenderWithUser(w http.ResponseWriter, statusCode int, message string, user any) {
 	if message == "" {
 		message = defaultErrorMessage(statusCode)
 	}
 
 	data := ErrorPageData{
+		User:       user,
 		Title:      fmt.Sprintf("%d - %s", statusCode, http.StatusText(statusCode)),
 		StatusCode: statusCode,
 		Heading:    errorHeading(statusCode),
@@ -74,6 +94,25 @@ func (r *ErrorRenderer) Render(w http.ResponseWriter, statusCode int, message st
 	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
 		log.Printf("error template execute failed for status %d: %v", statusCode, err)
 	}
+}
+
+func (r *ErrorRenderer) userFromRequest(req *http.Request) *model.User {
+	if req == nil || r.sessions == nil || r.users == nil {
+		return nil
+	}
+	cookie, err := req.Cookie("session_token")
+	if err != nil {
+		return nil
+	}
+	session, err := r.sessions.GetByToken(cookie.Value)
+	if err != nil || session.ExpiresAt.Before(time.Now()) {
+		return nil
+	}
+	user, err := r.users.GetByID(session.UserID)
+	if err != nil {
+		return nil
+	}
+	return user
 }
 
 func defaultErrorMessage(statusCode int) string {
