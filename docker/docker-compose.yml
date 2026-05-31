@@ -6,12 +6,17 @@ services:
     container_name: forum_app
     ports:
       - "8080:8080"
+      - "8443:8443"
     volumes:
-      - db_data:/app/data        # persistance SQLite
-      - uploads:/app/uploads     # persistance images uploadées
+      - db_data:/app/data
+      - uploads:/app/uploads
+      - ../certs:/app/certs:ro
     environment:
       - DB_PATH=/app/data/forum.db
       - PORT=8080
+      - HTTPS_PORT=8443
+      - TLS_CERT_FILE=/app/certs/cert.pem
+      - TLS_KEY_FILE=/app/certs/key.pem
     restart: unless-stopped
 
 volumes:
