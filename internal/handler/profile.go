@@ -12,6 +12,7 @@ import (
 	"ForumJS/internal/model"
 	"ForumJS/internal/repository"
 	"ForumJS/pkg/utils"
+	"ForumJS/pkg/validator"
 )
 
 type ProfileHandler struct {
@@ -128,10 +129,33 @@ func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseMultipartForm(5 << 20)
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
+	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
+		h.renderEditForm(w, EditProfilePageData{
+			User:  user,
+			Error: "Fichier trop volumineux (max 20 Mo).",
+		})
+		return
+	}
+
 	username := strings.TrimSpace(r.FormValue("username"))
-	if username == "" {
-		username = user.Username
+	if validationErrors := validator.ValidateProfile(validator.ProfileInput{Username: username}); validationErrors.HasErrors() {
+		h.renderEditForm(w, EditProfilePageData{
+			User:  user,
+			Error: firstValidationMessage(validationErrors),
+		})
+		return
+	}
+
+	if existingUser, err := h.users.GetByUsername(username); err == nil && existingUser.ID != user.ID {
+		h.renderEditForm(w, EditProfilePageData{
+			User:  user,
+			Error: "Ce nom d'utilisateur est déjà utilisé.",
+		})
+		return
+	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
 	}
 
 	profilePicture := user.ProfilePicture
@@ -156,7 +180,10 @@ func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		profilePicture = filename
 	}
 
-	h.users.UpdateProfile(user.ID, username, profilePicture)
+	if err := h.users.UpdateProfile(user.ID, username, profilePicture); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
 
