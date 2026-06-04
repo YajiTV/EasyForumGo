@@ -32,6 +32,21 @@
             <label for="password">Mot de passe</label>
             <input type="password" id="password" name="password"
                    placeholder="Choisissez un mot de passe" required>
+            <div class="password-check-actions">
+                <button type="submit"
+                        class="btn-secondary password-check-button"
+                        formaction="/register/password-strength"
+                        formtarget="password-strength-frame"
+                        formnovalidate>
+                    Vérifier la sécurité
+                </button>
+            </div>
+            <iframe class="password-strength-frame"
+                    id="password-strength-frame"
+                    name="password-strength-frame"
+                    src="/register/password-strength"
+                    title="Sécurité de votre mot de passe"
+                    sandbox="allow-forms allow-same-origin"></iframe>
         </div>
 
         <div class="form-group">

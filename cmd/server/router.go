@@ -25,6 +25,8 @@ func setupRouter(cfg config.Config, db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /login", authHandler.Login)
 	mux.HandleFunc("GET /register", authHandler.ShowRegisterForm)
 	mux.HandleFunc("POST /register", authHandler.Signup)
+	mux.HandleFunc("GET /register/password-strength", authHandler.PasswordStrength)
+	mux.HandleFunc("POST /register/password-strength", authHandler.PasswordStrength)
 	mux.HandleFunc("POST /logout", authHandler.Logout)
 
 	//Profile
@@ -40,14 +42,16 @@ func setupRouter(cfg config.Config, db *sql.DB) *http.ServeMux {
 	postHandler := handler.NewPostHandler(db, cfg.UploadDir)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
 	mux.HandleFunc("POST /post/new", postHandler.CreatePost)
-	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
 	mux.HandleFunc("GET /post/{id}/edit", postHandler.ShowEditForm)
 	mux.HandleFunc("POST /post/{id}/edit", postHandler.EditPost)
+	mux.HandleFunc("GET /post/{id}/delete", postHandler.ShowDeleteConfirmation)
 	mux.HandleFunc("POST /post/{id}/delete", postHandler.DeletePost)
+	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
 
 	//Commentaires
 	commentHandler := handler.NewCommentHandler(db)
 	mux.HandleFunc("POST /post/{id}/comment", commentHandler.CreateComment)
+	mux.HandleFunc("GET /comment/{id}/delete", commentHandler.ShowDeleteConfirmation)
 	mux.HandleFunc("POST /comment/{id}/delete", commentHandler.DeleteComment)
 	mux.HandleFunc("GET /comment/{id}/edit", commentHandler.ShowEditForm)
 	mux.HandleFunc("POST /comment/{id}/edit", commentHandler.EditComment)

@@ -36,10 +36,12 @@ type loginFormData struct {
 }
 
 type registerFormData struct {
-	User     any
-	Username string
-	Email    string
-	Error    string
+	User             any
+	Username         string
+	Email            string
+	Error            string
+	PasswordStrength validator.PasswordStrength
+	PasswordChecked  bool
 }
 
 func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRenderer) *AuthHandler {
@@ -62,7 +64,49 @@ func (h *AuthHandler) ShowLoginForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) ShowRegisterForm(w http.ResponseWriter, r *http.Request) {
-	renderAuthTemplate(w, "register.html", nil)
+	renderAuthTemplate(w, "register.html", registerFormData{
+		PasswordStrength: validator.EvaluatePasswordStrength("", "", ""),
+	})
+}
+
+func (h *AuthHandler) PasswordStrength(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
+		return
+	}
+
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'; form-action 'self'; base-uri 'none'")
+	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+	w.Header().Set("Referrer-Policy", "same-origin")
+	w.Header().Set("Cache-Control", "no-store")
+
+	input := validator.AuthInput{}
+	checked := false
+	if r.Method == http.MethodPost {
+		checked = true
+		input = validator.AuthInput{
+			Email:    strings.TrimSpace(strings.ToLower(r.FormValue("email"))),
+			Username: strings.TrimSpace(r.FormValue("username")),
+			Password: r.FormValue("password"),
+		}
+	}
+
+	data := registerFormData{
+		Username:         input.Username,
+		Email:            input.Email,
+		PasswordStrength: validator.EvaluatePasswordStrength(input.Password, input.Username, input.Email),
+		PasswordChecked:  checked,
+	}
+
+	tmpl, err := template.ParseFiles(filepath.Join("web", "templates", "auth", "password_strength.html"))
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.Execute(w, data); err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
@@ -263,9 +307,10 @@ func (h *AuthHandler) renderRegisterError(w http.ResponseWriter, username, email
 		message = "Formulaire invalide."
 	}
 	renderAuthTemplate(w, "register.html", registerFormData{
-		Username: username,
-		Email:    email,
-		Error:    message,
+		Username:         username,
+		Email:            email,
+		Error:            message,
+		PasswordStrength: validator.EvaluatePasswordStrength("", username, email),
 	})
 }
 

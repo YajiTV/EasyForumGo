@@ -48,6 +48,11 @@ type createPostData struct {
 	Content    string
 }
 
+type deletePostData struct {
+	User *model.User
+	Post *model.Post
+}
+
 func (h *PostHandler) ShowCreateForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -147,7 +152,7 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postID := r.PathValue("id")
+	postID := strings.TrimSuffix(r.PathValue("id"), "/delete")
 	post, err := h.posts.GetByID(postID)
 	if err != nil {
 		http.NotFound(w, r)
@@ -171,6 +176,39 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func (h *PostHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := strings.TrimSuffix(r.PathValue("id"), "/delete")
+	post, err := h.posts.GetByID(postID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if post.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	tmpl, err := template.ParseFiles(
+		filepath.Join("web", "templates", "layout", "base.html"),
+		filepath.Join("web", "templates", "post", "delete_post.html"),
+	)
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "base", deletePostData{
+		User: user,
+		Post: post,
+	})
+}
+
 type editPostData struct {
 	User               *model.User
 	Post               *model.Post
@@ -186,7 +224,7 @@ func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postID := r.PathValue("id")
+	postID := strings.TrimSuffix(r.PathValue("id"), "/edit")
 	post, err := h.posts.GetByID(postID)
 	if err != nil {
 		http.NotFound(w, r)
@@ -221,7 +259,7 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postID := r.PathValue("id")
+	postID := strings.TrimSuffix(r.PathValue("id"), "/edit")
 	post, err := h.posts.GetByID(postID)
 	if err != nil {
 		http.NotFound(w, r)
@@ -416,6 +454,16 @@ type PostDetailData struct {
 
 func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	postID := r.PathValue("id")
+	if strings.HasSuffix(postID, "/edit") {
+		r.SetPathValue("id", strings.TrimSuffix(postID, "/edit"))
+		h.ShowEditForm(w, r)
+		return
+	}
+	if strings.HasSuffix(postID, "/delete") {
+		r.SetPathValue("id", strings.TrimSuffix(postID, "/delete"))
+		h.ShowDeleteConfirmation(w, r)
+		return
+	}
 	if postID == "" {
 		http.NotFound(w, r)
 		return
