@@ -25,6 +25,8 @@ func setupRouter(cfg config.Config, db *sql.DB) *http.ServeMux {
 	mux.HandleFunc("POST /login", authHandler.Login)
 	mux.HandleFunc("GET /register", authHandler.ShowRegisterForm)
 	mux.HandleFunc("POST /register", authHandler.Signup)
+	mux.HandleFunc("GET /register/password-strength", authHandler.PasswordStrength)
+	mux.HandleFunc("POST /register/password-strength", authHandler.PasswordStrength)
 	mux.HandleFunc("POST /logout", authHandler.Logout)
 
 	//Profile

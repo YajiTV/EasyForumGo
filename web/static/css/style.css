@@ -785,6 +785,28 @@ textarea {
     min-height: 44px;
 }
 
+.password-check-actions {
+    display: flex;
+    justify-content: flex-start;
+    padding-top: 2px;
+}
+
+.password-check-button {
+    min-height: 34px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 13px;
+}
+
+.password-strength-frame {
+    width: 100%;
+    height: 248px;
+    display: block;
+    border: 0;
+    border-top: 1px solid var(--line);
+    background: #fff;
+}
+
 .auth-switch {
     margin-top: 24px;
     text-align: center;
