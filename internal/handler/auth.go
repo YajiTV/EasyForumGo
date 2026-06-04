@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"html/template"
@@ -29,8 +30,16 @@ type userCredentials struct {
 }
 
 type loginFormData struct {
+	User  any
 	Email string
 	Error string
+}
+
+type registerFormData struct {
+	User     any
+	Username string
+	Email    string
+	Error    string
 }
 
 func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRenderer) *AuthHandler {
@@ -69,7 +78,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if validationErrors := validator.ValidateSignup(input); validationErrors.HasErrors() {
-		h.writeValidationError(w, validationErrors)
+		h.renderRegisterError(w, input.Username, input.Email, firstValidationMessage(validationErrors))
 		return
 	}
 
@@ -79,7 +88,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exists {
-		h.errors.Render(w, http.StatusConflict, "Cette adresse e-mail ou ce nom d'utilisateur est déjà utilisé.")
+		h.renderRegisterError(w, input.Username, input.Email, "Cette adresse e-mail ou ce nom d'utilisateur est déjà utilisé.")
 		return
 	}
 
@@ -238,10 +247,6 @@ func (h *AuthHandler) createUser(email, username, hashedPassword string) error {
 	return err
 }
 
-func (h *AuthHandler) writeValidationError(w http.ResponseWriter, validationErrors validator.ValidationErrors) {
-	h.errors.BadRequest(w, firstValidationMessage(validationErrors))
-}
-
 func (h *AuthHandler) renderLoginError(w http.ResponseWriter, email, message string) {
 	if message == "" {
 		message = "Formulaire invalide."
@@ -249,6 +254,17 @@ func (h *AuthHandler) renderLoginError(w http.ResponseWriter, email, message str
 	renderAuthTemplate(w, "login.html", loginFormData{
 		Email: email,
 		Error: message,
+	})
+}
+
+func (h *AuthHandler) renderRegisterError(w http.ResponseWriter, username, email, message string) {
+	if message == "" {
+		message = "Formulaire invalide."
+	}
+	renderAuthTemplate(w, "register.html", registerFormData{
+		Username: username,
+		Email:    email,
+		Error:    message,
 	})
 }
 
@@ -261,10 +277,18 @@ func firstValidationMessage(validationErrors validator.ValidationErrors) string 
 }
 
 func renderAuthTemplate(w http.ResponseWriter, filename string, data any) {
-	tmpl, err := template.ParseFiles(filepath.Join("web", "templates", "auth", filename))
+	tmpl, err := template.ParseFiles(
+		filepath.Join("web", "templates", "layout", "base.html"),
+		filepath.Join("web", "templates", "auth", filename),
+	)
 	if err != nil {
 		http.Error(w, "Erreur template", http.StatusInternalServerError)
 		return
 	}
-	tmpl.Execute(w, data)
+	var rendered bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&rendered, "base", data); err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	rendered.WriteTo(w)
 }

@@ -666,6 +666,19 @@ textarea {
     padding: 56px 24px 72px;
 }
 
+.auth-page {
+    width: min(100%, 500px);
+    padding-top: 72px;
+}
+
+.auth-page .form-header {
+    margin-bottom: 28px;
+}
+
+.auth-page .form-title {
+    font-size: 46px;
+}
+
 .form-header {
     padding-bottom: 26px;
     margin-bottom: 30px;
@@ -706,7 +719,8 @@ textarea {
 }
 
 .post-form,
-.comment-form {
+.comment-form,
+.auth-form {
     display: flex;
     flex-direction: column;
     gap: 26px;
@@ -730,6 +744,8 @@ textarea {
 }
 
 .form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"],
 .form-group textarea,
 .comment-form textarea {
     width: 100%;
@@ -745,16 +761,39 @@ textarea {
     transition: border-color 0.15s ease;
 }
 
-.form-group input[type="text"] {
+.post-form .form-group input[type="text"] {
     font-size: 24px;
     font-weight: 700;
 }
 
 .form-group input[type="text"]:focus,
+.form-group input[type="email"]:focus,
+.form-group input[type="password"]:focus,
 .form-group textarea:focus,
 .comment-form textarea:focus {
     outline: none;
     border-color: var(--text);
+}
+
+.auth-form .form-group input {
+    font-size: 17px;
+    font-weight: 400;
+}
+
+.auth-form .btn-primary {
+    width: 100%;
+    min-height: 44px;
+}
+
+.auth-switch {
+    margin-top: 24px;
+    text-align: center;
+}
+
+.auth-switch a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .categories-grid {
