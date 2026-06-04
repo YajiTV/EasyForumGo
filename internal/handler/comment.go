@@ -108,6 +108,36 @@ type editCommentData struct {
 	Error   string
 }
 
+type deleteCommentData struct {
+	User    *model.User
+	Comment *model.Comment
+}
+
+func (h *CommentHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	commentID := r.PathValue("id")
+	comment, err := h.comments.GetByID(commentID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if comment.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	h.renderTemplate(w, "comment/delete_comment.html", deleteCommentData{
+		User:    user,
+		Comment: comment,
+	})
+}
+
 func (h *CommentHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {

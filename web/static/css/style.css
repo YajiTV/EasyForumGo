@@ -1047,11 +1047,32 @@ textarea {
 .post-full-actions {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 48px;
     padding: 20px 0;
     border-top: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
+}
+
+.delete-preview {
+    margin-bottom: 24px;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+}
+
+.delete-preview h2 {
+    margin-bottom: 8px;
+    font-size: 20px;
+    line-height: 1.35;
+}
+
+.delete-preview p {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+    white-space: pre-wrap;
 }
 
 .comments-section {

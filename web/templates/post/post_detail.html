@@ -41,9 +41,7 @@
             {{if .User}}
                 {{if eq .User.ID .Post.UserID}}
                 <a href="/post/{{.Post.ID}}/edit" class="btn-secondary">Modifier</a>
-                <form action="/post/{{.Post.ID}}/delete" method="POST" onsubmit="return confirm('Supprimer ce post ?')">
-                    <button type="submit" class="btn-delete">Supprimer</button>
-                </form>
+                <a href="/post/{{.Post.ID}}/delete" class="btn-delete">Supprimer</a>
                 {{end}}
             {{end}}
         </div>
@@ -72,9 +70,7 @@
                         {{if $.User}}
                             {{if eq $.User.ID .UserID}}
                             <a href="/comment/{{.ID}}/edit" class="btn-secondary btn-sm">Modifier</a>
-                            <form action="/comment/{{.ID}}/delete" method="POST" style="display:inline" onsubmit="return confirm('Supprimer ce commentaire ?')">
-                                <button type="submit" class="btn-delete btn-delete-sm">Supprimer</button>
-                            </form>
+                            <a href="/comment/{{.ID}}/delete" class="btn-delete btn-delete-sm">Supprimer</a>
                             {{end}}
                         {{end}}
                     </div>
