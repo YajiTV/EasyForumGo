@@ -23,8 +23,8 @@ COPY --from=builder /app/forum .
 COPY --from=builder /app/web ./web
 COPY --from=builder /app/migrations ./migrations
 
-RUN mkdir -p /app/data /app/uploads
+RUN mkdir -p /app/data /app/uploads /app/certs
 
-EXPOSE 8080
+EXPOSE 8080 8443
 
 CMD ["./forum"]

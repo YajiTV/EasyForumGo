@@ -200,6 +200,7 @@ textarea {
     border-radius: 999px;
     background: var(--soft);
     color: var(--text);
+    object-fit: cover;
     font-size: 13px;
     font-weight: 700;
     text-transform: uppercase;

@@ -1,0 +1,66 @@
+.page {
+    max-width: 700px;
+    margin: 3rem auto;
+    padding: 0 1rem;
+}
+
+.page h1 {
+    margin-bottom: 1rem;
+}
+
+.page h2 {
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.page p {
+    line-height: 1.7rem;
+    color: #333;
+}
+
+.page ul,
+.page ol {
+    line-height: 2.2rem;
+    margin-top: 0.5rem;
+    padding-left: 1.5rem;
+    color: #333;
+}
+
+.page a.back-link {
+    display: inline-block;
+    margin-top: 2rem;
+    color: #1a8917;
+    text-decoration: none;
+}
+
+.page a.back-link:hover {
+    text-decoration: underline;
+}
+
+/* Grille équipe — page about */
+.team-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.team-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 1.25rem;
+}
+
+.team-card h3 {
+    margin: 0 0 0.25rem;
+}
+
+.team-card .filiere-cyber {
+    color: #1a8917;
+    font-size: 0.9rem;
+}
+
+.team-card .filiere-info {
+    color: #555;
+    font-size: 0.9rem;
+}
