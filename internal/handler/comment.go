@@ -11,7 +11,10 @@ import (
 	"ForumJS/internal/model"
 	"ForumJS/internal/repository"
 	"ForumJS/pkg/utils"
+	"ForumJS/pkg/validator"
 )
+
+const maxCommentFormSize = 16 << 10
 
 type CommentHandler struct {
 	comments *repository.CommentRepository
@@ -42,18 +45,15 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxCommentFormSize)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Requête invalide", http.StatusBadRequest)
 		return
 	}
 
 	content := strings.TrimSpace(r.FormValue("content"))
-	if content == "" {
-		http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
-		return
-	}
-	if len(content) > 2000 {
-		http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
+	if validationErrors := validator.ValidateComment(validator.CommentInput{Content: content}); validationErrors.HasErrors() {
+		http.Error(w, firstValidationMessage(validationErrors), http.StatusBadRequest)
 		return
 	}
 
@@ -152,6 +152,7 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxCommentFormSize)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Requête invalide", http.StatusBadRequest)
 		return
@@ -167,12 +168,8 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if content == "" {
-		renderErr("Le contenu ne peut pas être vide.")
-		return
-	}
-	if len(content) > 2000 {
-		renderErr("Le contenu ne peut pas dépasser 2000 caractères.")
+	if validationErrors := validator.ValidateComment(validator.CommentInput{Content: content}); validationErrors.HasErrors() {
+		renderErr(firstValidationMessage(validationErrors))
 		return
 	}
 

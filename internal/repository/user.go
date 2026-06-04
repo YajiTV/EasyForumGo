@@ -33,6 +33,16 @@ func (r *UserRepository) GetByEmail(email string) (*model.User, error) {
 	return &u, nil
 }
 
+func (r *UserRepository) GetByUsername(username string) (*model.User, error) {
+	var u model.User
+	err := r.db.QueryRow(`SELECT id, email, username, password, profile_picture, created_at FROM users WHERE username = ?`, username).
+		Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.ProfilePicture, &u.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
 func (r *UserRepository) Create(u *model.User) error {
 	_, err := r.db.Exec(`INSERT INTO users (id, email, username, password, created_at) VALUES (?, ?, ?, ?, ?)`,
 		u.ID, u.Email, u.Username, u.Password, u.CreatedAt)

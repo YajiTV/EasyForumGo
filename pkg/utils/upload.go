@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 )
 
-const MaxUploadSize = 5 << 20
+const MaxUploadSize = 20 << 20
 
 var ErrInvalidMIME = errors.New("type de fichier non autorisé (JPEG, PNG ou GIF uniquement)")
-var ErrFileTooLarge = errors.New("fichier trop volumineux (max 5 Mo)")
+var ErrFileTooLarge = errors.New("fichier trop volumineux (max 20 Mo)")
 
 var allowedMIMEs = map[string]string{
 	"image/jpeg": ".jpg",

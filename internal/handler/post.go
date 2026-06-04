@@ -13,9 +13,8 @@ import (
 	"ForumJS/internal/model"
 	"ForumJS/internal/repository"
 	"ForumJS/pkg/utils"
+	"ForumJS/pkg/validator"
 )
-
-const maxImageSize = 5 << 20
 
 type PostHandler struct {
 	posts          *repository.PostRepository
@@ -71,8 +70,8 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxImageSize)
-	if err := r.ParseMultipartForm(maxImageSize); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
+	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
 		h.renderError(w, r, user, "Fichier trop volumineux (max 20 Mo).")
 		return
 	}
@@ -81,21 +80,18 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	content := strings.TrimSpace(r.FormValue("content"))
 	categoryIDs := r.Form["categories"]
 
-	// Validation
-	if title == "" {
-		h.renderError(w, r, user, "Le titre est obligatoire.")
+	if validationErrors := validator.ValidatePost(validator.PostInput{
+		Title:       title,
+		Content:     content,
+		CategoryIDs: categoryIDs,
+	}); validationErrors.HasErrors() {
+		h.renderError(w, r, user, firstValidationMessage(validationErrors))
 		return
 	}
-	if len(title) > 200 {
-		h.renderError(w, r, user, "Le titre ne peut pas dépasser 200 caractères.")
-		return
-	}
-	if content == "" {
-		h.renderError(w, r, user, "Le contenu est obligatoire.")
-		return
-	}
-	if len(categoryIDs) == 0 {
-		h.renderError(w, r, user, "Sélectionnez au moins une catégorie.")
+
+	categoryIDs, err := h.validCategoryIDs(categoryIDs)
+	if err != nil {
+		h.renderError(w, r, user, "Sélectionnez une catégorie valide.")
 		return
 	}
 
@@ -113,9 +109,11 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		imagePath = filename
+	} else if !errors.Is(err, http.ErrMissingFile) {
+		h.renderError(w, r, user, "L'image envoyée est invalide.")
+		return
 	}
 
-	// Insertion post
 	now := time.Now()
 	post := &model.Post{
 		ID:        utils.NewUUID(),
@@ -132,9 +130,11 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Association categories
 	for _, catID := range categoryIDs {
-		h.postCategories.AddCategory(post.ID, catID)
+		if err := h.postCategories.AddCategory(post.ID, catID); err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	http.Redirect(w, r, "/post/"+post.ID, http.StatusSeeOther)
@@ -172,11 +172,11 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 }
 
 type editPostData struct {
-	User              *model.User
-	Post              *model.Post
-	Categories        []model.Category
+	User               *model.User
+	Post               *model.Post
+	Categories         []model.Category
 	SelectedCategories map[string]bool
-	Error             string
+	Error              string
 }
 
 func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
@@ -233,8 +233,8 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxImageSize)
-	if err := r.ParseMultipartForm(maxImageSize); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
+	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
 		http.Error(w, "Fichier trop volumineux", http.StatusBadRequest)
 		return
 	}
@@ -260,20 +260,18 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if title == "" {
-		renderErr("Le titre est obligatoire.")
+	if validationErrors := validator.ValidatePost(validator.PostInput{
+		Title:       title,
+		Content:     content,
+		CategoryIDs: categoryIDs,
+	}); validationErrors.HasErrors() {
+		renderErr(firstValidationMessage(validationErrors))
 		return
 	}
-	if len(title) > 200 {
-		renderErr("Le titre ne peut pas dépasser 200 caractères.")
-		return
-	}
-	if content == "" {
-		renderErr("Le contenu est obligatoire.")
-		return
-	}
-	if len(categoryIDs) == 0 {
-		renderErr("Sélectionnez au moins une catégorie.")
+
+	categoryIDs, err = h.validCategoryIDs(categoryIDs)
+	if err != nil {
+		renderErr("Sélectionnez une catégorie valide.")
 		return
 	}
 
@@ -293,6 +291,9 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 			os.Remove(filepath.Join(h.uploadDir, post.ImagePath))
 		}
 		post.ImagePath = filename
+	} else if !errors.Is(err, http.ErrMissingFile) {
+		renderErr("L'image envoyée est invalide.")
+		return
 	}
 
 	post.Title = title
@@ -304,9 +305,15 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.postCategories.DeleteByPostID(postID)
+	if err := h.postCategories.DeleteByPostID(postID); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
 	for _, catID := range categoryIDs {
-		h.postCategories.AddCategory(postID, catID)
+		if err := h.postCategories.AddCategory(postID, catID); err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
@@ -363,6 +370,29 @@ func (h *PostHandler) renderError(w http.ResponseWriter, r *http.Request, user *
 		Title:      r.FormValue("title"),
 		Content:    r.FormValue("content"),
 	})
+}
+
+func (h *PostHandler) validCategoryIDs(categoryIDs []string) ([]string, error) {
+	seen := make(map[string]bool, len(categoryIDs))
+	validIDs := make([]string, 0, len(categoryIDs))
+
+	for _, categoryID := range categoryIDs {
+		categoryID = strings.TrimSpace(categoryID)
+		if categoryID == "" || seen[categoryID] {
+			continue
+		}
+		if _, err := h.categories.GetByID(categoryID); err != nil {
+			return nil, err
+		}
+		seen[categoryID] = true
+		validIDs = append(validIDs, categoryID)
+	}
+
+	if len(validIDs) == 0 {
+		return nil, errors.New("no valid category selected")
+	}
+
+	return validIDs, nil
 }
 
 // --- PostDetail ---

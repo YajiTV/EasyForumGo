@@ -29,8 +29,10 @@ func setupRouter(cfg config.Config, db *sql.DB) *http.ServeMux {
 
 	//Profile
 	profileHandler := handler.NewProfileHandler(db, cfg.UploadDir)
-	mux.HandleFunc("GET /profile", profileHandler.LikedPosts)
+	mux.HandleFunc("GET /profile", profileHandler.MyPosts)
+	mux.HandleFunc("GET /profile/my-posts", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/liked-posts", profileHandler.LikedPosts)
+	mux.HandleFunc("GET /profile/my-comments", profileHandler.MyComments)
 	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
 	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
 
