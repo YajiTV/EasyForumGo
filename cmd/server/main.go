@@ -4,7 +4,6 @@ import (
 	"ForumJS/config"
 	"ForumJS/internal/repository"
 	"log"
-	"net"
 	"net/http"
 )
 
@@ -32,18 +31,4 @@ func main() {
 		log.Printf("Server starting on :%s", cfg.Port)
 		log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
 	}
-}
-
-func httpsRedirectHandler(httpsPort string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		host := r.Host
-		if httpsPort != "443" {
-			if h, _, err := net.SplitHostPort(host); err == nil {
-				host = net.JoinHostPort(h, httpsPort)
-			} else {
-				host = net.JoinHostPort(host, httpsPort)
-			}
-		}
-		http.Redirect(w, r, "https://"+host+r.URL.RequestURI(), http.StatusMovedPermanently)
-	})
 }
