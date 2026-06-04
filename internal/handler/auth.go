@@ -72,9 +72,10 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input := validator.AuthInput{
-		Email:    strings.TrimSpace(strings.ToLower(r.FormValue("email"))),
-		Username: strings.TrimSpace(r.FormValue("username")),
-		Password: r.FormValue("password"),
+		Email:           strings.TrimSpace(strings.ToLower(r.FormValue("email"))),
+		Username:        strings.TrimSpace(r.FormValue("username")),
+		Password:        r.FormValue("password"),
+		ConfirmPassword: r.FormValue("confirm_password"),
 	}
 
 	if validationErrors := validator.ValidateSignup(input); validationErrors.HasErrors() {

@@ -14,9 +14,10 @@ const (
 )
 
 type AuthInput struct {
-	Email    string
-	Username string
-	Password string
+	Email           string
+	Username        string
+	Password        string
+	ConfirmPassword string
 }
 
 type ValidationErrors map[string]string
@@ -42,6 +43,9 @@ func ValidateSignup(input AuthInput) ValidationErrors {
 	}
 
 	validatePassword(input.Password, errors)
+	if input.ConfirmPassword != input.Password {
+		errors["confirm_password"] = "Les mots de passe ne correspondent pas."
+	}
 
 	return errors
 }
