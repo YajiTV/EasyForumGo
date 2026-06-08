@@ -6,10 +6,8 @@ import (
 	"ForumJS/internal/middleware"
 	"ForumJS/internal/repository"
 	"database/sql"
-	"html/template"
 	"net"
 	"net/http"
-	"path/filepath"
 )
 
 // setupRouter configures the application routes
@@ -79,7 +77,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /legal", pageHandler.Page("legal.html"))
 	mux.HandleFunc("GET /privacy", pageHandler.Page("privacy.html"))
 	mux.HandleFunc("GET /terms", pageHandler.Page("terms.html"))
-	mux.HandleFunc("GET /cookies", staticPage(cfg.TemplatesDir, "cookies.html"))
+	mux.HandleFunc("GET /cookies", pageHandler.Page("cookies.html"))
 
 	// home route
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
@@ -101,19 +99,4 @@ func httpsRedirectHandler(httpsPort string) http.Handler {
 		}
 		http.Redirect(w, r, "https://"+host+r.URL.RequestURI(), http.StatusMovedPermanently)
 	})
-}
-
-// staticPage renders a static page
-func staticPage(templatesDir, filename string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles(
-			filepath.Join(templatesDir, "layout", "base.html"),
-			filepath.Join(templatesDir, filename),
-		)
-		if err != nil {
-			http.Error(w, "Erreur template", http.StatusInternalServerError)
-			return
-		}
-		tmpl.ExecuteTemplate(w, "base", nil)
-	}
 }
