@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"ForumJS/internal/model"
+	"EasyForumGo/internal/model"
 )
 
 const sessionCookieName = "session_token"
