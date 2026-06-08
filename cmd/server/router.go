@@ -76,7 +76,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /about", pageHandler.Page("about.html"))
 	mux.HandleFunc("GET /rules", pageHandler.Page("rules.html"))
 	mux.HandleFunc("GET /help", pageHandler.Page("help.html"))
-	mux.HandleFunc("GET /legal", staticPage(cfg.TemplatesDir, "legal.html"))
+	mux.HandleFunc("GET /legal", pageHandler.Page("legal.html"))
 	mux.HandleFunc("GET /cookies", staticPage(cfg.TemplatesDir, "cookies.html"))
 
 	// home route
