@@ -195,13 +195,13 @@ Handlers compare the current user ID with the resource owner before editing or d
 
 ### HTTPS and rate limiting
 
-Docker enables HTTPS with a self-signed development certificate and redirects HTTP traffic to HTTPS. The in-memory rate limiter protects general traffic, login attempts, and selected write actions.
+Docker serves HTTP and leaves HTTPS termination to a trusted reverse proxy in production. The in-memory rate limiter protects general traffic, login attempts, and selected write actions.
 
 ### Known security limits
 
 - CSRF tokens are not implemented.
 - The rate limiter is local to one process and resets on restart.
-- The self-signed certificate is for development and evaluation, not production.
+- Production depends on the reverse proxy for HTTPS termination.
 
 ## 7. Error Handling
 
@@ -220,9 +220,9 @@ Error pages can preserve the current user's navigation state. Some feature handl
 The Dockerfile uses a multi-stage build:
 
 1. Alpine Go builder with GCC and musl development packages for CGO SQLite
-2. Alpine runtime containing the application, templates, migrations, SQLite tools, and certificate support
+2. Alpine runtime containing the application, templates, migrations, and SQLite tools
 
-Compose publishes HTTP `8080` and HTTPS `8443`.
+Compose binds HTTP `8080` to localhost and connects the application to the external `web` network.
 
 Named volumes persist:
 
@@ -235,7 +235,11 @@ Container recreation does not remove named volumes. `docker compose down --volum
 
 Configuration is read from environment variables in `config/config.go`. Invalid or missing numeric values fall back to safe defaults.
 
-TLS is enabled only when both `TLS_CERT_FILE` and `TLS_KEY_FILE` are non-empty. Session duration is configurable and defaults to 24 hours. Image uploads use the 20 MB limit required by the subject.
+Session duration is configurable and defaults to 24 hours. Image uploads use the 20 MB limit required by the subject.
+
+`APP_ENV` accepts `dev` or `prod`. Production mode requires an HTTPS `APP_PUBLIC_URL` and `TRUST_PROXY=true`. `APP_BASE_PATH` mounts the application below an optional path prefix, `APP_PUBLIC_URL` defines the canonical OAuth callback base and enables secure cookies for HTTPS URLs, and `TRUST_PROXY` allows trusted forwarded client IP headers.
+
+Development and production use the same `.env`, `docker/Dockerfile`, and `docker/docker-compose.yml`. Environment variables select the runtime configuration while the reverse proxy always owns production TLS.
 
 ## 10. Verification Strategy
 

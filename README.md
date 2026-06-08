@@ -31,7 +31,7 @@ Easy is a server-rendered community forum built in Go. It provides the complete 
 - Password strength feedback
 - Google OAuth authentication
 - JPEG, PNG, and GIF validation with a 20 MB limit
-- HTTPS with a self-signed certificate
+- Reverse-proxy production deployment with secure cookies
 - Global, login, and write-action rate limiting
 - Informational, help, legal, privacy, terms, cookies, and contact pages
 
@@ -59,16 +59,17 @@ Clone and start the application:
 ```bash
 git clone https://github.com/YajiTV/EasyForumGo.git
 cd EasyForumGo
+docker network create web
 docker compose -f docker/docker-compose.yml up --build
 ```
 
 Open:
 
 ```text
-https://localhost:8443
+http://localhost:8080
 ```
 
-The self-signed development certificate causes a browser warning. The HTTP endpoint at `http://localhost:8080` redirects to HTTPS.
+The container serves HTTP. In production, Caddy or another reverse proxy terminates HTTPS.
 
 Stop the application:
 
@@ -93,28 +94,16 @@ go run ./cmd/server
 
 Open `http://localhost:8080`.
 
-To enable HTTPS locally, generate a development certificate and load the example configuration:
-
-```bash
-sh scripts/gen_certs.sh
-set -a
-. ./.env.example
-set +a
-go run ./cmd/server
-```
-
-Then open `https://localhost:8443`.
-
 ## Configuration
 
 Configuration is read from environment variables. The application uses defaults when variables are absent.
 
 | Variable | Default | Description |
 | --- | --- | --- |
+| `APP_ENV` | `dev` | Runtime mode: `dev` or `prod` |
 | `PORT` | `8080` | HTTP server port |
-| `HTTPS_PORT` | `8443` | HTTPS server port |
-| `TLS_CERT_FILE` | empty | TLS certificate path; TLS is enabled when both TLS paths are set |
-| `TLS_KEY_FILE` | empty | TLS private key path |
+| `HOST_BIND` | `127.0.0.1` | Host address used by Docker Compose |
+| `HOST_PORT` | `8080` | Host port used by Docker Compose |
 | `DB_PATH` | `./data/forum.db` | SQLite database file |
 | `MIGRATIONS_DIR` | `./migrations` | SQL migration directory |
 | `STATIC_DIR` | `web/static` | Static asset directory |
@@ -123,8 +112,52 @@ Configuration is read from environment variables. The application uses defaults 
 | `SESSION_DURATION_H` | `24` | Session duration in hours |
 | `OAUTH_ID` | empty | Google OAuth client ID |
 | `OAUTH_KEY` | empty | Google OAuth client secret |
+| `APP_BASE_PATH` | empty | Optional public path prefix, for example `/easy` |
+| `APP_PUBLIC_URL` | empty | Canonical public application URL, including the path prefix |
+| `TRUST_PROXY` | `false` | Trust reverse-proxy client IP headers |
 
 See [`.env.example`](.env.example) for a complete example.
+
+## Production Behind a Reverse Proxy
+
+The default configuration remains intended for local development and Docker evaluation at `/`.
+
+For production behind Caddy or another trusted reverse proxy, Easy can be mounted below a path such as `https://palawi.fr/easy`. The single Compose file:
+
+- serves HTTP inside Docker and binds the host port to `127.0.0.1`;
+- joins the external `web` network;
+- keeps SQLite and uploads in named volumes.
+
+Create the external network once if it does not already exist:
+
+```bash
+docker network create web
+```
+
+Copy `.env.example` to `.env`, then set:
+
+```env
+APP_ENV=prod
+APP_BASE_PATH=/easy
+APP_PUBLIC_URL=https://palawi.fr/easy
+TRUST_PROXY=true
+```
+
+Start the same Compose stack:
+
+```bash
+docker compose -f docker/docker-compose.yml up --build -d
+```
+
+`APP_ENV=prod` refuses startup unless `APP_PUBLIC_URL` uses HTTPS and `TRUST_PROXY` is enabled. The reverse proxy must forward the public prefixed path unchanged to `forum:8080`; the application strips the prefix internally.
+
+The Google OAuth authorized redirect URI must match:
+
+```text
+https://palawi.fr/easy/auth/google/callback
+```
+
+Back up both the `db_data` and `uploads` volumes. Run only one application instance because the application uses SQLite.
 
 ## Project Structure
 
@@ -221,7 +254,7 @@ No demo account is seeded. Create an account from `/register`.
 
 ## Known Limits
 
-- The self-signed HTTPS certificate is intended for development and evaluation only.
+- Production requires a trusted reverse proxy to terminate HTTPS.
 - CSRF tokens are not implemented; state-changing actions use `POST` and session cookies use `SameSite=Lax`.
 - The in-memory rate limiter resets when the application restarts and is designed for a single application instance.
 
@@ -229,7 +262,7 @@ No demo account is seeded. Create an account from `/register`.
 
 - Google OAuth authentication
 - Advanced image upload validation
-- HTTPS and rate limiting
+- Reverse-proxy HTTPS support and rate limiting
 - Personal activity pages
 
 GitHub OAuth, moderation roles, notifications, and database encryption are not implemented.

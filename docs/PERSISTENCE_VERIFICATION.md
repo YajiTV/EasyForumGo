@@ -7,7 +7,7 @@ Database and upload persistence were verified successfully on June 8, 2026.
 The verification used a dedicated Compose project and confirmed that:
 
 - the Docker image builds from the repository without local certificate files
-- the application starts and responds with `200 OK` over HTTPS
+- the application starts and responds with `200 OK` over HTTP
 - migrations create the SQLite database in the `db_data` named volume
 - a database record remains available after container recreation
 - a file in the uploads volume remains available after container recreation
@@ -28,7 +28,7 @@ Validate and start the application:
 ```bash
 docker compose -p easy-persistence-check -f docker/docker-compose.yml config
 docker compose -p easy-persistence-check -f docker/docker-compose.yml up -d --build
-curl -k https://localhost:8443/
+curl http://localhost:8080/
 ```
 
 Insert a database marker and an upload marker:
@@ -62,10 +62,10 @@ docker compose -p easy-persistence-check -f docker/docker-compose.yml exec -T fo
 Observed output:
 
 ```text
-HTTPS status before recreation: 200
+HTTP status before recreation: 200
 Database marker after recreation: database-persists
 Upload marker after recreation: upload-persists
-HTTPS status after recreation: 200
+HTTP status after recreation: 200
 ```
 
 ## Volume Behavior
