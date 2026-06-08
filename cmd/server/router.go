@@ -76,6 +76,12 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /legal", staticPage(cfg.TemplatesDir, "legal.html"))
 	mux.HandleFunc("GET /cookies", staticPage(cfg.TemplatesDir, "cookies.html"))
 
+	// OAuth routes
+	redirectURL := "http://localhost:" + cfg.Port + "/auth/google/callback"
+	oauthHandler := handler.NewOAuthHandler(db, cfg.OAuthClientID, cfg.OAuthClientSecret, redirectURL, cfg.SessionDuration, errorRenderer)
+	mux.HandleFunc("GET /auth/google", oauthHandler.GoogleLogin)
+	mux.HandleFunc("GET /auth/google/callback", oauthHandler.GoogleCallback)
+
 	// home route
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)
