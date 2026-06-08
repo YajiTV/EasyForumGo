@@ -38,7 +38,7 @@
                     <details class="user-menu">
                         <summary aria-label="Menu utilisateur">
                             {{if .User.ProfilePicture}}
-                                <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar">
+                                <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar">
                             {{else}}
                                 <span class="user-avatar">{{printf "%.1s" .User.Username}}</span>
                             {{end}}
@@ -46,7 +46,7 @@
                         <div class="user-menu-panel">
                             <a href="/profile" class="user-menu-profile">
                                 {{if .User.ProfilePicture}}
-                                    <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar user-avatar-large">
+                                    <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar user-avatar-large">
                                 {{else}}
                                     <span class="user-avatar user-avatar-large">{{printf "%.1s" .User.Username}}</span>
                                 {{end}}

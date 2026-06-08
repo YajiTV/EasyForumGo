@@ -95,7 +95,7 @@
     <!-- profile summary -->
     <aside class="profile-sidebar" aria-label="Résumé du profil">
         {{if .User.ProfilePicture}}
-            <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil de {{.User.Username}}" class="profile-picture">
+            <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}" class="profile-picture">
         {{else}}
             <div class="profile-avatar-placeholder">{{printf "%.1s" .User.Username}}</div>
         {{end}}

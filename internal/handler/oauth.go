@@ -32,9 +32,10 @@ type OAuthHandler struct {
 }
 
 type googleUserInfo struct {
-	ID    string `json:"id"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
+	ID      string `json:"id"`
+	Email   string `json:"email"`
+	Name    string `json:"name"`
+	Picture string `json:"picture"`
 }
 
 func NewOAuthHandler(db *sql.DB, clientID, clientSecret, redirectURL string, sessionDuration time.Duration, errors *ErrorRenderer) *OAuthHandler {
@@ -213,10 +214,10 @@ func (h *OAuthHandler) findOrCreateUser(info googleUserInfo) (string, error) {
 		info.Email,
 	).Scan(&userID)
 	if err == nil {
-		// Lier le compte existant à Google
+		// Lier le compte existant à Google et mettre à jour la photo si absente
 		_, err = h.db.Exec(
-			"UPDATE users SET oauth_provider = 'google', oauth_id = ? WHERE id = ?",
-			info.ID, userID,
+			"UPDATE users SET oauth_provider = 'google', oauth_id = ?, profile_picture = CASE WHEN profile_picture = '' THEN ? ELSE profile_picture END WHERE id = ?",
+			info.ID, info.Picture, userID,
 		)
 		return userID, err
 	}
@@ -231,8 +232,8 @@ func (h *OAuthHandler) findOrCreateUser(info googleUserInfo) (string, error) {
 	fakePassword := "$oauth$" + utils.NewUUID()
 
 	_, err = h.db.Exec(
-		"INSERT INTO users (id, email, username, password, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, 'google', ?)",
-		userID, info.Email, username, fakePassword, info.ID,
+		"INSERT INTO users (id, email, username, password, profile_picture, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, 'google', ?)",
+		userID, info.Email, username, fakePassword, info.Picture, info.ID,
 	)
 	return userID, err
 }
