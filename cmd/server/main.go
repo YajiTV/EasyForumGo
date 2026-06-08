@@ -37,6 +37,9 @@ func loadEnv() {
 func main() {
 	loadEnv()
 	cfg := config.Load()
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Invalid configuration: %v", err)
+	}
 
 	db, err := repository.InitDB(cfg.DBPath, cfg.MigrationsDir)
 	if err != nil {
@@ -49,7 +52,10 @@ func main() {
 	writeLimiter := middleware.NewRateLimiter(20, time.Hour)
 
 	mux := setupRouter(cfg, db, loginLimiter, writeLimiter)
-	var root http.Handler = globalLimiter.Wrap(mux)
+	var root http.Handler = mux
+	root = middleware.BasePath(cfg.AppBasePath, cfg.SecureCookies(), root)
+	root = globalLimiter.Wrap(root)
+	root = middleware.ProxyHeaders(cfg.TrustProxy, root)
 
 	if cfg.TLSEnabled() {
 		go func() {
