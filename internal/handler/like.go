@@ -18,6 +18,7 @@ type LikeHandler struct {
 	users    *repository.UserRepository
 }
 
+// NewLikeHandler creates a new instance
 func NewLikeHandler(db *sql.DB) *LikeHandler {
 	return &LikeHandler{
 		likes:    repository.NewLikeRepository(db),
@@ -28,6 +29,7 @@ func NewLikeHandler(db *sql.DB) *LikeHandler {
 	}
 }
 
+// LikePost handles a like request
 func (h *LikeHandler) LikePost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -44,6 +46,7 @@ func (h *LikeHandler) LikePost(w http.ResponseWriter, r *http.Request) {
 	h.togglePostVote(w, r, user.ID, postID, true)
 }
 
+// DislikePost handles a dislike request
 func (h *LikeHandler) DislikePost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -60,6 +63,7 @@ func (h *LikeHandler) DislikePost(w http.ResponseWriter, r *http.Request) {
 	h.togglePostVote(w, r, user.ID, postID, false)
 }
 
+// togglePostVote toggles the requested vote
 func (h *LikeHandler) togglePostVote(w http.ResponseWriter, r *http.Request, userID, postID string, isLike bool) {
 	existing, err := h.likes.GetUserPostLike(postID, userID)
 	if err != nil {
@@ -94,6 +98,7 @@ func (h *LikeHandler) togglePostVote(w http.ResponseWriter, r *http.Request, use
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 }
 
+// LikeComment handles a like request
 func (h *LikeHandler) LikeComment(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -111,6 +116,7 @@ func (h *LikeHandler) LikeComment(w http.ResponseWriter, r *http.Request) {
 	h.toggleCommentVote(w, r, user.ID, commentID, comment.PostID, true)
 }
 
+// DislikeComment handles a dislike request
 func (h *LikeHandler) DislikeComment(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -128,6 +134,7 @@ func (h *LikeHandler) DislikeComment(w http.ResponseWriter, r *http.Request) {
 	h.toggleCommentVote(w, r, user.ID, commentID, comment.PostID, false)
 }
 
+// toggleCommentVote toggles the requested vote
 func (h *LikeHandler) toggleCommentVote(w http.ResponseWriter, r *http.Request, userID, commentID, postID string, isLike bool) {
 	existing, err := h.likes.GetUserCommentLike(commentID, userID)
 	if err != nil {
@@ -162,6 +169,7 @@ func (h *LikeHandler) toggleCommentVote(w http.ResponseWriter, r *http.Request, 
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 }
 
+// userFromSession gets the user from the current session
 func (h *LikeHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {

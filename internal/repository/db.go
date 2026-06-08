@@ -10,6 +10,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// InitDB opens the database and runs migrations
 func InitDB(dbPath, migrationsDir string) (*sql.DB, error) {
 	if dir := filepath.Dir(dbPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -35,8 +36,9 @@ func InitDB(dbPath, migrationsDir string) (*sql.DB, error) {
 	return db, nil
 }
 
+// runMigrations runs pending database migrations
 func runMigrations(db *sql.DB, dir string) error {
-	// Crée la table qui garde la liste des migrations déjà appliquées
+	// track migrations to prevent duplicate execution
 	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (filename TEXT PRIMARY KEY)`)
 	if err != nil {
 		return fmt.Errorf("create schema_migrations: %w", err)
@@ -51,11 +53,11 @@ func runMigrations(db *sql.DB, dir string) error {
 	for _, f := range files {
 		name := filepath.Base(f)
 
-		// Vérifie si cette migration a déjà été appliquée
+		// skip migrations already recorded in the database
 		var count int
 		db.QueryRow(`SELECT COUNT(*) FROM schema_migrations WHERE filename = ?`, name).Scan(&count)
 		if count > 0 {
-			continue // déjà appliquée, on passe
+			continue
 		}
 
 		content, err := os.ReadFile(f)
@@ -66,7 +68,7 @@ func runMigrations(db *sql.DB, dir string) error {
 			return fmt.Errorf("exec %s: %w", f, err)
 		}
 
-		// Marque la migration comme appliquée
+		// record the migration after successful execution
 		db.Exec(`INSERT INTO schema_migrations (filename) VALUES (?)`, name)
 	}
 	return nil

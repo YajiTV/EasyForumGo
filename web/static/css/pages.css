@@ -37,7 +37,6 @@
     text-decoration: underline;
 }
 
-/* Grille équipe — page about */
 .team-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

@@ -94,10 +94,12 @@ type PasswordStrength struct {
 
 type ValidationErrors map[string]string
 
+// HasErrors checks whether validation failed
 func (e ValidationErrors) HasErrors() bool {
 	return len(e) > 0
 }
 
+// ValidateSignup validates the provided input
 func ValidateSignup(input AuthInput) ValidationErrors {
 	errors := ValidationErrors{}
 
@@ -112,6 +114,7 @@ func ValidateSignup(input AuthInput) ValidationErrors {
 	return errors
 }
 
+// EvaluatePasswordStrength evaluates the provided input
 func EvaluatePasswordStrength(password, username, email string) PasswordStrength {
 	strength := PasswordStrength{
 		MaxScore: 7,
@@ -168,6 +171,7 @@ func EvaluatePasswordStrength(password, username, email string) PasswordStrength
 	return strength
 }
 
+// ValidateLogin validates the provided input
 func ValidateLogin(input AuthInput) ValidationErrors {
 	errors := ValidationErrors{}
 
@@ -180,6 +184,7 @@ func ValidateLogin(input AuthInput) ValidationErrors {
 	return errors
 }
 
+// ValidatePost validates the provided input
 func ValidatePost(input PostInput) ValidationErrors {
 	errors := ValidationErrors{}
 
@@ -210,6 +215,7 @@ func ValidatePost(input PostInput) ValidationErrors {
 	return errors
 }
 
+// ValidateComment validates the provided input
 func ValidateComment(input CommentInput) ValidationErrors {
 	errors := ValidationErrors{}
 
@@ -225,22 +231,26 @@ func ValidateComment(input CommentInput) ValidationErrors {
 	return errors
 }
 
+// ValidateProfile validates the provided input
 func ValidateProfile(input ProfileInput) ValidationErrors {
 	errors := ValidationErrors{}
 	validateUsername(input.Username, errors)
 	return errors
 }
 
+// validateEmail validates the provided input
 func validateEmail(email string, errors ValidationErrors) {
 	validateEmailSyntax(email, errors)
 }
 
+// validateSignupEmail validates the provided input
 func validateSignupEmail(email string, errors ValidationErrors) {
 	if validateEmailSyntax(email, errors) {
 		validateEmailDomain(email, errors)
 	}
 }
 
+// validateEmailSyntax validates the provided input
 func validateEmailSyntax(email string, errors ValidationErrors) bool {
 	email = strings.TrimSpace(email)
 	switch {
@@ -258,6 +268,7 @@ func validateEmailSyntax(email string, errors ValidationErrors) bool {
 	return errors["email"] == ""
 }
 
+// validateEmailDomain validates the provided input
 func validateEmailDomain(email string, validationErrors ValidationErrors) {
 	domain := emailDomain(email)
 	if domain == "" || !isPlausibleEmailDomainName(domain) {
@@ -290,6 +301,7 @@ func validateEmailDomain(email string, validationErrors ValidationErrors) {
 	validationErrors["email"] = "Le domaine de cette adresse e-mail ne semble pas recevoir d'e-mails."
 }
 
+// validateUsername validates the provided input
 func validateUsername(username string, errors ValidationErrors) {
 	username = strings.TrimSpace(username)
 	usernameLength := utf8.RuneCountInString(username)
@@ -305,6 +317,7 @@ func validateUsername(username string, errors ValidationErrors) {
 	}
 }
 
+// validatePassword validates the provided input
 func validatePassword(password, username, email string, errors ValidationErrors) {
 	passwordLength := utf8.RuneCountInString(password)
 	switch {
@@ -320,6 +333,7 @@ func validatePassword(password, username, email string, errors ValidationErrors)
 	}
 }
 
+// emailDomain gets the domain from an email address
 func emailDomain(email string) string {
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {
@@ -329,6 +343,7 @@ func emailDomain(email string) string {
 	return strings.TrimSuffix(strings.ToLower(parts[1]), ".")
 }
 
+// isPlausibleEmailDomainName checks whether an email domain is plausible
 func isPlausibleEmailDomainName(domain string) bool {
 	if len(domain) < 4 || len(domain) > 253 || strings.Contains(domain, "..") || !strings.Contains(domain, ".") {
 		return false
@@ -345,6 +360,7 @@ func isPlausibleEmailDomainName(domain string) bool {
 	return len(tld) >= 2 && !strings.ContainsAny(tld, "0123456789-")
 }
 
+// containsPersonalInfo checks whether a password contains personal information
 func containsPersonalInfo(password, username, email string) bool {
 	normalizedPassword := strings.ToLower(password)
 	normalizedUsername := strings.ToLower(strings.TrimSpace(username))
@@ -356,6 +372,7 @@ func containsPersonalInfo(password, username, email string) bool {
 	return localPart != "" && len(localPart) >= 3 && strings.Contains(normalizedPassword, localPart)
 }
 
+// isCommonPassword checks whether a password is common
 func isCommonPassword(password string) bool {
 	normalizedPassword := strings.ToLower(strings.TrimSpace(password))
 	if _, common := commonPasswords[normalizedPassword]; common {

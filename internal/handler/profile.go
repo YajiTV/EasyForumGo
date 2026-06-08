@@ -24,6 +24,7 @@ type ProfileHandler struct {
 	uploadDir string
 }
 
+// NewProfileHandler creates a new instance
 func NewProfileHandler(db *sql.DB, uploadDir string) *ProfileHandler {
 	return &ProfileHandler{
 		users:     repository.NewUserRepository(db),
@@ -58,6 +59,7 @@ type EditProfilePageData struct {
 	Error string
 }
 
+// LikedPosts renders posts liked by the current user
 func (h *ProfileHandler) LikedPosts(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -83,6 +85,7 @@ func (h *ProfileHandler) LikedPosts(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// MyPosts handles the request
 func (h *ProfileHandler) MyPosts(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -106,6 +109,7 @@ func (h *ProfileHandler) MyPosts(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// MyComments handles the request
 func (h *ProfileHandler) MyComments(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -145,6 +149,7 @@ func (h *ProfileHandler) MyComments(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// userFromSession gets the user from the current session
 func (h *ProfileHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
@@ -161,6 +166,7 @@ func (h *ProfileHandler) userFromSession(r *http.Request) *model.User {
 	return user
 }
 
+// ShowEditForm renders the requested page
 func (h *ProfileHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -171,6 +177,7 @@ func (h *ProfileHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	h.renderEditForm(w, EditProfilePageData{User: user})
 }
 
+// UpdateProfile updates an existing record
 func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -236,6 +243,7 @@ func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
 
+// renderEditForm renders the requested page
 func (h *ProfileHandler) renderEditForm(w http.ResponseWriter, data EditProfilePageData) {
 	tmpl, err := template.ParseFiles(
 		filepath.Join("web", "templates", "layout", "base.html"),
@@ -248,6 +256,7 @@ func (h *ProfileHandler) renderEditForm(w http.ResponseWriter, data EditProfileP
 	tmpl.ExecuteTemplate(w, "base", data)
 }
 
+// renderProfile renders the requested page
 func (h *ProfileHandler) renderProfile(w http.ResponseWriter, data ProfilePageData) {
 	tmpl, err := template.ParseFiles(
 		filepath.Join("web", "templates", "layout", "base.html"),
@@ -260,6 +269,7 @@ func (h *ProfileHandler) renderProfile(w http.ResponseWriter, data ProfilePageDa
 	tmpl.ExecuteTemplate(w, "base", data)
 }
 
+// postsWithMeta adds display metadata to posts
 func (h *ProfileHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
 	postsWithMeta := make([]PostWithMeta, 0, len(posts))
 

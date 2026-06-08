@@ -3,16 +3,19 @@
 {{define "content"}}
 <div class="form-page auth-page">
 
+    <!-- page heading -->
     <div class="form-header">
         <p class="form-kicker">Bienvenue</p>
         <h1 class="form-title">Connexion</h1>
         <p class="form-subtitle">Connectez-vous pour participer aux discussions.</p>
     </div>
 
+    <!-- authentication error returned by the server -->
     {{if .Error}}
     <p class="form-error">{{.Error}}</p>
     {{end}}
 
+    <!-- login form -->
     <form action="/login" method="POST" class="auth-form">
         <div class="form-group">
             <label for="email">Adresse e-mail</label>
@@ -32,6 +35,7 @@
         </div>
     </form>
 
+    <!-- registration link -->
     <p class="muted auth-switch">
         Pas encore de compte ? <a href="/register">S'inscrire</a>
     </p>

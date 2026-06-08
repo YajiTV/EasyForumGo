@@ -7,6 +7,7 @@ import (
 	"net/http"
 )
 
+// main starts the application
 func main() {
 	cfg := config.Load()
 

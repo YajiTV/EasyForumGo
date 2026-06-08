@@ -12,6 +12,7 @@
 <body>
     <input type="checkbox" id="menu-state" class="menu-state" aria-hidden="true">
 
+    <!-- top navigation -->
     <header class="topbar">
         <nav class="topbar-nav">
             <div class="topbar-left">
@@ -91,7 +92,9 @@
         </nav>
     </header>
 
+    <!-- application layout -->
     <div class="app-shell">
+        <!-- side navigation -->
         <aside class="left-sidebar" id="site-menu" aria-label="Navigation principale">
             <nav class="side-nav">
                 <a href="/" class="side-nav-item active">
@@ -144,11 +147,13 @@
             </nav>
         </aside>
 
+        <!-- page content -->
         <main class="main-content">
             {{block "content" .}}{{end}}
         </main>
     </div>
 
+    <!-- site footer -->
     <footer class="site-footer">
         <nav class="footer-links" aria-label="Liens secondaires">
             <a href="/">Accueil</a>
