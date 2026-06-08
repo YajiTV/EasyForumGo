@@ -1338,3 +1338,52 @@ textarea {
         justify-content: flex-start;
     }
 }
+
+/* Google OAuth button */
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 20px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--text);
+    font-size: 17px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    margin-bottom: 16px;
+}
+
+.btn-google:hover {
+    background: var(--soft);
+    border-color: var(--text);
+}
+
+.btn-google svg {
+    flex-shrink: 0;
+}
+
+/* Séparateur "ou" entre le formulaire et le bouton Google */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px;
+    margin: 4px 0;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+}
