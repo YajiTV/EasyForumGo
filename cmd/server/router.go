@@ -71,6 +71,8 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /posts/category/{id}", categoryHandler.FilterByCategory)
 
 	// static page routes
+	pageHandler := handler.NewPageHandler(db, cfg.TemplatesDir, errorRenderer)
+	mux.HandleFunc("GET /library", pageHandler.Page("library.html"))
 	mux.HandleFunc("GET /about", staticPage(cfg.TemplatesDir, "about.html"))
 	mux.HandleFunc("GET /rules", staticPage(cfg.TemplatesDir, "rules.html"))
 	mux.HandleFunc("GET /legal", staticPage(cfg.TemplatesDir, "legal.html"))
