@@ -2,7 +2,9 @@
 
 {{define "content"}}
 <div class="home-layout">
+    <!-- post feed -->
     <section class="home-feed" aria-label="Liste des posts">
+        <!-- primary filters -->
         <div class="feed-tabs" aria-label="Filtres principaux">
             <a href="/" class="feed-tab {{if not .CurrentCategory}}active{{end}}">Pour vous</a>
             {{if .User}}
@@ -11,6 +13,7 @@
             {{end}}
         </div>
 
+        <!-- category filters -->
         <div class="home-filters">
             <a href="/" class="filter-btn {{if not .CurrentCategory}}active{{end}}">Tous</a>
             {{range .Categories}}
@@ -31,6 +34,7 @@
         </div>
         {{end}}
 
+        <!-- post list -->
         <div class="posts-list">
             {{if .Posts}}
                 {{range .Posts}}
@@ -70,6 +74,7 @@
         </div>
     </section>
 
+    <!-- category sidebar -->
     <aside class="right-sidebar" aria-label="Panneau secondaire">
         <section class="sidebar-section">
             <h2>Catégories</h2>

@@ -3,16 +3,19 @@
 {{define "content"}}
 <div class="form-page auth-page">
 
+    <!-- page heading -->
     <div class="form-header">
         <p class="form-kicker">Nouveau sur ForumJS</p>
         <h1 class="form-title">Créer un compte</h1>
         <p class="form-subtitle">Rejoignez la communauté et participez aux discussions.</p>
     </div>
 
+    <!-- registration error -->
     {{if .Error}}
     <p class="form-error">{{.Error}}</p>
     {{end}}
 
+    <!-- registration form -->
     <form action="/register" method="POST" class="auth-form">
         <div class="form-group">
             <label for="username">Nom d'utilisateur</label>
@@ -60,6 +63,7 @@
         </div>
     </form>
 
+    <!-- login link -->
     <p class="muted auth-switch">
         Déjà un compte ? <a href="/login">Se connecter</a>
     </p>

@@ -44,6 +44,7 @@ type registerFormData struct {
 	PasswordChecked  bool
 }
 
+// NewAuthHandler creates a new instance
 func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRenderer) *AuthHandler {
 	if sessionDuration <= 0 {
 		sessionDuration = 24 * time.Hour
@@ -59,16 +60,19 @@ func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRend
 	}
 }
 
+// ShowLoginForm renders the requested page
 func (h *AuthHandler) ShowLoginForm(w http.ResponseWriter, r *http.Request) {
 	renderAuthTemplate(w, "login.html", nil)
 }
 
+// ShowRegisterForm renders the requested page
 func (h *AuthHandler) ShowRegisterForm(w http.ResponseWriter, r *http.Request) {
 	renderAuthTemplate(w, "register.html", registerFormData{
 		PasswordStrength: validator.EvaluatePasswordStrength("", "", ""),
 	})
 }
 
+// PasswordStrength handles the request
 func (h *AuthHandler) PasswordStrength(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
@@ -109,6 +113,7 @@ func (h *AuthHandler) PasswordStrength(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Signup handles the request
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
@@ -151,6 +156,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
+// Login handles the request
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
@@ -200,6 +206,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// Logout handles the request
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
@@ -223,6 +230,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// userExists checks whether an account already exists
 func (h *AuthHandler) userExists(email, username string) (bool, error) {
 	var id string
 	err := h.db.QueryRow(
@@ -240,6 +248,7 @@ func (h *AuthHandler) userExists(email, username string) (bool, error) {
 	return true, nil
 }
 
+// findUserCredentials finds the requested data
 func (h *AuthHandler) findUserCredentials(email string) (userCredentials, error) {
 	var user userCredentials
 	err := h.db.QueryRow(
@@ -249,6 +258,7 @@ func (h *AuthHandler) findUserCredentials(email string) (userCredentials, error)
 	return user, err
 }
 
+// createSession replaces the current user session
 func (h *AuthHandler) createSession(userID string) (string, time.Time, error) {
 	sessionToken := utils.NewSessionToken()
 	expiresAt := time.Now().Add(h.sessionDuration)
@@ -281,6 +291,7 @@ func (h *AuthHandler) createSession(userID string) (string, time.Time, error) {
 	return sessionToken, expiresAt, nil
 }
 
+// createUser stores a new user account
 func (h *AuthHandler) createUser(email, username, hashedPassword string) error {
 	_, err := h.db.Exec(
 		"INSERT INTO users (id, email, username, password) VALUES (?, ?, ?, ?)",
@@ -292,6 +303,7 @@ func (h *AuthHandler) createUser(email, username, hashedPassword string) error {
 	return err
 }
 
+// renderLoginError renders the requested page
 func (h *AuthHandler) renderLoginError(w http.ResponseWriter, email, message string) {
 	if message == "" {
 		message = "Formulaire invalide."
@@ -302,6 +314,7 @@ func (h *AuthHandler) renderLoginError(w http.ResponseWriter, email, message str
 	})
 }
 
+// renderRegisterError renders the requested page
 func (h *AuthHandler) renderRegisterError(w http.ResponseWriter, username, email, message string) {
 	if message == "" {
 		message = "Formulaire invalide."
@@ -314,6 +327,7 @@ func (h *AuthHandler) renderRegisterError(w http.ResponseWriter, username, email
 	})
 }
 
+// firstValidationMessage gets the first validation message
 func firstValidationMessage(validationErrors validator.ValidationErrors) string {
 	for _, message := range validationErrors {
 		return message
@@ -322,6 +336,7 @@ func firstValidationMessage(validationErrors validator.ValidationErrors) string 
 	return "Formulaire invalide."
 }
 
+// renderAuthTemplate renders an authentication template
 func renderAuthTemplate(w http.ResponseWriter, filename string, data any) {
 	tmpl, err := template.ParseFiles(
 		filepath.Join("web", "templates", "layout", "base.html"),

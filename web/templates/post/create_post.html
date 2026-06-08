@@ -2,16 +2,19 @@
 
 {{define "content"}}
 <div class="form-page">
+    <!-- page heading -->
     <header class="form-header">
         <p class="form-kicker">Publication</p>
         <h1 class="form-title">Créer un post</h1>
         <p class="form-subtitle">Partagez une idée, une question ou une ressource avec le forum.</p>
     </header>
 
+    <!-- validation error -->
     {{if .Error}}
         <p class="form-error">{{.Error}}</p>
     {{end}}
 
+    <!-- post form -->
     <form action="/post/new" method="POST" enctype="multipart/form-data" class="post-form">
 
         <div class="form-group">

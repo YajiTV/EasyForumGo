@@ -3,6 +3,7 @@
 {{define "content"}}
 <div class="post-detail">
 
+    <!-- post content -->
     <article class="post-full">
 
         <div class="post-full-header">
@@ -30,6 +31,7 @@
             {{.Post.Content}}
         </div>
 
+        <!-- post actions -->
         <div class="post-full-actions">
             <form action="/post/{{.Post.ID}}/like" method="POST">
                 <button type="submit" class="btn-like">J'aime {{.LikeCount}}</button>
@@ -48,9 +50,11 @@
 
     </article>
 
+    <!-- comments -->
     <section class="comments-section">
         <h2 class="comments-title">{{len .Comments}} commentaire{{if gt (len .Comments) 1}}s{{end}}</h2>
 
+        <!-- comment form -->
         {{if .User}}
         <form action="/post/{{.Post.ID}}/comment" method="POST" class="comment-form">
             <textarea name="content" rows="4" placeholder="Écrire un commentaire..." required></textarea>
@@ -60,6 +64,7 @@
         <p class="login-hint"><a href="/login">Connectez-vous</a> pour laisser un commentaire.</p>
         {{end}}
 
+        <!-- comment list -->
         <div class="comments-list">
             {{if .Comments}}
                 {{range .Comments}}

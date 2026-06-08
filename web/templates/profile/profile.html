@@ -6,6 +6,7 @@
 
 {{define "content"}}
 <div class="profile-page">
+    <!-- profile content -->
     <section class="profile-content" aria-label="Profil utilisateur">
         <header class="profile-hero">
             <div>
@@ -15,12 +16,14 @@
             </div>
         </header>
 
+        <!-- profile navigation -->
         <nav class="profile-tabs" aria-label="Navigation du profil">
             <a href="/profile/my-posts" class="{{if eq .ActiveTab "my-posts"}}active{{end}}">Mes posts</a>
             <a href="/profile/liked-posts" class="{{if eq .ActiveTab "liked-posts"}}active{{end}}">Posts aimés</a>
             <a href="/profile/my-comments" class="{{if eq .ActiveTab "my-comments"}}active{{end}}">Mes commentaires</a>
         </nav>
 
+        <!-- selected profile section -->
         <section class="profile-section">
             <div class="profile-section-header">
                 <h2>{{.SectionTitle}}</h2>
@@ -89,6 +92,7 @@
         </section>
     </section>
 
+    <!-- profile summary -->
     <aside class="profile-sidebar" aria-label="Résumé du profil">
         {{if .User.ProfilePicture}}
             <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil de {{.User.Username}}" class="profile-picture">

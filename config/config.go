@@ -32,6 +32,7 @@ type Config struct {
 	SessionDuration time.Duration
 }
 
+// Load loads the application configuration
 func Load() Config {
 	return Config{
 		Port:            stringEnv("PORT", defaultPort),
@@ -48,10 +49,12 @@ func Load() Config {
 	}
 }
 
+// TLSEnabled checks whether tls is enabled
 func (c Config) TLSEnabled() bool {
 	return c.TLSCertFile != "" && c.TLSKeyFile != ""
 }
 
+// stringEnv gets a string environment value
 func stringEnv(key, fallback string) string {
 	value := os.Getenv(key)
 	if value == "" {
@@ -60,6 +63,7 @@ func stringEnv(key, fallback string) string {
 	return value
 }
 
+// intEnv gets an integer environment value
 func intEnv(key string, fallback int) int {
 	value, err := strconv.Atoi(os.Getenv(key))
 	if err != nil || value <= 0 {
@@ -68,6 +72,7 @@ func intEnv(key string, fallback int) int {
 	return value
 }
 
+// int64Env gets a 64 bit integer environment value
 func int64Env(key string, fallback int64) int64 {
 	value, err := strconv.ParseInt(os.Getenv(key), 10, 64)
 	if err != nil || value <= 0 {
