@@ -70,7 +70,6 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 
 	// static page routes
 	pageHandler := handler.NewPageHandler(db, cfg.TemplatesDir, errorRenderer)
-	mux.HandleFunc("GET /library", pageHandler.Page("library.html"))
 	mux.HandleFunc("GET /about", pageHandler.Page("about.html"))
 	mux.HandleFunc("GET /rules", pageHandler.Page("rules.html"))
 	mux.HandleFunc("GET /help", pageHandler.Page("help.html"))
