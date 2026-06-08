@@ -20,6 +20,7 @@ const (
 	googleTokenURL   = "https://oauth2.googleapis.com/token"
 	googleUserURL    = "https://www.googleapis.com/oauth2/v2/userinfo"
 	oauthStateCookie = "oauth_state"
+	oauthPendingCookie = "oauth_pending"
 )
 
 type OAuthHandler struct {
@@ -31,11 +32,19 @@ type OAuthHandler struct {
 	errors          *ErrorRenderer
 }
 
+// googleUserInfo contient les données renvoyées par l'API Google
 type googleUserInfo struct {
 	ID      string `json:"id"`
 	Email   string `json:"email"`
-	Name    string `json:"name"`
 	Picture string `json:"picture"`
+}
+
+// pendingOAuthUser stocke temporairement les données Google
+// le temps que l'utilisateur choisisse son username
+type pendingOAuthUser struct {
+	GoogleID string `json:"google_id"`
+	Email    string `json:"email"`
+	Picture  string `json:"picture"`
 }
 
 func NewOAuthHandler(db *sql.DB, clientID, clientSecret, redirectURL string, sessionDuration time.Duration, errors *ErrorRenderer) *OAuthHandler {
@@ -49,26 +58,24 @@ func NewOAuthHandler(db *sql.DB, clientID, clientSecret, redirectURL string, ses
 	}
 }
 
-// GoogleLogin redirige vers Google
+// GoogleLogin redirige l'utilisateur vers la page de connexion Google
 func (h *OAuthHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
-	// Générer un état aléatoire pour prévenir les attaques CSRF
 	state, err := generateState()
 	if err != nil {
 		h.errors.InternalServerError(w)
 		return
 	}
 
-	// Stocker l'état dans un cookie temporaire
+	// Cookie anti-CSRF valable 5 minutes
 	http.SetCookie(w, &http.Cookie{
 		Name:     oauthStateCookie,
 		Value:    state,
 		Path:     "/",
-		MaxAge:   300, // 5 minutes
+		MaxAge:   300,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
 
-	// Construire l'URL Google
 	params := url.Values{}
 	params.Set("client_id", h.clientID)
 	params.Set("redirect_uri", h.redirectURL)
@@ -79,7 +86,7 @@ func (h *OAuthHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, googleAuthURL+"?"+params.Encode(), http.StatusTemporaryRedirect)
 }
 
-// GoogleCallback traite le retour de Google
+// GoogleCallback traite le retour de Google après authentification
 func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	// Vérifier le state anti-CSRF
 	stateCookie, err := r.Cookie(oauthStateCookie)
@@ -87,13 +94,7 @@ func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		h.errors.Forbidden(w, "État OAuth invalide.")
 		return
 	}
-	// Supprimer le cookie d'état
-	http.SetCookie(w, &http.Cookie{
-		Name:   oauthStateCookie,
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
-	})
+	http.SetCookie(w, &http.Cookie{Name: oauthStateCookie, Value: "", Path: "/", MaxAge: -1})
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
@@ -101,47 +102,195 @@ func (h *OAuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Échanger le code contre un token
+	// Étape 1 : échanger le code contre un access token
 	token, err := h.exchangeCode(code)
 	if err != nil {
 		h.errors.InternalServerError(w)
 		return
 	}
 
-	// Récupérer les infos utilisateur
+	// Étape 2 : récupérer les infos du compte Google
 	userInfo, err := h.fetchUserInfo(token)
 	if err != nil {
 		h.errors.InternalServerError(w)
 		return
 	}
 
-	// Trouver ou créer l'utilisateur
-	userID, err := h.findOrCreateUser(userInfo)
+	// Étape 3 : chercher si l'utilisateur existe déjà
+	userID, found, err := h.findExistingUser(userInfo)
 	if err != nil {
 		h.errors.InternalServerError(w)
 		return
 	}
 
-	// Créer la session
+	if found {
+		// Utilisateur connu → on crée la session directement
+		h.startSession(w, userID)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Nouvel utilisateur → on stocke ses données dans un cookie temporaire
+	// et on lui demande de choisir un username
+	pending := pendingOAuthUser{
+		GoogleID: userInfo.ID,
+		Email:    userInfo.Email,
+		Picture:  userInfo.Picture,
+	}
+	data, err := json.Marshal(pending)
+	if err != nil {
+		h.errors.InternalServerError(w)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     oauthPendingCookie,
+		Value:    base64.URLEncoding.EncodeToString(data),
+		Path:     "/",
+		MaxAge:   900, // 15 minutes pour choisir son username
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/auth/complete-profile", http.StatusSeeOther)
+}
+
+// ShowCompleteProfile affiche le formulaire de choix du username
+func (h *OAuthHandler) ShowCompleteProfile(w http.ResponseWriter, r *http.Request) {
+	pending, ok := h.readPendingCookie(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	renderAuthTemplate(w, "complete_profile.html", map[string]any{
+		"Email": pending.Email,
+		"Error": "",
+	})
+}
+
+// CompleteProfile traite le formulaire : crée le compte et démarre la session
+func (h *OAuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
+		return
+	}
+
+	pending, ok := h.readPendingCookie(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	username := strings.TrimSpace(r.FormValue("username"))
+
+	// Validation simple du username
+	if len(username) < 3 || len(username) > 30 {
+		renderAuthTemplate(w, "complete_profile.html", map[string]any{
+			"Email": pending.Email,
+			"Error": "Le username doit faire entre 3 et 30 caractères.",
+		})
+		return
+	}
+
+	// Vérifier que le username n'est pas déjà pris
+	var existingID string
+	err := h.db.QueryRow("SELECT id FROM users WHERE username = ? LIMIT 1", username).Scan(&existingID)
+	if err != sql.ErrNoRows {
+		renderAuthTemplate(w, "complete_profile.html", map[string]any{
+			"Email": pending.Email,
+			"Error": "Ce username est déjà pris.",
+		})
+		return
+	}
+
+	// Créer le compte — le mot de passe est inutilisable volontairement
+	userID := utils.NewUUID()
+	fakePassword := "$oauth$" + utils.NewUUID()
+	_, err = h.db.Exec(
+		"INSERT INTO users (id, email, username, password, profile_picture, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, 'google', ?)",
+		userID, pending.Email, username, fakePassword, pending.Picture, pending.GoogleID,
+	)
+	if err != nil {
+		h.errors.InternalServerError(w)
+		return
+	}
+
+	// Supprimer le cookie temporaire
+	http.SetCookie(w, &http.Cookie{Name: oauthPendingCookie, Value: "", Path: "/", MaxAge: -1})
+
+	// Démarrer la session
+	h.startSession(w, userID)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// findExistingUser cherche un utilisateur par oauth_id ou par email
+func (h *OAuthHandler) findExistingUser(info googleUserInfo) (string, bool, error) {
+	var userID string
+
+	// Chercher par oauth_id (connexion Google déjà utilisée)
+	err := h.db.QueryRow(
+		"SELECT id FROM users WHERE oauth_provider = 'google' AND oauth_id = ? LIMIT 1",
+		info.ID,
+	).Scan(&userID)
+	if err == nil {
+		return userID, true, nil
+	}
+	if err != sql.ErrNoRows {
+		return "", false, err
+	}
+
+	// Chercher par email (compte classique existant)
+	err = h.db.QueryRow(
+		"SELECT id FROM users WHERE email = ? LIMIT 1",
+		info.Email,
+	).Scan(&userID)
+	if err == nil {
+		// Lier le compte Google à ce compte existant
+		_, err = h.db.Exec(
+			"UPDATE users SET oauth_provider = 'google', oauth_id = ?, profile_picture = CASE WHEN profile_picture = '' THEN ? ELSE profile_picture END WHERE id = ?",
+			info.ID, info.Picture, userID,
+		)
+		return userID, true, err
+	}
+	if err != sql.ErrNoRows {
+		return "", false, err
+	}
+
+	return "", false, nil
+}
+
+// startSession crée un cookie de session pour l'utilisateur
+func (h *OAuthHandler) startSession(w http.ResponseWriter, userID string) {
 	sessionToken, expiresAt, err := h.createSession(userID)
 	if err != nil {
-		h.errors.InternalServerError(w)
 		return
 	}
-
 	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName, // même constante que dans auth.go
+		Name:     sessionCookieName,
 		Value:    sessionToken,
 		Path:     "/",
 		Expires:  expiresAt,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// exchangeCode échange le code contre un access token Google
+// readPendingCookie lit et décode le cookie temporaire OAuth
+func (h *OAuthHandler) readPendingCookie(r *http.Request) (pendingOAuthUser, bool) {
+	cookie, err := r.Cookie(oauthPendingCookie)
+	if err != nil {
+		return pendingOAuthUser{}, false
+	}
+	data, err := base64.URLEncoding.DecodeString(cookie.Value)
+	if err != nil {
+		return pendingOAuthUser{}, false
+	}
+	var pending pendingOAuthUser
+	if err := json.Unmarshal(data, &pending); err != nil {
+		return pendingOAuthUser{}, false
+	}
+	return pending, true
+}
+
+// exchangeCode échange le code d'autorisation contre un access token Google
 func (h *OAuthHandler) exchangeCode(code string) (string, error) {
 	resp, err := http.PostForm(googleTokenURL, url.Values{
 		"code":          {code},
@@ -172,7 +321,7 @@ func (h *OAuthHandler) exchangeCode(code string) (string, error) {
 	return accessToken, nil
 }
 
-// fetchUserInfo récupère les infos du compte Google
+// fetchUserInfo appelle l'API Google pour récupérer les infos du compte
 func (h *OAuthHandler) fetchUserInfo(accessToken string) (googleUserInfo, error) {
 	req, err := http.NewRequest("GET", googleUserURL, nil)
 	if err != nil {
@@ -193,70 +342,7 @@ func (h *OAuthHandler) fetchUserInfo(accessToken string) (googleUserInfo, error)
 	return info, nil
 }
 
-// findOrCreateUser trouve ou crée l'utilisateur en base
-func (h *OAuthHandler) findOrCreateUser(info googleUserInfo) (string, error) {
-	// Chercher par oauth_id
-	var userID string
-	err := h.db.QueryRow(
-		"SELECT id FROM users WHERE oauth_provider = 'google' AND oauth_id = ? LIMIT 1",
-		info.ID,
-	).Scan(&userID)
-	if err == nil {
-		return userID, nil // utilisateur existant
-	}
-	if err != sql.ErrNoRows {
-		return "", err
-	}
-
-	// Chercher par email (compte existant sans OAuth)
-	err = h.db.QueryRow(
-		"SELECT id FROM users WHERE email = ? LIMIT 1",
-		info.Email,
-	).Scan(&userID)
-	if err == nil {
-		// Lier le compte existant à Google et mettre à jour la photo si absente
-		_, err = h.db.Exec(
-			"UPDATE users SET oauth_provider = 'google', oauth_id = ?, profile_picture = CASE WHEN profile_picture = '' THEN ? ELSE profile_picture END WHERE id = ?",
-			info.ID, info.Picture, userID,
-		)
-		return userID, err
-	}
-	if err != sql.ErrNoRows {
-		return "", err
-	}
-
-	// Créer un nouvel utilisateur
-	username := h.uniqueUsername(info.Name)
-	userID = utils.NewUUID()
-	// Mot de passe inutilisable (l'utilisateur se connecte via Google)
-	fakePassword := "$oauth$" + utils.NewUUID()
-
-	_, err = h.db.Exec(
-		"INSERT INTO users (id, email, username, password, profile_picture, oauth_provider, oauth_id) VALUES (?, ?, ?, ?, ?, 'google', ?)",
-		userID, info.Email, username, fakePassword, info.Picture, info.ID,
-	)
-	return userID, err
-}
-
-// uniqueUsername génère un username unique
-func (h *OAuthHandler) uniqueUsername(name string) string {
-	base := strings.ReplaceAll(strings.ToLower(name), " ", "_")
-	if base == "" {
-		base = "user"
-	}
-	username := base
-	for i := 2; ; i++ {
-		var id string
-		err := h.db.QueryRow("SELECT id FROM users WHERE username = ? LIMIT 1", username).Scan(&id)
-		if err == sql.ErrNoRows {
-			break
-		}
-		username = fmt.Sprintf("%s_%d", base, i)
-	}
-	return username
-}
-
-// createSession crée une session (même logique que dans auth.go)
+// createSession crée une nouvelle session en base de données
 func (h *OAuthHandler) createSession(userID string) (string, time.Time, error) {
 	sessionToken := utils.NewSessionToken()
 	expiresAt := time.Now().Add(h.sessionDuration)
@@ -281,7 +367,7 @@ func (h *OAuthHandler) createSession(userID string) (string, time.Time, error) {
 	return sessionToken, expiresAt, tx.Commit()
 }
 
-// generateState génère un token aléatoire anti-CSRF
+// generateState génère un token aléatoire pour la protection CSRF
 func generateState() (string, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {

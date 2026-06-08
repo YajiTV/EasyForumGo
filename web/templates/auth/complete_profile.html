@@ -1,0 +1,35 @@
+{{define "title"}}Choisir un username — ForumJS{{end}}
+
+{{define "content"}}
+<div class="form-page auth-page">
+
+    <!-- page heading -->
+    <div class="form-header">
+        <p class="form-kicker">Dernière étape</p>
+        <h1 class="form-title">Choisissez votre username</h1>
+        <p class="form-subtitle">
+            Votre compte sera créé avec l'adresse <strong>{{.Email}}</strong>.<br>
+            Choisissez un username public — votre nom Google ne sera pas utilisé.
+        </p>
+    </div>
+
+    {{if .Error}}
+    <p class="form-error">{{.Error}}</p>
+    {{end}}
+
+    <form action="/auth/complete-profile" method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username"
+                   placeholder="Votre identifiant public"
+                   minlength="3" maxlength="30" required autofocus>
+            <small class="form-hint">Entre 3 et 30 caractères. Visible par tous les membres.</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Créer mon compte</button>
+        </div>
+    </form>
+
+</div>
+{{end}}
