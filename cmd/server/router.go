@@ -1,10 +1,10 @@
 package main
 
 import (
-	"ForumJS/config"
-	"ForumJS/internal/handler"
-	"ForumJS/internal/middleware"
-	"ForumJS/internal/repository"
+	"EasyForumGo/config"
+	"EasyForumGo/internal/handler"
+	"EasyForumGo/internal/middleware"
+	"EasyForumGo/internal/repository"
 	"database/sql"
 	"net"
 	"net/http"

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
-	"ForumJS/pkg/utils"
-	"ForumJS/pkg/validator"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
+	"EasyForumGo/pkg/validator"
 )
 
 type PostHandler struct {

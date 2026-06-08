@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"ForumJS/internal/model"
+	"EasyForumGo/internal/model"
 )
 
 type LikeRepository struct {

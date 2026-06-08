@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"ForumJS/pkg/utils"
+	"EasyForumGo/pkg/utils"
 )
 
 const (
-	googleAuthURL    = "https://accounts.google.com/o/oauth2/v2/auth"
-	googleTokenURL   = "https://oauth2.googleapis.com/token"
-	googleUserURL    = "https://www.googleapis.com/oauth2/v2/userinfo"
-	oauthStateCookie = "oauth_state"
+	googleAuthURL      = "https://accounts.google.com/o/oauth2/v2/auth"
+	googleTokenURL     = "https://oauth2.googleapis.com/token"
+	googleUserURL      = "https://www.googleapis.com/oauth2/v2/userinfo"
+	oauthStateCookie   = "oauth_state"
 	oauthPendingCookie = "oauth_pending"
 )
 
