@@ -11,7 +11,10 @@ import (
 	"ForumJS/internal/model"
 	"ForumJS/internal/repository"
 	"ForumJS/pkg/utils"
+	"ForumJS/pkg/validator"
 )
+
+const maxCommentFormSize = 16 << 10
 
 type CommentHandler struct {
 	comments *repository.CommentRepository
@@ -42,18 +45,15 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxCommentFormSize)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Requête invalide", http.StatusBadRequest)
 		return
 	}
 
 	content := strings.TrimSpace(r.FormValue("content"))
-	if content == "" {
-		http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
-		return
-	}
-	if len(content) > 2000 {
-		http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
+	if validationErrors := validator.ValidateComment(validator.CommentInput{Content: content}); validationErrors.HasErrors() {
+		http.Error(w, firstValidationMessage(validationErrors), http.StatusBadRequest)
 		return
 	}
 
@@ -108,6 +108,36 @@ type editCommentData struct {
 	Error   string
 }
 
+type deleteCommentData struct {
+	User    *model.User
+	Comment *model.Comment
+}
+
+func (h *CommentHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	commentID := r.PathValue("id")
+	comment, err := h.comments.GetByID(commentID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if comment.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	h.renderTemplate(w, "comment/delete_comment.html", deleteCommentData{
+		User:    user,
+		Comment: comment,
+	})
+}
+
 func (h *CommentHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -152,6 +182,7 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxCommentFormSize)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Requête invalide", http.StatusBadRequest)
 		return
@@ -167,12 +198,8 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if content == "" {
-		renderErr("Le contenu ne peut pas être vide.")
-		return
-	}
-	if len(content) > 2000 {
-		renderErr("Le contenu ne peut pas dépasser 2000 caractères.")
+	if validationErrors := validator.ValidateComment(validator.CommentInput{Content: content}); validationErrors.HasErrors() {
+		renderErr(firstValidationMessage(validationErrors))
 		return
 	}
 

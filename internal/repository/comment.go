@@ -32,6 +32,24 @@ func (r *CommentRepository) GetByPostID(postID string) ([]model.Comment, error) 
 	return comments, rows.Err()
 }
 
+func (r *CommentRepository) GetByUserID(userID string) ([]model.Comment, error) {
+	rows, err := r.db.Query(`SELECT id, post_id, user_id, content, created_at, updated_at FROM comments WHERE user_id = ? ORDER BY created_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var comments []model.Comment
+	for rows.Next() {
+		var c model.Comment
+		if err := rows.Scan(&c.ID, &c.PostID, &c.UserID, &c.Content, &c.CreatedAt, &c.UpdatedAt); err != nil {
+			return nil, err
+		}
+		comments = append(comments, c)
+	}
+	return comments, rows.Err()
+}
+
 func (r *CommentRepository) Create(c *model.Comment) error {
 	_, err := r.db.Exec(`INSERT INTO comments (id, post_id, user_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
 		c.ID, c.PostID, c.UserID, c.Content, c.CreatedAt, c.UpdatedAt)

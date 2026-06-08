@@ -1,45 +1,68 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/css/login.css">
-    <title>Inscription — ForumJS</title>
-</head>
-<body>
-    <header class="site-header">
-        <a href="/">ForumJS</a>
-    </header>
+{{define "title"}}Inscription — ForumJS{{end}}
 
-    <div class="login-wrapper">
-        <div class="card">
-            <h2>Inscription</h2>
+{{define "content"}}
+<div class="form-page auth-page">
 
-            {{if .Error}}
-            <p class="form-error">{{.Error}}</p>
-            {{end}}
-
-            <form action="/register" method="POST">
-                <div class="inputbox">
-                    <label for="email">Adresse e-mail</label>
-                    <input type="email" id="email" name="email" placeholder="exemple@email.com" value="{{.Email}}" required>
-                </div>
-
-                <div class="inputbox">
-                    <label for="username">Nom d'utilisateur</label>
-                    <input type="text" id="username" name="username" placeholder="Votre pseudo" value="{{.Username}}" required>
-                </div>
-
-                <div class="inputbox">
-                    <label for="password">Mot de passe</label>
-                    <input type="password" id="password" name="password" placeholder="8 caractères minimum" required>
-                </div>
-
-                <button type="submit" class="btn">Créer mon compte</button>
-            </form>
-
-            <p class="switch-link">Déjà un compte ? <a href="/login">Se connecter</a></p>
-        </div>
+    <div class="form-header">
+        <p class="form-kicker">Nouveau sur ForumJS</p>
+        <h1 class="form-title">Créer un compte</h1>
+        <p class="form-subtitle">Rejoignez la communauté et participez aux discussions.</p>
     </div>
-</body>
-</html>
+
+    {{if .Error}}
+    <p class="form-error">{{.Error}}</p>
+    {{end}}
+
+    <form action="/register" method="POST" class="auth-form">
+        <div class="form-group">
+            <label for="username">Nom d'utilisateur</label>
+            <input type="text" id="username" name="username"
+                   placeholder="Votre pseudo"
+                   value="{{.Username}}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Adresse e-mail</label>
+            <input type="email" id="email" name="email"
+                   placeholder="exemple@email.com"
+                   value="{{.Email}}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <input type="password" id="password" name="password"
+                   placeholder="Choisissez un mot de passe" required>
+            <div class="password-check-actions">
+                <button type="submit"
+                        class="btn-secondary password-check-button"
+                        formaction="/register/password-strength"
+                        formtarget="password-strength-frame"
+                        formnovalidate>
+                    Vérifier la sécurité
+                </button>
+            </div>
+            <iframe class="password-strength-frame"
+                    id="password-strength-frame"
+                    name="password-strength-frame"
+                    src="/register/password-strength"
+                    title="Sécurité de votre mot de passe"
+                    sandbox="allow-forms allow-same-origin"></iframe>
+        </div>
+
+        <div class="form-group">
+            <label for="confirm_password">Confirmez votre mot de passe</label>
+            <input type="password" id="confirm_password" name="confirm_password"
+                   placeholder="Répétez votre mot de passe" required>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Créer mon compte</button>
+        </div>
+    </form>
+
+    <p class="muted auth-switch">
+        Déjà un compte ? <a href="/login">Se connecter</a>
+    </p>
+
+</div>
+{{end}}
