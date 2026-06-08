@@ -1,0 +1,58 @@
+{{define "title"}}Confidentialité — ForumJS{{end}}
+
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/pages.css">
+{{end}}
+
+{{define "content"}}
+<!-- privacy page -->
+<article class="info-page">
+    <header class="info-hero">
+        <span class="info-kicker">Vos données</span>
+        <h1>Politique de confidentialité</h1>
+        <p class="info-lead">Cette page explique quelles données ForumJS utilise, pourquoi elles sont nécessaires et comment vous pouvez exercer vos droits.</p>
+        <div class="info-meta"><span>Dernière mise à jour: 8 juin 2026</span></div>
+    </header>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Données traitées</h2><p>ForumJS limite la collecte aux informations utiles au fonctionnement du forum.</p></div>
+        <div class="info-grid two-columns">
+            <div class="info-card"><h3>Données du compte</h3><p>Adresse e-mail, nom d'utilisateur, mot de passe chiffré sous forme de hash et éventuelle photo de profil.</p></div>
+            <div class="info-card"><h3>Contenus publiés</h3><p>Posts, commentaires, images, catégories, votes et dates associées à ces actions.</p></div>
+            <div class="info-card"><h3>Données de session</h3><p>Jeton de session aléatoire et date d'expiration nécessaires pour maintenir votre connexion.</p></div>
+            <div class="info-card"><h3>Données techniques</h3><p>Informations strictement nécessaires au diagnostic, à la sécurité et à la limitation des abus du service.</p></div>
+        </div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Finalités</h2></div>
+        <ul class="info-list">
+            <li>Créer et sécuriser votre compte ainsi que votre session.</li>
+            <li>Afficher, organiser et attribuer les contenus que vous publiez.</li>
+            <li>Permettre les commentaires, votes, filtres et fonctionnalités de profil.</li>
+            <li>Prévenir les abus, diagnostiquer les erreurs et maintenir le service.</li>
+        </ul>
+        <div class="info-note">ForumJS n'utilise pas vos données à des fins publicitaires et ne les vend pas.</div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Conservation et accès</h2></div>
+        <p>Les données du compte et les contenus sont conservés tant qu'ils sont nécessaires au fonctionnement du projet ou jusqu'à leur suppression. Les sessions expirées peuvent être supprimées. Les personnes responsables du projet peuvent accéder aux données uniquement pour administrer, sécuriser et maintenir ForumJS.</p>
+        <p>ForumJS ne transmet pas volontairement vos données à des tiers, sauf obligation légale ou nécessité technique clairement identifiée.</p>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Vos choix et vos droits</h2></div>
+        <p>Vous pouvez modifier votre profil et supprimer vos propres posts ou commentaires depuis le forum. Pour demander l'accès, la rectification ou la suppression d'autres données liées à votre compte, contactez l'équipe.</p>
+        <div class="info-actions">
+            {{if .User}}<a href="/profile/edit" class="info-button">Modifier mon profil</a>{{end}}
+            <a href="/contact" class="info-button secondary">Contacter l'équipe</a>
+        </div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Sécurité</h2></div>
+        <p>Les mots de passe sont hashés et ne sont jamais stockés en clair. Les sessions utilisent un cookie HTTP dédié et les entrées utilisateur sont validées côté serveur. Aucun système ne pouvant être totalement exempt de risque, signalez rapidement toute anomalie via la <a href="/contact">page de contact</a>.</p>
+    </section>
+</article>
+{{end}}
