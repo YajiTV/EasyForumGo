@@ -5,21 +5,46 @@
 {{end}}
 
 {{define "content"}}
-<div class="page">
-    <h1>Politique de cookies</h1>
+<!-- cookie policy -->
+<article class="info-page">
+    <header class="info-hero">
+        <span class="info-kicker">Navigation et session</span>
+        <h1>Politique de cookies</h1>
+        <p class="info-lead">ForumJS utilise uniquement le cookie nécessaire pour vous reconnaître pendant votre session. Aucun cookie publicitaire ou de suivi tiers n'est déposé.</p>
+        <div class="info-meta"><span>Dernière mise à jour: 8 juin 2026</span></div>
+    </header>
 
-    <h2>Qu'est-ce qu'un cookie ?</h2>
-    <p>Un cookie est un petit fichier stocké dans votre navigateur lors de votre visite sur un site web.</p>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Le cookie utilisé</h2></div>
+        <div class="info-card">
+            <h3>session_token</h3>
+            <p>Ce cookie contient un identifiant aléatoire associé à votre session côté serveur. Il permet d'afficher votre compte et d'autoriser les actions réservées aux membres connectés.</p>
+        </div>
+        <div class="info-meta"><span>Finalité: authentification</span><span>Type: nécessaire</span><span>Durée: jusqu'à l'expiration ou la déconnexion</span></div>
+    </section>
 
-    <h2>Cookies utilisés sur ForumJS</h2>
-    <p>ForumJS utilise un seul cookie :</p>
-    <ul>
-        <li><strong>session_token</strong> maintient votre connexion active. Il est supprimé à l'expiration de votre session.</li>
-    </ul>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Protection du cookie</h2></div>
+        <ul class="info-list">
+            <li>Le cookie est marqué <strong>HttpOnly</strong> afin de limiter son accès depuis les scripts du navigateur.</li>
+            <li>La règle <strong>SameSite=Lax</strong> réduit certains risques liés aux requêtes provenant d'autres sites.</li>
+            <li>Le jeton possède une date d'expiration vérifiée par le serveur.</li>
+            <li>ForumJS autorise une seule session active par utilisateur.</li>
+        </ul>
+    </section>
 
-    <h2>Pas de tracking</h2>
-    <p>Aucun cookie publicitaire ou de suivi tiers n'est utilisé sur ce site.</p>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Vos choix</h2></div>
+        <p>Vous pouvez supprimer le cookie depuis les paramètres de votre navigateur ou en utilisant le bouton de déconnexion. Sans ce cookie, vous pouvez toujours lire les contenus publics, mais les fonctions liées au compte ne sont plus disponibles.</p>
+        {{if .User}}
+        <div class="info-note">Vous êtes actuellement connecté. Utilisez « Déconnexion » dans le menu utilisateur pour fermer proprement votre session.</div>
+        {{end}}
+    </section>
 
-    <a href="/" class="back-link">Retour à l'accueil</a>
-</div>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Cookies tiers et mesure d'audience</h2></div>
+        <p>ForumJS n'intègre actuellement aucun service publicitaire, outil de mesure d'audience tiers ou bouton social déposant ses propres cookies. Cette politique sera mise à jour avant tout changement de ce fonctionnement.</p>
+        <p>Pour en savoir plus sur les données associées à votre compte, consultez la <a href="/privacy">politique de confidentialité</a>.</p>
+    </section>
+</article>
 {{end}}

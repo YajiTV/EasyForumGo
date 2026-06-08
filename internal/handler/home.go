@@ -39,6 +39,7 @@ type HomeHandler struct {
 	errors     *ErrorRenderer
 }
 
+// NewHomeHandler creates a new instance
 func NewHomeHandler(db *sql.DB, errors *ErrorRenderer) *HomeHandler {
 	if errors == nil {
 		errors = NewErrorRenderer("web/templates")
@@ -54,6 +55,7 @@ func NewHomeHandler(db *sql.DB, errors *ErrorRenderer) *HomeHandler {
 	}
 }
 
+// Home handles the request
 func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	currentUser := h.userFromSession(r)
 
@@ -116,6 +118,7 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// userFromSession gets the user from the current session
 func (h *HomeHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {

@@ -27,6 +27,7 @@ type PostHandler struct {
 	uploadDir      string
 }
 
+// NewPostHandler creates a new instance
 func NewPostHandler(db *sql.DB, uploadDir string) *PostHandler {
 	return &PostHandler{
 		posts:          repository.NewPostRepository(db),
@@ -53,6 +54,7 @@ type deletePostData struct {
 	Post *model.Post
 }
 
+// ShowCreateForm renders the requested page
 func (h *PostHandler) ShowCreateForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -68,6 +70,7 @@ func (h *PostHandler) ShowCreateForm(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// CreatePost creates a new record
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -145,6 +148,7 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/post/"+post.ID, http.StatusSeeOther)
 }
 
+// DeletePost deletes an existing record
 func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -176,6 +180,7 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// ShowDeleteConfirmation renders the requested page
 func (h *PostHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -217,6 +222,7 @@ type editPostData struct {
 	Error              string
 }
 
+// ShowEditForm renders the requested page
 func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -252,6 +258,7 @@ func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// EditPost updates a post from the author
 func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -357,6 +364,7 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 }
 
+// renderEditForm renders the requested page
 func (h *PostHandler) renderEditForm(w http.ResponseWriter, data editPostData) {
 	tmpl, err := template.ParseFiles(
 		filepath.Join("web", "templates", "layout", "base.html"),
@@ -369,8 +377,7 @@ func (h *PostHandler) renderEditForm(w http.ResponseWriter, data editPostData) {
 	tmpl.ExecuteTemplate(w, "base", data)
 }
 
-// --- helpers ---
-
+// userFromSession gets the user from the current session
 func (h *PostHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
@@ -387,6 +394,7 @@ func (h *PostHandler) userFromSession(r *http.Request) *model.User {
 	return user
 }
 
+// renderCreateForm renders the requested page
 func (h *PostHandler) renderCreateForm(w http.ResponseWriter, data createPostData) {
 	tmpl, err := template.ParseFiles(
 		filepath.Join("web", "templates", "layout", "base.html"),
@@ -399,6 +407,7 @@ func (h *PostHandler) renderCreateForm(w http.ResponseWriter, data createPostDat
 	tmpl.ExecuteTemplate(w, "base", data)
 }
 
+// renderError renders the requested page
 func (h *PostHandler) renderError(w http.ResponseWriter, r *http.Request, user *model.User, msg string) {
 	categories, _ := h.categories.GetAll()
 	h.renderCreateForm(w, createPostData{
@@ -410,6 +419,7 @@ func (h *PostHandler) renderError(w http.ResponseWriter, r *http.Request, user *
 	})
 }
 
+// validCategoryIDs removes duplicate and unknown category ids
 func (h *PostHandler) validCategoryIDs(categoryIDs []string) ([]string, error) {
 	seen := make(map[string]bool, len(categoryIDs))
 	validIDs := make([]string, 0, len(categoryIDs))
@@ -433,8 +443,6 @@ func (h *PostHandler) validCategoryIDs(categoryIDs []string) ([]string, error) {
 	return validIDs, nil
 }
 
-// --- PostDetail ---
-
 type CommentWithAuthor struct {
 	model.Comment
 	Username     string
@@ -452,6 +460,7 @@ type PostDetailData struct {
 	DislikeCount int
 }
 
+// PostDetail handles the request
 func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	postID := r.PathValue("id")
 	if strings.HasSuffix(postID, "/edit") {

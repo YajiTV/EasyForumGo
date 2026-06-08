@@ -17,10 +17,12 @@ type AuthMiddleware struct {
 	db *sql.DB
 }
 
+// NewAuthMiddleware creates a new instance
 func NewAuthMiddleware(db *sql.DB) *AuthMiddleware {
 	return &AuthMiddleware{db: db}
 }
 
+// RequireAuth protects routes from unauthenticated requests
 func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(sessionCookieName)
@@ -36,16 +38,19 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		// make the user id available to protected handlers
 		ctx := context.WithValue(r.Context(), currentUserIDKey, userID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
+// CurrentUserID gets the authenticated user id
 func CurrentUserID(r *http.Request) (string, bool) {
 	userID, ok := r.Context().Value(currentUserIDKey).(string)
 	return userID, ok && userID != ""
 }
 
+// findValidSessionUserID gets the user id from a valid session
 func (m *AuthMiddleware) findValidSessionUserID(sessionToken string) (string, error) {
 	var userID string
 	var rawExpiresAt string
@@ -63,6 +68,7 @@ func (m *AuthMiddleware) findValidSessionUserID(sessionToken string) (string, er
 	}
 
 	if !expiresAt.After(time.Now()) {
+		// remove expired sessions before rejecting them
 		_, _ = m.db.Exec("DELETE FROM sessions WHERE session_token = ?", sessionToken)
 		return "", sql.ErrNoRows
 	}
@@ -70,6 +76,7 @@ func (m *AuthMiddleware) findValidSessionUserID(sessionToken string) (string, er
 	return userID, nil
 }
 
+// parseSQLiteTime parses sqlite timestamp formats
 func parseSQLiteTime(value string) (time.Time, error) {
 	layouts := []string{
 		time.RFC3339Nano,
@@ -92,6 +99,7 @@ func parseSQLiteTime(value string) (time.Time, error) {
 	return time.Time{}, lastErr
 }
 
+// clearSessionCookie expires the browser session cookie
 func clearSessionCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookieName,

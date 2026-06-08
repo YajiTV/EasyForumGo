@@ -2,17 +2,20 @@
 
 {{define "content"}}
 <div class="form-page delete-confirmation">
+    <!-- confirmation heading -->
     <div class="form-header">
         <p class="form-kicker">Confirmation</p>
         <h1 class="form-title">Supprimer ce post ?</h1>
         <p class="form-subtitle">Cette action est définitive.</p>
     </div>
 
+    <!-- post preview -->
     <article class="delete-preview">
         <h2>{{.Post.Title}}</h2>
         <p>{{.Post.Content}}</p>
     </article>
 
+    <!-- confirmation actions -->
     <form action="/post/{{.Post.ID}}/delete" method="POST" class="post-form">
         <div class="form-actions">
             <a href="/post/{{.Post.ID}}" class="btn-secondary">Annuler</a>

@@ -5,32 +5,59 @@
 {{end}}
 
 {{define "content"}}
-<div class="page">
-    <h1>À propos de ForumJS</h1>
-    <p>ForumJS est un forum communautaire dédié à l'informatique, développé dans le cadre d'un projet scolaire à <strong>Ynov Campus</strong>.</p>
+<!-- about page -->
+<article class="info-page">
+    <header class="info-hero">
+        <span class="info-kicker">À propos</span>
+        <h1>Un forum pensé pour apprendre ensemble</h1>
+        <p class="info-lead">ForumJS est un espace communautaire consacré à l'informatique, créé par quatre étudiants de première année à Ynov Campus.</p>
+        <div class="info-actions">
+            <a href="/" class="info-button">Découvrir les discussions</a>
+            <a href="/rules" class="info-button secondary">Lire les règles</a>
+        </div>
+    </header>
 
-    <h2>L'équipe</h2>
-    <p>Nous sommes 4 étudiants en B1 :</p>
+    <section class="info-section">
+        <div class="info-section-heading">
+            <h2>Notre intention</h2>
+            <p>Créer un lieu simple où chacun peut poser une question, documenter une découverte et progresser grâce aux retours de la communauté.</p>
+        </div>
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Partager</h3>
+                <p>Publier des idées, des ressources et des projets accessibles à tous.</p>
+            </div>
+            <div class="info-card">
+                <h3>Comprendre</h3>
+                <p>Transformer les difficultés techniques en discussions utiles et durables.</p>
+            </div>
+            <div class="info-card">
+                <h3>Progresser</h3>
+                <p>Apprendre à expliquer, argumenter et collaborer avec bienveillance.</p>
+            </div>
+        </div>
+    </section>
 
-    <div class="team-grid">
-        <div class="team-card">
-            <h3>Mathys</h3>
-            <span class="filiere-cyber">Cybersécurité</span>
+    <section class="info-section">
+        <div class="info-section-heading">
+            <h2>L'équipe</h2>
+            <p>ForumJS est développé par une équipe pluridisciplinaire d'étudiants en B1.</p>
         </div>
-        <div class="team-card">
-            <h3>Axel</h3>
-            <span class="filiere-cyber">Cybersécurité</span>
+        <div class="info-grid two-columns">
+            <div class="info-card"><h3>Mathys</h3><p>Cybersécurité, développement front et back.</p></div>
+            <div class="info-card"><h3>Axel</h3><p>Cybersécurité, développement front et back.</p></div>
+            <div class="info-card"><h3>Baptiste</h3><p>Informatique, développement front et back.</p></div>
+            <div class="info-card"><h3>Nine</h3><p>Conception et développement de l'interface.</p></div>
         </div>
-        <div class="team-card">
-            <h3>Baptiste</h3>
-            <span class="filiere-info">Informatique</span>
-        </div>
-        <div class="team-card">
-            <h3>Marine</h3>
-            <span class="filiere-info">Informatique</span>
-        </div>
-    </div>
+    </section>
 
-    <a href="/" class="back-link">Retour à l'accueil</a>
-</div>
+    <section class="info-section">
+        <div class="info-section-heading">
+            <h2>Le projet technique</h2>
+            <p>Le forum est construit en Go avec la bibliothèque standard, une base SQLite, des templates HTML, du CSS natif et une exécution reproductible avec Docker.</p>
+        </div>
+        <p>Ce choix volontairement sobre permet de comprendre chaque couche de l'application: routage HTTP, sessions, persistance, validation, sécurité et rendu côté serveur.</p>
+        <div class="info-note">ForumJS est un projet pédagogique sans vocation commerciale. Les fonctionnalités et contenus peuvent évoluer pendant son développement.</div>
+    </section>
+</article>
 {{end}}

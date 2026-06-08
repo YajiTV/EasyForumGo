@@ -11,7 +11,6 @@ import (
 	"ForumJS/internal/repository"
 )
 
-// CategoryHandler gère la page de filtrage par catégorie
 type CategoryHandler struct {
 	posts      *repository.PostRepository
 	users      *repository.UserRepository
@@ -20,6 +19,7 @@ type CategoryHandler struct {
 	sessions   *repository.SessionRepository
 }
 
+// NewCategoryHandler creates a new instance
 func NewCategoryHandler(db *sql.DB) *CategoryHandler {
 	return &CategoryHandler{
 		posts:      repository.NewPostRepository(db),
@@ -30,32 +30,31 @@ func NewCategoryHandler(db *sql.DB) *CategoryHandler {
 	}
 }
 
-// CategoryPageData contient tout ce dont le template a besoin
 type CategoryPageData struct {
 	User            *model.User
-	Posts           []PostWithMeta // PostWithMeta existe déjà dans home.go
+	Posts           []PostWithMeta
 	Categories      []model.Category
-	CurrentCategory *model.Category // la catégorie sélectionnée (pour afficher son nom)
+	CurrentCategory *model.Category
 }
 
+// FilterByCategory handles the request
 func (h *CategoryHandler) FilterByCategory(w http.ResponseWriter, r *http.Request) {
 	categoryID := r.PathValue("id")
 
-	// 1. On vérifie que la catégorie existe
+	// reject unknown categories before loading posts
 	category, err := h.categories.GetByID(categoryID)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 
-	// 2. On récupère les posts de cette catégorie (le JOIN est déjà dans le repository)
 	posts, err := h.posts.GetByCategory(categoryID)
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
 
-	// 3. Pour chaque post, on enrichit avec le username et les likes
+	// enrich posts with data required by the home template
 	var postsWithMeta []PostWithMeta
 	for _, p := range posts {
 		user, err := h.users.GetByID(p.UserID)
@@ -78,10 +77,8 @@ func (h *CategoryHandler) FilterByCategory(w http.ResponseWriter, r *http.Reques
 		})
 	}
 
-	// 4. On récupère toutes les catégories pour la barre de filtres
 	categories, _ := h.categories.GetAll()
 
-	// 5. On récupère l'utilisateur connecté (nil si non connecté)
 	user := h.userFromSession(r)
 
 	data := CategoryPageData{
@@ -91,7 +88,7 @@ func (h *CategoryHandler) FilterByCategory(w http.ResponseWriter, r *http.Reques
 		CurrentCategory: category,
 	}
 
-	// 6. On affiche le template (on réutilise home.html !)
+	// reuse the home template with the selected category
 	tmpl, err := template.ParseFiles(
 		filepath.Join("web", "templates", "layout", "base.html"),
 		filepath.Join("web", "templates", "home.html"),
@@ -103,8 +100,7 @@ func (h *CategoryHandler) FilterByCategory(w http.ResponseWriter, r *http.Reques
 	tmpl.ExecuteTemplate(w, "base", data)
 }
 
-// userFromSession est dupliquée ici depuis post.go
-// (on pourrait la mettre dans un fichier helpers.go plus tard)
+// userFromSession gets the user from the current session
 func (h *CategoryHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {

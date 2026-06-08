@@ -20,6 +20,7 @@ type RateLimiter struct {
 	window   time.Duration
 }
 
+// NewRateLimiter creates a rate limiter
 func NewRateLimiter(rate int, window time.Duration) *RateLimiter {
 	rl := &RateLimiter{
 		counters: make(map[string]*counter),
@@ -30,6 +31,7 @@ func NewRateLimiter(rate int, window time.Duration) *RateLimiter {
 	return rl
 }
 
+// Allow checks whether a key remains below the rate limit
 func (rl *RateLimiter) Allow(key string) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
@@ -49,6 +51,7 @@ func (rl *RateLimiter) Allow(key string) bool {
 	return true
 }
 
+// Wrap applies rate limiting to an http handler
 func (rl *RateLimiter) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !rl.Allow(realIP(r)) {
@@ -59,6 +62,7 @@ func (rl *RateLimiter) Wrap(next http.Handler) http.Handler {
 	})
 }
 
+// cleanup removes expired rate limit counters
 func (rl *RateLimiter) cleanup() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
@@ -74,6 +78,7 @@ func (rl *RateLimiter) cleanup() {
 	}
 }
 
+// realIP gets the client ip address
 func realIP(r *http.Request) string {
 	if ip := r.Header.Get("X-Real-IP"); ip != "" {
 		return ip

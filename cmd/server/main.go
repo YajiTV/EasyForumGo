@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// main starts the application
 func main() {
 	cfg := config.Load()
 

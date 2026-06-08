@@ -5,22 +5,45 @@
 {{end}}
 
 {{define "content"}}
-<div class="page">
-    <h1>Mentions légales</h1>
+<!-- legal information -->
+<article class="info-page">
+    <header class="info-hero">
+        <span class="info-kicker">Informations légales</span>
+        <h1>Mentions légales</h1>
+        <p class="info-lead">Informations relatives à l'édition, à l'hébergement et à l'utilisation de ForumJS.</p>
+        <div class="info-meta"><span>Dernière mise à jour: 8 juin 2026</span></div>
+    </header>
 
-    <h2>Éditeur du site</h2>
-    <p>ForumJS est un projet scolaire réalisé par des étudiants de <strong>Ynov Campus</strong> en B1.</p>
-    <p>Il n'a pas de vocation commerciale et est développé à des fins pédagogiques uniquement.</p>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Éditeur du site</h2></div>
+        <p>ForumJS est un projet pédagogique non commercial réalisé par Mathys, Axel, Baptiste et Nine, étudiants en première année à Ynov Campus.</p>
+        <p>Pour toute demande concernant le site, son contenu ou vos données, utilisez la <a href="/contact">page de contact</a>.</p>
+    </section>
 
-    <h2>Hébergement</h2>
-    <p>Ce site est hébergé localement dans le cadre d'un projet étudiant.</p>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Hébergement</h2></div>
+        <p>Le service est exécuté dans un environnement pédagogique et peut être hébergé localement ou sur une infrastructure de démonstration. Les coordonnées d'un hébergeur tiers seront ajoutées sur cette page si le service est déployé publiquement.</p>
+    </section>
 
-    <h2>Responsabilité</h2>
-    <p>Les contenus publiés sur ForumJS sont sous la responsabilité de leurs auteurs. L'équipe du projet ne saurait être tenue responsable des propos tenus par les utilisateurs.</p>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Propriété intellectuelle</h2></div>
+        <p>La structure, l'interface et le code de ForumJS appartiennent à leurs auteurs, sous réserve des droits associés aux bibliothèques et ressources utilisées.</p>
+        <p>Chaque utilisateur reste responsable des contenus qu'il publie et doit disposer des droits nécessaires pour les partager. Toute reproduction d'un contenu tiers doit respecter son auteur et sa licence.</p>
+    </section>
 
-    <h2>Données personnelles</h2>
-    <p>Les données collectées (adresse e-mail, nom d'utilisateur) sont utilisées uniquement pour le fonctionnement du forum. Aucune donnée n'est transmise à des tiers.</p>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Responsabilité</h2></div>
+        <p>L'équipe s'efforce de maintenir un service fiable et des informations exactes, sans pouvoir garantir une disponibilité continue ni l'absence totale d'erreurs. ForumJS ne remplace pas l'avis d'un professionnel.</p>
+        <p>Les opinions publiées par les membres leur appartiennent. Les contenus contraires aux <a href="/rules">règles du forum</a> peuvent être retirés.</p>
+    </section>
 
-    <a href="/" class="back-link">Retour à l'accueil</a>
-</div>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Documents associés</h2></div>
+        <div class="info-grid">
+            <a href="/privacy" class="info-card info-card-link"><h3>Confidentialité</h3><p>Comprendre les données traitées par ForumJS.</p></a>
+            <a href="/terms" class="info-card info-card-link"><h3>Conditions d'utilisation</h3><p>Connaître les règles applicables au service.</p></a>
+            <a href="/cookies" class="info-card info-card-link"><h3>Cookies</h3><p>Découvrir le fonctionnement de la session.</p></a>
+        </div>
+    </section>
+</article>
 {{end}}

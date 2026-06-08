@@ -44,6 +44,7 @@ func detectImageExtension(buf []byte) (string, bool) {
 	return "", false
 }
 
+// SaveUploadedImage saves uploaded data
 func SaveUploadedImage(file multipart.File, header *multipart.FileHeader, uploadDir string) (string, error) {
 	if header.Size > MaxUploadSize {
 		return "", ErrFileTooLarge

@@ -12,6 +12,7 @@
 <body>
     <input type="checkbox" id="menu-state" class="menu-state" aria-hidden="true">
 
+    <!-- top navigation -->
     <header class="topbar">
         <nav class="topbar-nav">
             <div class="topbar-left">
@@ -91,7 +92,9 @@
         </nav>
     </header>
 
+    <!-- application layout -->
     <div class="app-shell">
+        <!-- side navigation -->
         <aside class="left-sidebar" id="site-menu" aria-label="Navigation principale">
             <nav class="side-nav">
                 <a href="/" class="side-nav-item active">
@@ -127,12 +130,6 @@
                         <span>Connexion</span>
                     </a>
                 {{end}}
-                <a href="/library" class="side-nav-item">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"></path>
-                    </svg>
-                    <span>Bibliothèque</span>
-                </a>
                 <a href="/about" class="side-nav-item">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -144,11 +141,13 @@
             </nav>
         </aside>
 
+        <!-- page content -->
         <main class="main-content">
             {{block "content" .}}{{end}}
         </main>
     </div>
 
+    <!-- site footer -->
     <footer class="site-footer">
         <nav class="footer-links" aria-label="Liens secondaires">
             <a href="/">Accueil</a>
