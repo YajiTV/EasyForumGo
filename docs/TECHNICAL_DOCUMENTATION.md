@@ -234,7 +234,7 @@ Container recreation does not remove named volumes. `docker compose down --volum
 
 Configuration is read from environment variables in `config/config.go`. Invalid or missing numeric values fall back to safe defaults.
 
-TLS is enabled only when both `TLS_CERT_FILE` and `TLS_KEY_FILE` are non-empty. Session duration and upload size are configurable, with defaults of 24 hours and 20 MB.
+TLS is enabled only when both `TLS_CERT_FILE` and `TLS_KEY_FILE` are non-empty. Session duration is configurable and defaults to 24 hours. Image uploads use the 20 MB limit required by the subject.
 
 ## 10. Verification Strategy
 
@@ -248,7 +248,7 @@ docker compose -f docker/docker-compose.yml config
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-Because no automated `*_test.go` files currently exist, `go test ./...` mainly validates compilation. Manual validation must cover:
+`go test ./...` validates compilation and checks fresh migrations, foreign key activation, and cascade deletion. Manual validation must cover:
 
 - guest read-only access
 - registration, login, session replacement, and logout

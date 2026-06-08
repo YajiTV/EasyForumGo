@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -18,7 +19,7 @@ func InitDB(dbPath, migrationsDir string) (*sql.DB, error) {
 		}
 	}
 
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", sqliteDSN(dbPath))
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
@@ -34,6 +35,15 @@ func InitDB(dbPath, migrationsDir string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+// sqliteDSN enables foreign keys on every database connection
+func sqliteDSN(dbPath string) string {
+	separator := "?"
+	if strings.Contains(dbPath, "?") {
+		separator = "&"
+	}
+	return dbPath + separator + "_foreign_keys=on"
 }
 
 // runMigrations runs pending database migrations
@@ -53,10 +63,11 @@ func runMigrations(db *sql.DB, dir string) error {
 	for _, f := range files {
 		name := filepath.Base(f)
 
-		// skip migrations already recorded in the database
-		var count int
-		db.QueryRow(`SELECT COUNT(*) FROM schema_migrations WHERE filename = ?`, name).Scan(&count)
-		if count > 0 {
+		applied, err := migrationApplied(db, name)
+		if err != nil {
+			return err
+		}
+		if applied {
 			continue
 		}
 
@@ -64,12 +75,38 @@ func runMigrations(db *sql.DB, dir string) error {
 		if err != nil {
 			return fmt.Errorf("read %s: %w", f, err)
 		}
-		if _, err := db.Exec(string(content)); err != nil {
-			return fmt.Errorf("exec %s: %w", f, err)
+		if err := applyMigration(db, name, content); err != nil {
+			return err
 		}
+	}
+	return nil
+}
 
-		// record the migration after successful execution
-		db.Exec(`INSERT INTO schema_migrations (filename) VALUES (?)`, name)
+// migrationApplied checks whether a migration has already run
+func migrationApplied(db *sql.DB, name string) (bool, error) {
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM schema_migrations WHERE filename = ?`, name).Scan(&count); err != nil {
+		return false, fmt.Errorf("check migration %s: %w", name, err)
+	}
+	return count > 0, nil
+}
+
+// applyMigration executes and records one migration atomically
+func applyMigration(db *sql.DB, name string, content []byte) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin migration %s: %w", name, err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(string(content)); err != nil {
+		return fmt.Errorf("exec migration %s: %w", name, err)
+	}
+	if _, err := tx.Exec(`INSERT INTO schema_migrations (filename) VALUES (?)`, name); err != nil {
+		return fmt.Errorf("record migration %s: %w", name, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit migration %s: %w", name, err)
 	}
 	return nil
 }

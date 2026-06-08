@@ -116,7 +116,6 @@ Configuration is read from environment variables. The application uses defaults 
 | `STATIC_DIR` | `web/static` | Static asset directory |
 | `TEMPLATES_DIR` | `web/templates` | HTML template directory |
 | `UPLOAD_DIR` | `./uploads` | Uploaded image directory |
-| `MAX_UPLOAD_MB` | `20` | Configured maximum upload size |
 | `SESSION_DURATION_H` | `24` | Session duration in hours |
 
 See [`.env.example`](.env.example) for a complete example.
@@ -197,7 +196,7 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 Run the Go checks:
 
 ```bash
-gofmt -w .
+gofmt -w $(find . -name '*.go' -type f)
 go test ./...
 go vet ./...
 ```
@@ -208,7 +207,7 @@ Validate the Compose configuration:
 docker compose -f docker/docker-compose.yml config
 ```
 
-`go test ./...` currently validates compilation because the repository does not yet contain automated `*_test.go` files. The main workflows must also be checked manually: guest access, authentication, posts, comments, votes, personal filters, uploads, errors, and Docker persistence.
+`go test ./...` validates compilation and includes a repository test covering fresh migrations, foreign key activation, and cascade deletion. The main HTTP workflows must also be checked manually: guest access, authentication, posts, comments, votes, personal filters, uploads, errors, and Docker persistence.
 
 ## Demo Accounts
 
@@ -219,7 +218,6 @@ No demo account is seeded. Create an account from `/register`.
 - The self-signed HTTPS certificate is intended for development and evaluation only.
 - CSRF tokens are not implemented; state-changing actions use `POST` and session cookies use `SameSite=Lax`.
 - The in-memory rate limiter resets when the application restarts and is designed for a single application instance.
-- No automated unit or integration test files are currently included.
 
 ## Implemented Bonuses
 
