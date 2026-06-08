@@ -6,21 +6,47 @@
 
 {{define "content"}}
 <!-- forum rules -->
-<div class="page">
-    <h1>Règles du forum</h1>
-    <p>Pour que ForumJS reste un espace agréable pour tout le monde, merci de respecter ces quelques règles.</p>
+<article class="info-page">
+    <header class="info-hero">
+        <span class="info-kicker">Communauté</span>
+        <h1>Les règles du forum</h1>
+        <p class="info-lead">Ces principes protègent la qualité des échanges et permettent à chacun de participer dans un environnement accueillant.</p>
+        <div class="info-meta"><span>Applicables à tous les membres</span><span>Dernière mise à jour: 8 juin 2026</span></div>
+    </header>
 
-    <ol>
-        <li>Soyez respectueux envers les autres membres.</li>
-        <li>Pas d'insultes, de harcèlement ou de propos haineux.</li>
-        <li>Pas de spam ou de publicité non sollicitée.</li>
-        <li>Restez dans le sujet de la catégorie choisie.</li>
-        <li>Pas de contenu illégal ou protégé par le droit d'auteur.</li>
-        <li>Signalez tout comportement suspect aux modérateurs.</li>
-    </ol>
+    <section class="info-section">
+        <div class="info-grid">
+            <div class="info-card"><h3>Respectez les personnes</h3><p>Les désaccords sont permis, les attaques personnelles, insultes, menaces et discriminations ne le sont pas.</p></div>
+            <div class="info-card"><h3>Publiez avec soin</h3><p>Choisissez un titre clair, la bonne catégorie et fournissez assez de contexte pour permettre une réponse utile.</p></div>
+            <div class="info-card"><h3>Protégez la communauté</h3><p>Ne partagez pas de données personnelles, de secrets, de contenu dangereux ou de liens trompeurs.</p></div>
+        </div>
+    </section>
 
-    <p>Le non-respect de ces règles peut entraîner la suppression de votre compte.</p>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Comportements attendus</h2></div>
+        <ul class="info-list">
+            <li>Restez courtois, constructif et pertinent dans chaque discussion.</li>
+            <li>Recherchez les discussions existantes avant de publier un doublon.</li>
+            <li>Citez les sources et respectez les licences ainsi que le droit d'auteur.</li>
+            <li>Utilisez les votes pour évaluer le contenu, jamais pour cibler une personne.</li>
+            <li>Signalez à l'équipe les contenus problématiques au lieu d'alimenter un conflit.</li>
+        </ul>
+    </section>
 
-    <a href="/" class="back-link">Retour à l'accueil</a>
-</div>
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Contenus interdits</h2><p>Les éléments suivants peuvent être retirés sans préavis afin de protéger les utilisateurs et le service.</p></div>
+        <div class="info-grid two-columns">
+            <div class="info-card"><h3>Abus et harcèlement</h3><p>Propos haineux, intimidation, usurpation d'identité ou divulgation d'informations privées.</p></div>
+            <div class="info-card"><h3>Spam et manipulation</h3><p>Publicité répétitive, faux comptes, votes coordonnés ou publications sans rapport avec le forum.</p></div>
+            <div class="info-card"><h3>Contenu illégal</h3><p>Instructions ou ressources qui enfreignent la loi, les droits d'un tiers ou compromettent sa sécurité.</p></div>
+            <div class="info-card"><h3>Fichiers dangereux</h3><p>Malwares, liens frauduleux, pièces jointes trompeuses ou contenus destinés à nuire.</p></div>
+        </div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Modération</h2></div>
+        <p>Selon la gravité et la répétition, l'équipe peut modifier ou supprimer un contenu, avertir son auteur, limiter son accès ou supprimer son compte. Une mesure urgente peut être prise immédiatement lorsqu'un risque existe.</p>
+        <p>Pour demander un examen ou signaler un contenu, utilisez la <a href="/contact">page de contact</a> en indiquant le lien concerné et une description factuelle.</p>
+    </section>
+</article>
 {{end}}
