@@ -30,8 +30,8 @@ type Config struct {
 	UploadDir         string
 	MaxUploadBytes    int64
 	SessionDuration   time.Duration
-	OauthClientID     string
-	OauthClientSecret string
+	OAuthClientID     string
+	OAuthClientSecret string
 }
 
 // Load loads the application configuration
@@ -48,8 +48,8 @@ func Load() Config {
 		UploadDir:         stringEnv("UPLOAD_DIR", defaultUploadDir),
 		MaxUploadBytes:    int64Env("MAX_UPLOAD_MB", defaultMaxUploadMegabytes) * 1024 * 1024,
 		SessionDuration:   time.Duration(intEnv("SESSION_DURATION_H", defaultSessionDurationHours)) * time.Hour,
-		OauthClientID:     stringEnv("OAUTH_CLIENT_ID", ""),
-		OauthClientSecret: stringEnv("OAUTH_CLIENT_SECRET", ""),
+		OAuthClientID:     stringEnv("OAUTH_CLIENT_ID", ""),
+		OAuthClientSecret: stringEnv("OAUTH_CLIENT_SECRET", ""),
 	}
 }
 
