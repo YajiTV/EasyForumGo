@@ -6,11 +6,36 @@ import (
 	"ForumJS/internal/repository"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 )
 
+// loadEnv loads variables from a .env file into the environment
+func loadEnv() {
+	data, err := os.ReadFile(".env")
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			if os.Getenv(key) == "" {
+				os.Setenv(key, value)
+			}
+		}
+	}
+}
+
 // main starts the application
 func main() {
+	loadEnv()
 	cfg := config.Load()
 
 	db, err := repository.InitDB(cfg.DBPath, cfg.MigrationsDir)

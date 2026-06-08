@@ -48,8 +48,8 @@ func Load() Config {
 		UploadDir:         stringEnv("UPLOAD_DIR", defaultUploadDir),
 		MaxUploadBytes:    int64Env("MAX_UPLOAD_MB", defaultMaxUploadMegabytes) * 1024 * 1024,
 		SessionDuration:   time.Duration(intEnv("SESSION_DURATION_H", defaultSessionDurationHours)) * time.Hour,
-		OAuthClientID:     stringEnv("OAUTH_CLIENT_ID", ""),
-		OAuthClientSecret: stringEnv("OAUTH_CLIENT_SECRET", ""),
+		OAuthClientID:     stringEnv("OAUTH_ID", ""),
+		OAuthClientSecret: stringEnv("OAUTH_KEY", ""),
 	}
 }
 
