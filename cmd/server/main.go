@@ -2,9 +2,11 @@ package main
 
 import (
 	"ForumJS/config"
+	"ForumJS/internal/middleware"
 	"ForumJS/internal/repository"
 	"log"
 	"net/http"
+	"time"
 )
 
 // main starts the application
@@ -17,7 +19,12 @@ func main() {
 	}
 	defer db.Close()
 
-	mux := setupRouter(cfg, db)
+	globalLimiter := middleware.NewRateLimiter(200, time.Minute)
+	loginLimiter := middleware.NewRateLimiter(10, 15*time.Minute)
+	writeLimiter := middleware.NewRateLimiter(20, time.Hour)
+
+	mux := setupRouter(cfg, db, loginLimiter, writeLimiter)
+	var root http.Handler = globalLimiter.Wrap(mux)
 
 	if cfg.TLSEnabled() {
 		go func() {
@@ -27,9 +34,9 @@ func main() {
 			}
 		}()
 		log.Printf("HTTPS server starting on :%s", cfg.HTTPSPort)
-		log.Fatal(http.ListenAndServeTLS(":"+cfg.HTTPSPort, cfg.TLSCertFile, cfg.TLSKeyFile, mux))
+		log.Fatal(http.ListenAndServeTLS(":"+cfg.HTTPSPort, cfg.TLSCertFile, cfg.TLSKeyFile, root))
 	} else {
 		log.Printf("Server starting on :%s", cfg.Port)
-		log.Fatal(http.ListenAndServe(":"+cfg.Port, mux))
+		log.Fatal(http.ListenAndServe(":"+cfg.Port, root))
 	}
 }

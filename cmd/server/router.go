@@ -3,6 +3,7 @@ package main
 import (
 	"ForumJS/config"
 	"ForumJS/internal/handler"
+	"ForumJS/internal/middleware"
 	"ForumJS/internal/repository"
 	"database/sql"
 	"html/template"
@@ -12,7 +13,7 @@ import (
 )
 
 // setupRouter configures the application routes
-func setupRouter(cfg config.Config, db *sql.DB) *http.ServeMux {
+func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *middleware.RateLimiter) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// static files
@@ -24,7 +25,7 @@ func setupRouter(cfg config.Config, db *sql.DB) *http.ServeMux {
 	errorRenderer.SetAuthRepositories(repository.NewSessionRepository(db), repository.NewUserRepository(db))
 	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration, errorRenderer)
 	mux.HandleFunc("GET /login", authHandler.ShowLoginForm)
-	mux.HandleFunc("POST /login", authHandler.Login)
+	mux.Handle("POST /login", loginLimiter.Wrap(http.HandlerFunc(authHandler.Login)))
 	mux.HandleFunc("GET /register", authHandler.ShowRegisterForm)
 	mux.HandleFunc("POST /register", authHandler.Signup)
 	mux.HandleFunc("GET /register/password-strength", authHandler.PasswordStrength)
@@ -43,7 +44,7 @@ func setupRouter(cfg config.Config, db *sql.DB) *http.ServeMux {
 	// post routes
 	postHandler := handler.NewPostHandler(db, cfg.UploadDir)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
-	mux.HandleFunc("POST /post/new", postHandler.CreatePost)
+	mux.Handle("POST /post/new", writeLimiter.Wrap(http.HandlerFunc(postHandler.CreatePost)))
 	mux.HandleFunc("GET /post/{id}/edit", postHandler.ShowEditForm)
 	mux.HandleFunc("POST /post/{id}/edit", postHandler.EditPost)
 	mux.HandleFunc("GET /post/{id}/delete", postHandler.ShowDeleteConfirmation)
@@ -52,7 +53,7 @@ func setupRouter(cfg config.Config, db *sql.DB) *http.ServeMux {
 
 	// comment routes
 	commentHandler := handler.NewCommentHandler(db)
-	mux.HandleFunc("POST /post/{id}/comment", commentHandler.CreateComment)
+	mux.Handle("POST /post/{id}/comment", writeLimiter.Wrap(http.HandlerFunc(commentHandler.CreateComment)))
 	mux.HandleFunc("GET /comment/{id}/delete", commentHandler.ShowDeleteConfirmation)
 	mux.HandleFunc("POST /comment/{id}/delete", commentHandler.DeleteComment)
 	mux.HandleFunc("GET /comment/{id}/edit", commentHandler.ShowEditForm)
