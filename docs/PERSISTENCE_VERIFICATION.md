@@ -18,7 +18,7 @@ The verification used a dedicated Compose project and confirmed that:
 ```text
 Docker Engine: 29.5.2
 Docker Compose: 5.1.4
-Compose project: forumjs-persistence-check
+Compose project: easy-persistence-check
 ```
 
 ## Procedure
@@ -26,36 +26,36 @@ Compose project: forumjs-persistence-check
 Validate and start the application:
 
 ```bash
-docker compose -p forumjs-persistence-check -f docker/docker-compose.yml config
-docker compose -p forumjs-persistence-check -f docker/docker-compose.yml up -d --build
+docker compose -p easy-persistence-check -f docker/docker-compose.yml config
+docker compose -p easy-persistence-check -f docker/docker-compose.yml up -d --build
 curl -k https://localhost:8443/
 ```
 
 Insert a database marker and an upload marker:
 
 ```bash
-docker compose -p forumjs-persistence-check -f docker/docker-compose.yml exec -T forum \
+docker compose -p easy-persistence-check -f docker/docker-compose.yml exec -T forum \
   sqlite3 /app/data/forum.db \
   "CREATE TABLE IF NOT EXISTS persistence_check (value TEXT PRIMARY KEY);
    INSERT OR REPLACE INTO persistence_check(value) VALUES ('database-persists');"
 
-docker compose -p forumjs-persistence-check -f docker/docker-compose.yml exec -T forum \
+docker compose -p easy-persistence-check -f docker/docker-compose.yml exec -T forum \
   sh -c "printf 'upload-persists' > /app/uploads/persistence-check.txt"
 ```
 
 Recreate the container without deleting its named volumes:
 
 ```bash
-docker compose -p forumjs-persistence-check -f docker/docker-compose.yml up -d --force-recreate
+docker compose -p easy-persistence-check -f docker/docker-compose.yml up -d --force-recreate
 ```
 
 Read both markers after recreation:
 
 ```bash
-docker compose -p forumjs-persistence-check -f docker/docker-compose.yml exec -T forum \
+docker compose -p easy-persistence-check -f docker/docker-compose.yml exec -T forum \
   sqlite3 /app/data/forum.db "SELECT value FROM persistence_check;"
 
-docker compose -p forumjs-persistence-check -f docker/docker-compose.yml exec -T forum \
+docker compose -p easy-persistence-check -f docker/docker-compose.yml exec -T forum \
   cat /app/uploads/persistence-check.txt
 ```
 

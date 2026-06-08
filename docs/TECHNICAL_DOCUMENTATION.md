@@ -1,8 +1,8 @@
-# ForumJS Technical Documentation
+# Easy Technical Documentation
 
 ## 1. Purpose and Scope
 
-ForumJS is a server-rendered forum written in Go for the B1 Forum project. This document describes the implementation delivered in this repository and maps its technical decisions to the subject requirements.
+Easy is a server-rendered forum written in Go for the B1 Forum project. This document describes the implementation delivered in this repository and maps its technical decisions to the subject requirements.
 
 The mandatory scope includes:
 
@@ -15,9 +15,10 @@ The mandatory scope includes:
 - Docker delivery
 - HTTP and technical error handling
 
-Implemented optional scope includes advanced image validation, personal activity pages, HTTPS, and rate limiting.
+Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, HTTPS, and rate limiting.
 
 ## 2. Architecture
+The internal Go module is named `EasyForumGo`.
 
 The application follows a layered organization while remaining deliberately small and based on the Go standard library.
 

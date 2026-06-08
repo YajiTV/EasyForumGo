@@ -49,7 +49,7 @@ var commonPasswords = map[string]struct{}{
 	"qwerty123":     {},
 	"qwerty1234":    {},
 	"admin1234":     {},
-	"forumjs123":    {},
+	"easy123":       {},
 	"letmein123":    {},
 	"iloveyou123":   {},
 	"bonjour123":    {},

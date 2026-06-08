@@ -10,7 +10,7 @@ openssl req -x509 \
   -out "$CERTS_DIR/cert.pem" \
   -days 365 \
   -nodes \
-  -subj "/C=FR/ST=Paris/L=Paris/O=ForumJS/CN=localhost" \
+  -subj "/C=FR/ST=Paris/L=Paris/O=Easy/CN=localhost" \
   -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 
 echo "Certificates generated in $CERTS_DIR"

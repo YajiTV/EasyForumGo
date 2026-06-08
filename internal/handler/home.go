@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
 )
 
 type PostWithMeta struct {

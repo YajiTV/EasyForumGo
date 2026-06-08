@@ -1,9 +1,9 @@
 package main
 
 import (
-	"ForumJS/config"
-	"ForumJS/internal/middleware"
-	"ForumJS/internal/repository"
+	"EasyForumGo/config"
+	"EasyForumGo/internal/middleware"
+	"EasyForumGo/internal/repository"
 	"log"
 	"net/http"
 	"os"

@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 
-	"ForumJS/internal/model"
+	"EasyForumGo/internal/model"
 )
 
 type SessionRepository struct {

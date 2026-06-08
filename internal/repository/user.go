@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"ForumJS/internal/model"
+	"EasyForumGo/internal/model"
 	"database/sql"
 )
 

@@ -1,6 +1,6 @@
-# ForumJS
+# Easy
 
-ForumJS is a server-rendered community forum built in Go. It provides the complete mandatory feature set from the B1 Forum project: authentication, one active session per user, posts with categories and images, comments, votes, personal filters, SQLite persistence, HTTP error handling, and Docker delivery.
+Easy is a server-rendered community forum built in Go. It provides the complete mandatory feature set from the B1 Forum project: authentication, one active session per user, posts with categories and images, comments, votes, personal filters, SQLite persistence, HTTP error handling, and Docker delivery.
 
 ## Team
 
@@ -29,12 +29,14 @@ ForumJS is a server-rendered community forum built in Go. It provides the comple
 - Personal comments page and editable user profile
 - Profile picture upload
 - Password strength feedback
+- Google OAuth authentication
 - JPEG, PNG, and GIF validation with a 20 MB limit
 - HTTPS with a self-signed certificate
 - Global, login, and write-action rate limiting
 - Informational, help, legal, privacy, terms, cookies, and contact pages
 
 ## Technology
+- Internal Go module: `EasyForumGo`
 
 - Go `1.22.2` and the standard library: `net/http`, `html/template`, `database/sql`
 - SQLite through `github.com/mattn/go-sqlite3`
@@ -50,11 +52,13 @@ ForumJS is a server-rendered community forum built in Go. It provides the comple
 - Docker
 - Docker Compose
 
+The GitHub repository slug is `EasyForumGo`, while the product name is Easy and the Go module is `EasyForumGo`.
+
 Clone and start the application:
 
 ```bash
-git clone https://github.com/YajiTV/ForumJS.git
-cd ForumJS
+git clone https://github.com/YajiTV/EasyForumGo.git
+cd EasyForumGo
 docker compose -f docker/docker-compose.yml up --build
 ```
 
@@ -117,6 +121,8 @@ Configuration is read from environment variables. The application uses defaults 
 | `TEMPLATES_DIR` | `web/templates` | HTML template directory |
 | `UPLOAD_DIR` | `./uploads` | Uploaded image directory |
 | `SESSION_DURATION_H` | `24` | Session duration in hours |
+| `OAUTH_ID` | empty | Google OAuth client ID |
+| `OAUTH_KEY` | empty | Google OAuth client secret |
 
 See [`.env.example`](.env.example) for a complete example.
 
@@ -141,7 +147,7 @@ docs/                ERD and technical documentation
 
 ## Database
 
-ForumJS uses SQLite with foreign keys enabled. Migrations run automatically at startup and are recorded in `schema_migrations`.
+Easy uses SQLite with foreign keys enabled. Migrations run automatically at startup and are recorded in `schema_migrations`.
 
 | Table | Purpose |
 | --- | --- |
@@ -221,8 +227,9 @@ No demo account is seeded. Create an account from `/register`.
 
 ## Implemented Bonuses
 
+- Google OAuth authentication
 - Advanced image upload validation
 - HTTPS and rate limiting
 - Personal activity pages
 
-OAuth, moderation roles, notifications, and database encryption are not implemented.
+GitHub OAuth, moderation roles, notifications, and database encryption are not implemented.
