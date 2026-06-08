@@ -3,14 +3,12 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: forum_app
     ports:
       - "8080:8080"
       - "8443:8443"
     volumes:
       - db_data:/app/data
       - uploads:/app/uploads
-      - ../certs:/app/certs:ro
     environment:
       - DB_PATH=/app/data/forum.db
       - PORT=8080
