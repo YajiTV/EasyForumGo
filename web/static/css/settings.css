@@ -223,6 +223,32 @@
     font: inherit;
 }
 
+.settings-form textarea {
+    width: 100%;
+    resize: vertical;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+    font: inherit;
+}
+
+.settings-form .settings-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.settings-form .settings-checkbox input {
+    width: auto;
+}
+
+.settings-social-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .settings-form input:focus {
     outline: none;
     border-color: var(--text);
