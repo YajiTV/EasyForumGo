@@ -12,11 +12,8 @@
         </div>
         <div class="social-profile-action">
             {{if .IsOwner}}<a href="/profile/edit" class="social-button">Modifier le profil</a>{{else if .User}}
-            {{if not .IsBlocked}}<form action="/user/{{.ProfileUser.Username}}/{{if .IsFollowing}}unfollow{{else}}follow{{end}}" method="POST">
+            <form action="/user/{{.ProfileUser.Username}}/{{if .IsFollowing}}unfollow{{else}}follow{{end}}" method="POST">
                 <button type="submit" class="social-button {{if .IsFollowing}}secondary{{end}}">{{if .IsFollowing}}Ne plus suivre{{else}}Suivre{{end}}</button>
-            </form>{{end}}
-            <form action="/user/{{.ProfileUser.Username}}/{{if .HasBlocked}}unblock{{else}}block{{end}}" method="POST">
-                <button type="submit" class="social-block-button">{{if .HasBlocked}}Débloquer{{else if .IsBlocked}}Utilisateur indisponible{{else}}Bloquer{{end}}</button>
             </form>
             {{end}}
         </div>

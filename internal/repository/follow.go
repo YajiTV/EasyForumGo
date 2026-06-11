@@ -8,9 +8,6 @@ import (
 	"EasyForumGo/internal/model"
 )
 
-// ErrFollowBlocked indicates that a block prevents a following relation
-var ErrFollowBlocked = errors.New("blocked users cannot follow each other")
-
 type FollowRepository struct {
 	db *sql.DB
 }
@@ -24,14 +21,6 @@ func NewFollowRepository(db *sql.DB) *FollowRepository {
 func (r *FollowRepository) Follow(followerID, followedID string) error {
 	if followerID == followedID {
 		return errors.New("users cannot follow themselves")
-	}
-	var blocked int
-	if err := r.db.QueryRow(`SELECT COUNT(*) FROM user_blocks WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?)`,
-		followerID, followedID, followedID, followerID).Scan(&blocked); err != nil {
-		return err
-	}
-	if blocked > 0 {
-		return ErrFollowBlocked
 	}
 	_, err := r.db.Exec(`INSERT OR IGNORE INTO user_follows (follower_id, followed_id) VALUES (?, ?)`, followerID, followedID)
 	return err
@@ -92,13 +81,6 @@ func (r *FollowRepository) FollowerIDs(userID string) ([]string, error) {
 		ids = append(ids, id)
 	}
 	return ids, rows.Err()
-}
-
-// RemoveBetween removes following relations in both directions
-func (r *FollowRepository) RemoveBetween(firstID, secondID string) error {
-	_, err := r.db.Exec(`DELETE FROM user_follows WHERE (follower_id = ? AND followed_id = ?) OR (follower_id = ? AND followed_id = ?)`,
-		firstID, secondID, secondID, firstID)
-	return err
 }
 
 // count counts matching following relations

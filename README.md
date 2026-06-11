@@ -30,7 +30,7 @@ Easy is a server-rendered community forum built in Go. It provides the complete 
 - Consolidated personal activity page with contributions, reactions, and statistics
 - Customizable libraries for saving and organizing posts
 - Complete account settings for email, password, session, and account deletion
-- Public profiles, followers, following feed, user discovery, social notifications, and user blocking
+- Public profiles, followers, following feed, user discovery, and social notifications
 - Profile picture upload
 - Password strength feedback
 - Google OAuth authentication
@@ -199,7 +199,6 @@ Easy uses SQLite with foreign keys enabled. Migrations run automatically at star
 | `libraries` | Named post collections owned by users |
 | `library_posts` | Posts saved in user libraries |
 | `user_follows` | Unique following relationships between users |
-| `user_blocks` | Unique user blocks that prevent following and discovery |
 
 The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 
@@ -229,7 +228,6 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 | `GET` | `/user/{username}` | Public | Display a public profile and its posts |
 | `GET` | `/user/{username}/followers`, `/user/{username}/following` | Public or owner | Paginated social relations |
 | `POST` | `/user/{username}/follow`, `/user/{username}/unfollow` | Connected | Manage a following relationship |
-| `POST` | `/user/{username}/block`, `/user/{username}/unblock` | Connected | Manage a user block |
 | `GET` | `/?feed=following` | Connected | Display posts from followed users |
 | `GET` | `/discover`, `/search?q=...` | Connected | Discover and search profiles |
 | `GET` | `/settings` | Connected | Display account and security settings |
@@ -254,7 +252,7 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 - SQLite foreign keys enforce relation integrity and cascading deletion.
 - Image content is checked with `http.DetectContentType`.
 - Rate limiting protects global traffic, login attempts, and write actions.
-- Follow, unfollow, block, and unblock actions use POST routes protected by the write limiter.
+- Follow and unfollow actions use POST routes protected by the write limiter.
 
 ## Verification
 

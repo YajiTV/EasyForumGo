@@ -80,9 +80,7 @@ func (r *PostRepository) GetByUserIDPaginated(userID string, limit, offset int) 
 func (r *PostRepository) GetFollowing(userID string, limit, offset int) ([]model.Post, error) {
 	return r.queryPosts(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
 		FROM posts p JOIN user_follows f ON f.followed_id = p.user_id
-		WHERE f.follower_id = ?
-		  AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.blocker_id = ? AND b.blocked_id = p.user_id) OR (b.blocker_id = p.user_id AND b.blocked_id = ?))
-		ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, userID, userID, userID, limit, max(offset, 0))
+		WHERE f.follower_id = ? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, userID, limit, max(offset, 0))
 }
 
 // CountFollowing counts posts from followed users

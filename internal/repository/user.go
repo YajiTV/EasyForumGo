@@ -122,9 +122,8 @@ func (r *UserRepository) Search(query, excludeUserID string, limit int) ([]model
 	rows, err := r.db.Query(userColumns+`
 		WHERE id <> ? AND username LIKE ? ESCAPE '\'
 		  AND NOT EXISTS (SELECT 1 FROM user_follows f WHERE f.follower_id = ? AND f.followed_id = users.id)
-		  AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.blocker_id = ? AND b.blocked_id = users.id) OR (b.blocker_id = users.id AND b.blocked_id = ?))
 		ORDER BY username COLLATE NOCASE ASC LIMIT ?`,
-		excludeUserID, "%"+escapeLike(query)+"%", excludeUserID, excludeUserID, excludeUserID, limit)
+		excludeUserID, "%"+escapeLike(query)+"%", excludeUserID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -146,10 +145,9 @@ func (r *UserRepository) Popular(currentUserID string, limit int) ([]model.User,
 		LEFT JOIN user_follows received ON received.followed_id = users.id
 		WHERE users.id <> ?
 		  AND NOT EXISTS (SELECT 1 FROM user_follows f WHERE f.follower_id = ? AND f.followed_id = users.id)
-		  AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.blocker_id = ? AND b.blocked_id = users.id) OR (b.blocker_id = users.id AND b.blocked_id = ?))
 		GROUP BY users.id
 		ORDER BY COUNT(received.follower_id) DESC, users.created_at DESC
-		LIMIT ?`, currentUserID, currentUserID, currentUserID, currentUserID, limit)
+		LIMIT ?`, currentUserID, currentUserID, limit)
 }
 
 // SuggestedByLikedCategories returns profiles publishing in categories liked by the current user
@@ -164,10 +162,9 @@ func (r *UserRepository) SuggestedByLikedCategories(currentUserID string, limit 
 		      WHERE pl.user_id = ? AND pl.is_like = 1
 		  )
 		  AND NOT EXISTS (SELECT 1 FROM user_follows f WHERE f.follower_id = ? AND f.followed_id = users.id)
-		  AND NOT EXISTS (SELECT 1 FROM user_blocks b WHERE (b.blocker_id = ? AND b.blocked_id = users.id) OR (b.blocker_id = users.id AND b.blocked_id = ?))
 		GROUP BY users.id
 		ORDER BY COUNT(DISTINCT authored.id) DESC, users.username COLLATE NOCASE ASC
-		LIMIT ?`, currentUserID, currentUserID, currentUserID, currentUserID, currentUserID, limit)
+		LIMIT ?`, currentUserID, currentUserID, currentUserID, limit)
 }
 
 const userColumns = `SELECT users.id, users.email, users.username, users.password, users.role, users.profile_picture, users.biography, users.follows_visible, users.created_at FROM users`
