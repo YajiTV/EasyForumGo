@@ -48,6 +48,14 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
 	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
 
+	// social profile routes
+	socialHandler := handler.NewSocialHandler(db, renderer)
+	mux.HandleFunc("GET /user/{username}", socialHandler.PublicProfile)
+	mux.HandleFunc("GET /user/{username}/followers", socialHandler.Followers)
+	mux.HandleFunc("GET /user/{username}/following", socialHandler.Following)
+	mux.Handle("POST /user/{username}/follow", writeLimiter.Wrap(http.HandlerFunc(socialHandler.Follow)))
+	mux.Handle("POST /user/{username}/unfollow", writeLimiter.Wrap(http.HandlerFunc(socialHandler.Unfollow)))
+
 	// settings routes
 	settingsHandler := handler.NewSettingsHandler(db, renderer)
 	mux.HandleFunc("GET /settings", settingsHandler.Show)

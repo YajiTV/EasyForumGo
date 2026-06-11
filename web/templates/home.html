@@ -37,7 +37,7 @@
                     <div class="post-card-body">
                         <div class="post-card-author">
                             <span class="author-avatar">{{printf "%.1s" .Username}}</span>
-                            <span>Par {{.Username}}</span>
+                            <span>Par <a href="/user/{{.Username}}">{{.Username}}</a></span>
                             <span>{{.CreatedAt.Format "02/01/2006"}}</span>
                         </div>
 
