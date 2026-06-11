@@ -51,6 +51,14 @@ type SocialListPageData struct {
 	HasNext      bool
 }
 
+type DiscoverPageData struct {
+	User        *model.User
+	Query       string
+	Results     []model.User
+	Popular     []model.User
+	Suggestions []model.User
+}
+
 // NewSocialHandler creates a new instance
 func NewSocialHandler(db *sql.DB, renderer *PageRenderer) *SocialHandler {
 	return &SocialHandler{
@@ -118,6 +126,33 @@ func (h *SocialHandler) Follow(w http.ResponseWriter, r *http.Request) {
 // Unfollow removes a following relation
 func (h *SocialHandler) Unfollow(w http.ResponseWriter, r *http.Request) {
 	h.changeFollow(w, r, false)
+}
+
+// Discover renders user discovery suggestions
+func (h *SocialHandler) Discover(w http.ResponseWriter, r *http.Request) {
+	currentUser := h.userFromSession(r)
+	if currentUser == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	popular, _ := h.users.Popular(currentUser.ID, 8)
+	suggestions, _ := h.users.SuggestedByLikedCategories(currentUser.ID, 8)
+	h.renderer.Render(w, "social/discover.html", DiscoverPageData{User: currentUser, Popular: popular, Suggestions: suggestions})
+}
+
+// Search renders user search results
+func (h *SocialHandler) Search(w http.ResponseWriter, r *http.Request) {
+	currentUser := h.userFromSession(r)
+	if currentUser == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	var results []model.User
+	if query != "" {
+		results, _ = h.users.Search(query, currentUser.ID, 30)
+	}
+	h.renderer.Render(w, "social/discover.html", DiscoverPageData{User: currentUser, Query: query, Results: results})
 }
 
 // renderUserList renders followers or following users
