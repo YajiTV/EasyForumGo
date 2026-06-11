@@ -160,13 +160,18 @@ func (r *LikeRepository) CountCommentDislikes(commentID string) (int, error) {
 
 // GetLikedPostsByUserID gets stored data
 func (r *LikeRepository) GetLikedPostsByUserID(userID string) ([]model.Post, error) {
+	return r.GetPostsByUserVote(userID, true)
+}
+
+// GetPostsByUserVote gets posts matching a user's vote
+func (r *LikeRepository) GetPostsByUserVote(userID string, isLike bool) ([]model.Post, error) {
 	rows, err := r.db.Query(`
 		SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
 		FROM posts p
 		JOIN post_likes pl ON p.id = pl.post_id
-		WHERE pl.user_id = ? AND pl.is_like = 1
+		WHERE pl.user_id = ? AND pl.is_like = ?
 		ORDER BY pl.created_at DESC
-	`, userID)
+	`, userID, isLike)
 	if err != nil {
 		return nil, err
 	}
@@ -181,4 +186,24 @@ func (r *LikeRepository) GetLikedPostsByUserID(userID string) ([]model.Post, err
 		posts = append(posts, p)
 	}
 	return posts, rows.Err()
+}
+
+// CountPostVotesByUserID counts a user's post votes by type
+func (r *LikeRepository) CountPostVotesByUserID(userID string, isLike bool) (int, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM post_likes WHERE user_id = ? AND is_like = ?`,
+		userID, isLike,
+	).Scan(&count)
+	return count, err
+}
+
+// CountCommentVotesByUserID counts a user's comment votes by type
+func (r *LikeRepository) CountCommentVotesByUserID(userID string, isLike bool) (int, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM comment_likes WHERE user_id = ? AND is_like = ?`,
+		userID, isLike,
+	).Scan(&count)
+	return count, err
 }

@@ -1,5 +1,9 @@
 {{define "title"}}{{.Post.Title}} — Easy{{end}}
 
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/library.css">
+{{end}}
+
 {{define "content"}}
 <div class="post-detail">
 
@@ -47,6 +51,30 @@
                 {{end}}
             {{end}}
         </div>
+
+        {{if .User}}
+        <!-- library actions -->
+        <section class="post-library-actions">
+            <div>
+                <strong>Bibliothèque</strong>
+                <a href="/library">Gérer mes listes</a>
+            </div>
+            {{if .Libraries}}
+            <form action="/post/{{.Post.ID}}/library" method="POST" class="post-library-form">
+                <label for="library-id">Enregistrer dans</label>
+                <select id="library-id" name="library_id" required>
+                    <option value="" disabled selected>Choisir une bibliothèque</option>
+                    {{range .Libraries}}
+                    <option value="{{.ID}}">{{.Name}}</option>
+                    {{end}}
+                </select>
+                <button type="submit">Ajouter</button>
+            </form>
+            {{else}}
+            <p>Créez une bibliothèque pour enregistrer ce post.</p>
+            {{end}}
+        </section>
+        {{end}}
 
     </article>
 

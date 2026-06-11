@@ -108,6 +108,49 @@
     font-size: 14px;
 }
 
+.activity-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 38px;
+}
+
+.activity-stats article {
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.activity-stats strong,
+.activity-stats span {
+    display: block;
+}
+
+.activity-stats strong {
+    margin-bottom: 5px;
+    font-size: 26px;
+}
+
+.activity-stats span,
+.activity-empty {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.activity-section {
+    margin-top: 38px;
+}
+
+.activity-section h2 {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 18px;
+}
+
+.activity-empty {
+    padding: 22px 0;
+}
+
 .profile-posts-list {
     display: flex;
     flex-direction: column;
@@ -406,6 +449,10 @@
     .profile-tabs {
         gap: 24px;
         overflow-x: auto;
+    }
+
+    .activity-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .profile-post-card,

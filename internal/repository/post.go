@@ -64,6 +64,13 @@ func (r *PostRepository) GetByUserID(userID string) ([]model.Post, error) {
 	return posts, rows.Err()
 }
 
+// CountByUserID counts posts created by a user
+func (r *PostRepository) CountByUserID(userID string) (int, error) {
+	var count int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM posts WHERE user_id = ?`, userID).Scan(&count)
+	return count, err
+}
+
 // GetByCategory gets stored data
 func (r *PostRepository) GetByCategory(categoryID string) ([]model.Post, error) {
 	rows, err := r.db.Query(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at FROM posts p JOIN post_categories pc ON p.id = pc.post_id WHERE pc.category_id = ? ORDER BY p.created_at DESC`, categoryID)
