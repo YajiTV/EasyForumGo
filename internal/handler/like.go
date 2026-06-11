@@ -85,6 +85,23 @@ func (h *LikeHandler) togglePostVote(w http.ResponseWriter, r *http.Request, use
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
+
+		// notification : seulement si ce n'est pas son propre post
+		if post, err := h.posts.GetByID(postID); err == nil && post.UserID != userID {
+			notifType := "post_like"
+			if !isLike {
+				notifType = "post_dislike"
+			}
+			n := &model.Notification{
+				ID:        utils.NewUUID(),
+				UserID:    post.UserID,
+				ActorID:   userID,
+				Type:      notifType,
+				PostID:    postID,
+				CreatedAt: time.Now(),
+			}
+			_ = h.notifications.Create(n)
+		}
 	} else if existing.IsLike == isLike {
 		if err := h.likes.DeletePostLike(postID, userID); err != nil {
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
@@ -155,6 +172,24 @@ func (h *LikeHandler) toggleCommentVote(w http.ResponseWriter, r *http.Request, 
 		if err := h.likes.CreateCommentLike(l); err != nil {
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
+		}
+
+		// notification : seulement si ce n'est pas son propre commentaire
+		if comment, err := h.comments.GetByID(commentID); err == nil && comment.UserID != userID {
+			notifType := "comment_like"
+			if !isLike {
+				notifType = "comment_dislike"
+			}
+			n := &model.Notification{
+				ID:        utils.NewUUID(),
+				UserID:    comment.UserID,
+				ActorID:   userID,
+				Type:      notifType,
+				PostID:    postID,
+				CommentID: commentID,
+				CreatedAt: time.Now(),
+			}
+			_ = h.notifications.Create(n)
 		}
 	} else if existing.IsLike == isLike {
 		if err := h.likes.DeleteCommentLike(commentID, userID); err != nil {
