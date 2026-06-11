@@ -53,6 +53,13 @@ func (r *CommentRepository) GetByUserID(userID string) ([]model.Comment, error) 
 	return comments, rows.Err()
 }
 
+// CountByUserID counts comments created by a user
+func (r *CommentRepository) CountByUserID(userID string) (int, error) {
+	var count int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM comments WHERE user_id = ?`, userID).Scan(&count)
+	return count, err
+}
+
 // Create creates a new record
 func (r *CommentRepository) Create(c *model.Comment) error {
 	_, err := r.db.Exec(`INSERT INTO comments (id, post_id, user_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,

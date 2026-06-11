@@ -1,0 +1,109 @@
+{{define "title"}}Mon activité — Easy{{end}}
+
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/profile.css">
+{{end}}
+
+{{define "activity_posts"}}
+    {{if .}}
+        {{range .}}
+        <article class="profile-post-card {{if .ImagePath}}has-image{{end}}">
+            <div class="profile-post-body">
+                <div class="profile-post-meta">
+                    <span class="profile-author-avatar">{{printf "%.1s" .Username}}</span>
+                    <span>Par {{.Username}}</span>
+                    <span>{{.CreatedAt.Format "02/01/2006"}}</span>
+                </div>
+                <h3><a href="/post/{{.ID}}">{{.Title}}</a></h3>
+                <p>{{.Content}}</p>
+                <div class="profile-post-stats">
+                    <span>{{.LikeCount}} j'aime</span>
+                    <span>{{.DislikeCount}} je n'aime pas</span>
+                </div>
+            </div>
+            {{if .ImagePath}}
+            <a href="/post/{{.ID}}" class="profile-post-image" aria-label="Lire {{.Title}}">
+                <img src="/uploads/{{.ImagePath}}" alt="Image du post">
+            </a>
+            {{end}}
+        </article>
+        {{end}}
+    {{else}}
+        <p class="activity-empty">Aucune activité dans cette section.</p>
+    {{end}}
+{{end}}
+
+{{define "content"}}
+<div class="profile-page">
+    <!-- profile activity -->
+    <section class="profile-content" aria-label="Activité personnelle">
+        <header class="profile-hero">
+            <div>
+                <p class="profile-kicker">Profil</p>
+                <h1>Mon activité</h1>
+                <p>Retrouvez vos contributions et vos réactions.</p>
+            </div>
+        </header>
+
+        <!-- profile navigation -->
+        <nav class="profile-tabs" aria-label="Navigation du profil">
+            <a href="/profile/my-posts">Mes posts</a>
+            <a href="/profile/liked-posts">Posts aimés</a>
+            <a href="/profile/my-comments">Mes commentaires</a>
+            <a href="/profile/activity" class="active">Activité</a>
+        </nav>
+
+        <!-- activity statistics -->
+        <section class="activity-stats" aria-label="Statistiques personnelles">
+            <article><strong>{{.Stats.PostCount}}</strong><span>Posts créés</span></article>
+            <article><strong>{{.Stats.CommentCount}}</strong><span>Commentaires</span></article>
+            <article><strong>{{.Stats.LikeCount}}</strong><span>Posts aimés</span></article>
+            <article><strong>{{.Stats.DislikeCount}}</strong><span>Posts détestés</span></article>
+        </section>
+
+        <!-- activity sections -->
+        <section class="activity-section">
+            <h2>Posts créés</h2>
+            <div class="profile-posts-list">{{template "activity_posts" .CreatedPosts}}</div>
+        </section>
+        <section class="activity-section">
+            <h2>Posts aimés</h2>
+            <div class="profile-posts-list">{{template "activity_posts" .LikedPosts}}</div>
+        </section>
+        <section class="activity-section">
+            <h2>Posts détestés</h2>
+            <div class="profile-posts-list">{{template "activity_posts" .DislikedPosts}}</div>
+        </section>
+        <section class="activity-section">
+            <h2>Commentaires laissés</h2>
+            <div class="profile-posts-list">
+                {{if .Comments}}
+                    {{range .Comments}}
+                    <article class="profile-comment-card">
+                        <div class="profile-post-meta">
+                            <span>{{.CreatedAt.Format "02/01/2006"}}</span>
+                            <a href="/post/{{.PostID}}">{{.PostTitle}}</a>
+                        </div>
+                        <p>{{.Content}}</p>
+                    </article>
+                    {{end}}
+                {{else}}
+                    <p class="activity-empty">Aucun commentaire laissé.</p>
+                {{end}}
+            </div>
+        </section>
+    </section>
+
+    <!-- profile summary -->
+    <aside class="profile-sidebar" aria-label="Résumé du profil">
+        {{if .User.ProfilePicture}}
+            <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}" class="profile-picture">
+        {{else}}
+            <div class="profile-avatar-placeholder">{{printf "%.1s" .User.Username}}</div>
+        {{end}}
+        <h2>{{.User.Username}}</h2>
+        <p>{{.User.Email}}</p>
+        <a href="/profile/edit">Modifier le profil</a>
+    </aside>
+</div>
+{{end}}
