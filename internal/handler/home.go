@@ -33,6 +33,7 @@ type HomePageData struct {
 	NextPage        int
 	HasPrevious     bool
 	HasNext         bool
+	PaginationBase  string
 }
 
 type HomeHandler struct {
@@ -84,14 +85,14 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		}
 		posts, err = h.posts.GetFollowing(currentUser.ID, socialPageSize+1, (page-1)*socialPageSize)
 	} else {
-		posts, err = h.posts.GetAll()
+		posts, err = h.posts.GetAllPaginated(socialPageSize+1, (page-1)*socialPageSize)
 	}
 	if err != nil {
 		h.errors.InternalServerError(w)
 		return
 	}
 
-	hasNext := followingFeed && len(posts) > socialPageSize
+	hasNext := len(posts) > socialPageSize
 	if hasNext {
 		posts = posts[:socialPageSize]
 	}
@@ -103,15 +104,19 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := HomePageData{
-		User:          currentUser,
-		Posts:         postsWithMeta,
-		Categories:    categories,
-		FollowingFeed: followingFeed,
-		Page:          page,
-		PreviousPage:  page - 1,
-		NextPage:      page + 1,
-		HasPrevious:   followingFeed && page > 1,
-		HasNext:       hasNext,
+		User:           currentUser,
+		Posts:          postsWithMeta,
+		Categories:     categories,
+		FollowingFeed:  followingFeed,
+		Page:           page,
+		PreviousPage:   page - 1,
+		NextPage:       page + 1,
+		HasPrevious:    page > 1,
+		HasNext:        hasNext,
+		PaginationBase: "/?page=",
+	}
+	if followingFeed {
+		data.PaginationBase = "/?feed=following&page="
 	}
 
 	h.renderer.Render(w, "home.html", data)

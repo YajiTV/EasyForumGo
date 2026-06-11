@@ -8,6 +8,9 @@ import (
 	"EasyForumGo/internal/model"
 )
 
+// ErrFollowBlocked indicates that a block prevents a following relation
+var ErrFollowBlocked = errors.New("blocked users cannot follow each other")
+
 type FollowRepository struct {
 	db *sql.DB
 }
@@ -28,7 +31,7 @@ func (r *FollowRepository) Follow(followerID, followedID string) error {
 		return err
 	}
 	if blocked > 0 {
-		return errors.New("blocked users cannot follow each other")
+		return ErrFollowBlocked
 	}
 	_, err := r.db.Exec(`INSERT OR IGNORE INTO user_follows (follower_id, followed_id) VALUES (?, ?)`, followerID, followedID)
 	return err

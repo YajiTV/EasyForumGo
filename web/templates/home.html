@@ -105,9 +105,9 @@
         </div>
         {{if or .HasPrevious .HasNext}}
         <nav class="feed-pagination" aria-label="Pagination">
-            {{if .HasPrevious}}<a href="/?feed=following&page={{.PreviousPage}}">Précédent</a>{{end}}
+            {{if .HasPrevious}}<a href="{{.PaginationBase}}{{.PreviousPage}}">Précédent</a>{{end}}
             <span>Page {{.Page}}</span>
-            {{if .HasNext}}<a href="/?feed=following&page={{.NextPage}}">Suivant</a>{{end}}
+            {{if .HasNext}}<a href="{{.PaginationBase}}{{.NextPage}}">Suivant</a>{{end}}
         </nav>
         {{end}}
     </section>

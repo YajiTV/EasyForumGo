@@ -233,6 +233,10 @@ func (h *SocialHandler) changeFollow(w http.ResponseWriter, r *http.Request, fol
 	}
 	if follow {
 		err = h.follows.Follow(currentUser.ID, target.ID)
+		if errors.Is(err, repository.ErrFollowBlocked) {
+			http.Error(w, "Cette relation est bloquée.", http.StatusForbidden)
+			return
+		}
 		if err == nil {
 			_ = h.notifications.Create(&model.Notification{
 				ID: utils.NewUUID(), UserID: target.ID, ActorID: currentUser.ID,

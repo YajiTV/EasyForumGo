@@ -41,6 +41,7 @@ type CategoryPageData struct {
 	NextPage        int
 	HasPrevious     bool
 	HasNext         bool
+	PaginationBase  string
 }
 
 // FilterByCategory handles the request
@@ -54,10 +55,16 @@ func (h *CategoryHandler) FilterByCategory(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	posts, err := h.posts.GetByCategory(categoryID)
+	page := pageNumber(r)
+	posts, err := h.posts.GetByCategoryPaginated(categoryID, socialPageSize+1, (page-1)*socialPageSize)
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
+	}
+
+	hasNext := len(posts) > socialPageSize
+	if hasNext {
+		posts = posts[:socialPageSize]
 	}
 
 	// enrich posts with data required by the home template
@@ -92,6 +99,12 @@ func (h *CategoryHandler) FilterByCategory(w http.ResponseWriter, r *http.Reques
 		Posts:           postsWithMeta,
 		Categories:      categories,
 		CurrentCategory: category,
+		Page:            page,
+		PreviousPage:    page - 1,
+		NextPage:        page + 1,
+		HasPrevious:     page > 1,
+		HasNext:         hasNext,
+		PaginationBase:  "/posts/category/" + category.ID + "?page=",
 	}
 
 	// reuse the home template with the selected category

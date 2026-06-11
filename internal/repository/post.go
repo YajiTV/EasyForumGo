@@ -45,6 +45,12 @@ func (r *PostRepository) GetAll() ([]model.Post, error) {
 	return posts, rows.Err()
 }
 
+// GetAllPaginated gets a page of posts
+func (r *PostRepository) GetAllPaginated(limit, offset int) ([]model.Post, error) {
+	return r.queryPosts(`SELECT id, user_id, title, content, image_path, created_at, updated_at
+		FROM posts ORDER BY created_at DESC LIMIT ? OFFSET ?`, limit, max(offset, 0))
+}
+
 // GetByUserID gets stored data
 func (r *PostRepository) GetByUserID(userID string) ([]model.Post, error) {
 	rows, err := r.db.Query(`SELECT id, user_id, title, content, image_path, created_at, updated_at FROM posts WHERE user_id = ? ORDER BY created_at DESC`, userID)
@@ -110,6 +116,13 @@ func (r *PostRepository) GetByCategory(categoryID string) ([]model.Post, error) 
 		posts = append(posts, p)
 	}
 	return posts, rows.Err()
+}
+
+// GetByCategoryPaginated gets a page of posts in a category
+func (r *PostRepository) GetByCategoryPaginated(categoryID string, limit, offset int) ([]model.Post, error) {
+	return r.queryPosts(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
+		FROM posts p JOIN post_categories pc ON p.id = pc.post_id
+		WHERE pc.category_id = ? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, categoryID, limit, max(offset, 0))
 }
 
 // Create creates a new record
