@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"bytes"
 	"database/sql"
 	"errors"
 	"html/template"
@@ -22,6 +21,7 @@ type AuthHandler struct {
 	db              *sql.DB
 	sessionDuration time.Duration
 	errors          *ErrorRenderer
+	renderer        *PageRenderer
 }
 
 type userCredentials struct {
@@ -45,7 +45,7 @@ type registerFormData struct {
 }
 
 // NewAuthHandler creates a new instance
-func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRenderer) *AuthHandler {
+func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRenderer, renderer *PageRenderer) *AuthHandler {
 	if sessionDuration <= 0 {
 		sessionDuration = 24 * time.Hour
 	}
@@ -57,17 +57,18 @@ func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRend
 		db:              db,
 		sessionDuration: sessionDuration,
 		errors:          errors,
+		renderer:        renderer,
 	}
 }
 
 // ShowLoginForm renders the requested page
 func (h *AuthHandler) ShowLoginForm(w http.ResponseWriter, r *http.Request) {
-	renderAuthTemplate(w, "login.html", nil)
+	renderAuthTemplate(h.renderer, w, "login.html", nil)
 }
 
 // ShowRegisterForm renders the requested page
 func (h *AuthHandler) ShowRegisterForm(w http.ResponseWriter, r *http.Request) {
-	renderAuthTemplate(w, "register.html", registerFormData{
+	renderAuthTemplate(h.renderer, w, "register.html", registerFormData{
 		PasswordStrength: validator.EvaluatePasswordStrength("", "", ""),
 	})
 }
@@ -308,7 +309,7 @@ func (h *AuthHandler) renderLoginError(w http.ResponseWriter, email, message str
 	if message == "" {
 		message = "Formulaire invalide."
 	}
-	renderAuthTemplate(w, "login.html", loginFormData{
+	renderAuthTemplate(h.renderer, w, "login.html", loginFormData{
 		Email: email,
 		Error: message,
 	})
@@ -319,7 +320,7 @@ func (h *AuthHandler) renderRegisterError(w http.ResponseWriter, username, email
 	if message == "" {
 		message = "Formulaire invalide."
 	}
-	renderAuthTemplate(w, "register.html", registerFormData{
+	renderAuthTemplate(h.renderer, w, "register.html", registerFormData{
 		Username:         username,
 		Email:            email,
 		Error:            message,
@@ -337,19 +338,6 @@ func firstValidationMessage(validationErrors validator.ValidationErrors) string 
 }
 
 // renderAuthTemplate renders an authentication template
-func renderAuthTemplate(w http.ResponseWriter, filename string, data any) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "auth", filename),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	var rendered bytes.Buffer
-	if err := tmpl.ExecuteTemplate(&rendered, "base", data); err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	rendered.WriteTo(w)
+func renderAuthTemplate(renderer *PageRenderer, w http.ResponseWriter, filename string, data any) {
+	renderer.Render(w, filepath.Join("auth", filename), data)
 }

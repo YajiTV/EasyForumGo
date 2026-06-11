@@ -2,9 +2,7 @@ package handler
 
 import (
 	"database/sql"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"ForumJS/internal/model"
@@ -17,16 +15,18 @@ type CategoryHandler struct {
 	likes      *repository.LikeRepository
 	categories *repository.CategoryRepository
 	sessions   *repository.SessionRepository
+	renderer   *PageRenderer
 }
 
 // NewCategoryHandler creates a new instance
-func NewCategoryHandler(db *sql.DB) *CategoryHandler {
+func NewCategoryHandler(db *sql.DB, renderer *PageRenderer) *CategoryHandler {
 	return &CategoryHandler{
 		posts:      repository.NewPostRepository(db),
 		users:      repository.NewUserRepository(db),
 		likes:      repository.NewLikeRepository(db),
 		categories: repository.NewCategoryRepository(db),
 		sessions:   repository.NewSessionRepository(db),
+		renderer:   renderer,
 	}
 }
 
@@ -89,15 +89,7 @@ func (h *CategoryHandler) FilterByCategory(w http.ResponseWriter, r *http.Reques
 	}
 
 	// reuse the home template with the selected category
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "home.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "home.html", data)
 }
 
 // userFromSession gets the user from the current session

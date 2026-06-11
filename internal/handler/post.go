@@ -3,7 +3,6 @@ package handler
 import (
 	"database/sql"
 	"errors"
-	"html/template"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,10 +24,11 @@ type PostHandler struct {
 	comments       *repository.CommentRepository
 	likes          *repository.LikeRepository
 	uploadDir      string
+	renderer       *PageRenderer
 }
 
 // NewPostHandler creates a new instance
-func NewPostHandler(db *sql.DB, uploadDir string) *PostHandler {
+func NewPostHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *PostHandler {
 	return &PostHandler{
 		posts:          repository.NewPostRepository(db),
 		categories:     repository.NewCategoryRepository(db),
@@ -38,6 +38,7 @@ func NewPostHandler(db *sql.DB, uploadDir string) *PostHandler {
 		comments:       repository.NewCommentRepository(db),
 		likes:          repository.NewLikeRepository(db),
 		uploadDir:      uploadDir,
+		renderer:       renderer,
 	}
 }
 
@@ -200,15 +201,7 @@ func (h *PostHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "post", "delete_post.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", deletePostData{
+	h.renderer.Render(w, "post/delete_post.html", deletePostData{
 		User: user,
 		Post: post,
 	})
@@ -366,15 +359,7 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 
 // renderEditForm renders the requested page
 func (h *PostHandler) renderEditForm(w http.ResponseWriter, data editPostData) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "post", "edit_post.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "post/edit_post.html", data)
 }
 
 // userFromSession gets the user from the current session
@@ -396,15 +381,7 @@ func (h *PostHandler) userFromSession(r *http.Request) *model.User {
 
 // renderCreateForm renders the requested page
 func (h *PostHandler) renderCreateForm(w http.ResponseWriter, data createPostData) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "post", "create_post.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "post/create_post.html", data)
 }
 
 // renderError renders the requested page
@@ -521,13 +498,5 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 		DislikeCount: dislikes,
 	}
 
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "post", "post_detail.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "post/post_detail.html", data)
 }

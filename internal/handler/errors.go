@@ -16,6 +16,7 @@ type ErrorRenderer struct {
 	templatesDir string
 	sessions     *repository.SessionRepository
 	users        *repository.UserRepository
+	renderer     *PageRenderer
 }
 
 type ErrorPageData struct {
@@ -35,6 +36,11 @@ func NewErrorRenderer(templatesDir string) *ErrorRenderer {
 func (r *ErrorRenderer) SetAuthRepositories(sessions *repository.SessionRepository, users *repository.UserRepository) {
 	r.sessions = sessions
 	r.users = users
+}
+
+// SetRenderer enables notification count on error pages
+func (r *ErrorRenderer) SetRenderer(renderer *PageRenderer) {
+	r.renderer = renderer
 }
 
 // BadRequest renders a bad request error
@@ -91,6 +97,13 @@ func (r *ErrorRenderer) RenderWithUser(w http.ResponseWriter, statusCode int, me
 		Message:    message,
 	}
 
+	w.WriteHeader(statusCode)
+
+	if r.renderer != nil {
+		r.renderer.Render(w, filepath.Join("error", fmt.Sprintf("%d.html", statusCode)), data)
+		return
+	}
+
 	tmpl, err := template.ParseFiles(
 		filepath.Join(r.templatesDir, "layout", "base.html"),
 		filepath.Join(r.templatesDir, "error", fmt.Sprintf("%d.html", statusCode)),
@@ -100,8 +113,6 @@ func (r *ErrorRenderer) RenderWithUser(w http.ResponseWriter, statusCode int, me
 		http.Error(w, message, statusCode)
 		return
 	}
-
-	w.WriteHeader(statusCode)
 	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
 		log.Printf("error template execute failed for status %d: %v", statusCode, err)
 	}

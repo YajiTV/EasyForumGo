@@ -8,6 +8,12 @@
     <link rel="icon" type="image/x-icon" href="/static/img/logo.ico">
     <link rel="stylesheet" href="/static/css/style.css">
     {{block "extra_css" .}}{{end}}
+    <style>
+        .notif-bell { position: relative; display: flex; align-items: center; }
+        .notif-badge { position: absolute; top: -4px; right: -6px; background: #e53e3e; color: #fff;
+            font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px;
+            padding: 0 3px; text-align: center; line-height: 16px; }
+    </style>
 </head>
 <body>
     <input type="checkbox" id="menu-state" class="menu-state" aria-hidden="true">
@@ -34,6 +40,16 @@
 
             <div class="nav-links">
                 {{if .User}}
+                    {{$notifCount := notifCount .User}}
+                    <a href="/notifications" class="notif-bell" aria-label="Notifications">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+                        </svg>
+                        {{if gt $notifCount 0}}
+                            <span class="notif-badge">{{if gt $notifCount 99}}99+{{else}}{{$notifCount}}{{end}}</span>
+                        {{end}}
+                    </a>
                     <a href="/post/new" class="write-link">Écrire</a>
                     <details class="user-menu">
                         <summary aria-label="Menu utilisateur">
@@ -162,6 +178,5 @@
         </nav>
         <p>ForumJS &copy; 2026</p>
     </footer>
-</body>
 </html>
 {{end}}

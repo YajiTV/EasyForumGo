@@ -1,0 +1,59 @@
+{{define "title"}}Notifications — ForumJS{{end}}
+
+{{define "extra_css"}}
+<style>
+    .notif-page { max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
+    .notif-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.5rem; }
+    .notif-header h1 { margin: 0; }
+    .notif-count { color: #6b7280; font-size: .9rem; }
+    .notif-list { list-style: none; padding: 0; margin: 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+    .notif-item { border-bottom: 1px solid #e5e7eb; }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item a { display: flex; flex-direction: column; gap: .25rem; padding: 1rem 1.25rem; text-decoration: none; color: inherit; }
+    .notif-item a:hover { background: #f9fafb; }
+    .notif-item--unread { background: #eff6ff; }
+    .notif-item--unread a:hover { background: #dbeafe; }
+    .notif-actor { font-weight: 600; }
+    .notif-post { color: #6b7280; font-style: italic; font-size: .9rem; }
+    .notif-time { color: #9ca3af; font-size: .8rem; }
+    .notif-empty { text-align: center; padding: 3rem 1rem; color: #6b7280; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .notif-empty h3 { margin: 0 0 .5rem; color: #374151; }
+    .notif-empty a { color: #3b82f6; }
+</style>
+{{end}}
+
+{{define "content"}}
+<div class="notif-page">
+    <div class="notif-header">
+        <h1>Notifications</h1>
+        <span class="notif-count">{{len .Notifications}} notification{{if gt (len .Notifications) 1}}s{{end}}</span>
+    </div>
+
+    {{if .Notifications}}
+        <ul class="notif-list">
+        {{range .Notifications}}
+            <li class="notif-item{{if not .IsRead}} notif-item--unread{{end}}">
+                <a href="/post/{{.PostID}}">
+                    <span>
+                        <span class="notif-actor">{{.ActorUsername}}</span>
+                        {{if eq .Type "post_like"}} a aimé votre post{{end}}
+                        {{if eq .Type "post_dislike"}} n'a pas aimé votre post{{end}}
+                        {{if eq .Type "comment"}} a commenté votre post{{end}}
+                        {{if eq .Type "comment_like"}} a aimé votre commentaire{{end}}
+                        {{if eq .Type "comment_dislike"}} n'a pas aimé votre commentaire{{end}}
+                    </span>
+                    <span class="notif-post">« {{.PostTitle}} »</span>
+                    <time class="notif-time">{{.CreatedAt.Format "02/01/2006 à 15:04"}}</time>
+                </a>
+            </li>
+        {{end}}
+        </ul>
+    {{else}}
+        <div class="notif-empty">
+            <h3>Aucune notification</h3>
+            <p>Vous serez notifié quand quelqu'un interagit avec vos posts ou commentaires.</p>
+            <a href="/">Explorer les posts</a>
+        </div>
+    {{end}}
+</div>
+{{end}}

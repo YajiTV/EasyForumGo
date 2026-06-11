@@ -30,6 +30,7 @@ type OAuthHandler struct {
 	redirectURL     string
 	sessionDuration time.Duration
 	errors          *ErrorRenderer
+	renderer        *PageRenderer
 }
 
 // googleUserInfo contient les données renvoyées par l'API Google
@@ -47,7 +48,7 @@ type pendingOAuthUser struct {
 	Picture  string `json:"picture"`
 }
 
-func NewOAuthHandler(db *sql.DB, clientID, clientSecret, redirectURL string, sessionDuration time.Duration, errors *ErrorRenderer) *OAuthHandler {
+func NewOAuthHandler(db *sql.DB, clientID, clientSecret, redirectURL string, sessionDuration time.Duration, errors *ErrorRenderer, renderer *PageRenderer) *OAuthHandler {
 	return &OAuthHandler{
 		db:              db,
 		clientID:        clientID,
@@ -55,6 +56,7 @@ func NewOAuthHandler(db *sql.DB, clientID, clientSecret, redirectURL string, ses
 		redirectURL:     redirectURL,
 		sessionDuration: sessionDuration,
 		errors:          errors,
+		renderer:        renderer,
 	}
 }
 
@@ -160,7 +162,7 @@ func (h *OAuthHandler) ShowCompleteProfile(w http.ResponseWriter, r *http.Reques
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	renderAuthTemplate(w, "complete_profile.html", map[string]any{
+	renderAuthTemplate(h.renderer, w, "complete_profile.html", map[string]any{
 		"Email": pending.Email,
 		"Error": "",
 	})
@@ -183,7 +185,7 @@ func (h *OAuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 
 	// Validation simple du username
 	if len(username) < 3 || len(username) > 30 {
-		renderAuthTemplate(w, "complete_profile.html", map[string]any{
+		renderAuthTemplate(h.renderer, w, "complete_profile.html", map[string]any{
 			"Email": pending.Email,
 			"Error": "Le username doit faire entre 3 et 30 caractères.",
 		})
@@ -194,7 +196,7 @@ func (h *OAuthHandler) CompleteProfile(w http.ResponseWriter, r *http.Request) {
 	var existingID string
 	err := h.db.QueryRow("SELECT id FROM users WHERE username = ? LIMIT 1", username).Scan(&existingID)
 	if err != sql.ErrNoRows {
-		renderAuthTemplate(w, "complete_profile.html", map[string]any{
+		renderAuthTemplate(h.renderer, w, "complete_profile.html", map[string]any{
 			"Email": pending.Email,
 			"Error": "Ce username est déjà pris.",
 		})

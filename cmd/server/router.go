@@ -18,10 +18,17 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
 
-	// authentication routes
+	// shared renderer : injecte notifCount dans tous les templates via FuncMap
+	notifRepo := repository.NewNotificationRepository(db)
+	renderer := handler.NewPageRenderer(notifRepo)
+
+	// error renderer
 	errorRenderer := handler.NewErrorRenderer(cfg.TemplatesDir)
 	errorRenderer.SetAuthRepositories(repository.NewSessionRepository(db), repository.NewUserRepository(db))
-	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration, errorRenderer)
+	errorRenderer.SetRenderer(renderer)
+
+	// authentication routes
+	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration, errorRenderer, renderer)
 	mux.HandleFunc("GET /login", authHandler.ShowLoginForm)
 	mux.Handle("POST /login", loginLimiter.Wrap(http.HandlerFunc(authHandler.Login)))
 	mux.HandleFunc("GET /register", authHandler.ShowRegisterForm)
@@ -31,7 +38,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("POST /logout", authHandler.Logout)
 
 	// profile routes
-	profileHandler := handler.NewProfileHandler(db, cfg.UploadDir)
+	profileHandler := handler.NewProfileHandler(db, cfg.UploadDir, renderer)
 	mux.HandleFunc("GET /profile", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/my-posts", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/liked-posts", profileHandler.LikedPosts)
@@ -40,7 +47,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
 
 	// post routes
-	postHandler := handler.NewPostHandler(db, cfg.UploadDir)
+	postHandler := handler.NewPostHandler(db, cfg.UploadDir, renderer)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
 	mux.Handle("POST /post/new", writeLimiter.Wrap(http.HandlerFunc(postHandler.CreatePost)))
 	mux.HandleFunc("GET /post/{id}/edit", postHandler.ShowEditForm)
@@ -50,7 +57,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
 
 	// comment routes
-	commentHandler := handler.NewCommentHandler(db)
+	commentHandler := handler.NewCommentHandler(db, renderer)
 	mux.Handle("POST /post/{id}/comment", writeLimiter.Wrap(http.HandlerFunc(commentHandler.CreateComment)))
 	mux.HandleFunc("GET /comment/{id}/delete", commentHandler.ShowDeleteConfirmation)
 	mux.HandleFunc("POST /comment/{id}/delete", commentHandler.DeleteComment)
@@ -65,11 +72,11 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("POST /comment/{id}/dislike", likeHandler.DislikeComment)
 
 	// category routes
-	categoryHandler := handler.NewCategoryHandler(db)
+	categoryHandler := handler.NewCategoryHandler(db, renderer)
 	mux.HandleFunc("GET /posts/category/{id}", categoryHandler.FilterByCategory)
 
 	// static page routes
-	pageHandler := handler.NewPageHandler(db, cfg.TemplatesDir, errorRenderer)
+	pageHandler := handler.NewPageHandler(db, errorRenderer, renderer)
 	mux.HandleFunc("GET /about", pageHandler.Page("about.html"))
 	mux.HandleFunc("GET /rules", pageHandler.Page("rules.html"))
 	mux.HandleFunc("GET /help", pageHandler.Page("help.html"))
@@ -81,19 +88,18 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 
 	// OAuth routes
 	redirectURL := "http://localhost:" + cfg.Port + "/auth/google/callback"
-	oauthHandler := handler.NewOAuthHandler(db, cfg.OAuthClientID, cfg.OAuthClientSecret, redirectURL, cfg.SessionDuration, errorRenderer)
+	oauthHandler := handler.NewOAuthHandler(db, cfg.OAuthClientID, cfg.OAuthClientSecret, redirectURL, cfg.SessionDuration, errorRenderer, renderer)
 	mux.HandleFunc("GET /auth/google", oauthHandler.GoogleLogin)
 	mux.HandleFunc("GET /auth/google/callback", oauthHandler.GoogleCallback)
 	mux.HandleFunc("GET /auth/complete-profile", oauthHandler.ShowCompleteProfile)
 	mux.HandleFunc("POST /auth/complete-profile", oauthHandler.CompleteProfile)
 
 	// notification routes
-	notificationHandler := handler.NewNotificationHandler(db)
-	mux.HandleFunc("GET /notifications", notificationHandler.ShowNotifications)
-	mux.HandleFunc("GET /notifications/count", notificationHandler.GetUnreadCount)
+	notifHandler := handler.NewNotificationHandler(db, notifRepo, renderer)
+	mux.HandleFunc("GET /notifications", notifHandler.ShowNotifications)
 
 	// home route
-	homeHandler := handler.NewHomeHandler(db, errorRenderer)
+	homeHandler := handler.NewHomeHandler(db, errorRenderer, renderer)
 	mux.HandleFunc("/", homeHandler.Home)
 
 	return mux

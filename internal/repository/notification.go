@@ -15,21 +15,12 @@ func NewNotificationRepository(db *sql.DB) *NotificationRepository {
 	return &NotificationRepository{db: db}
 }
 
-// Create new record
+// Create creates a new record
 func (r *NotificationRepository) Create(n *model.Notification) error {
-	_, err := r.db.Exec(`INSERT INTO notifications (id, user_id, actor_id, type, comment_id, post_id, is_read, created_at, update, actor_username, post_title) 
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		n.ID,
-		n.UserID,
-		n.ActorID,
-		n.Type,
-		n.CommentID,
-		n.PostID,
-		n.IsRead,
-		n.CreatedAt,
-		n.UpdatedAt,
-		n.ActorUsername,
-		n.PostTitle,
+	_, err := r.db.Exec(
+		`INSERT INTO notifications (id, user_id, actor_id, type, post_id, comment_id, is_read, created_at)
+		 VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
+		n.ID, n.UserID, n.ActorID, n.Type, n.PostID, n.CommentID, n.CreatedAt,
 	)
 	return err
 }

@@ -2,9 +2,7 @@ package handler
 
 import (
 	"database/sql"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"ForumJS/internal/model"
@@ -37,10 +35,11 @@ type HomeHandler struct {
 	likes      *repository.LikeRepository
 	categories *repository.CategoryRepository
 	errors     *ErrorRenderer
+	renderer   *PageRenderer
 }
 
 // NewHomeHandler creates a new instance
-func NewHomeHandler(db *sql.DB, errors *ErrorRenderer) *HomeHandler {
+func NewHomeHandler(db *sql.DB, errors *ErrorRenderer, renderer *PageRenderer) *HomeHandler {
 	if errors == nil {
 		errors = NewErrorRenderer("web/templates")
 	}
@@ -52,6 +51,7 @@ func NewHomeHandler(db *sql.DB, errors *ErrorRenderer) *HomeHandler {
 		likes:      repository.NewLikeRepository(db),
 		categories: repository.NewCategoryRepository(db),
 		errors:     errors,
+		renderer:   renderer,
 	}
 }
 
@@ -104,18 +104,7 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		Categories: categories,
 	}
 
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "home.html"),
-	)
-	if err != nil {
-		h.errors.InternalServerError(w)
-		return
-	}
-
-	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
-		h.errors.InternalServerError(w)
-	}
+	h.renderer.Render(w, "home.html", data)
 }
 
 // userFromSession gets the user from the current session

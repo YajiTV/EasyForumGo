@@ -3,9 +3,7 @@ package handler
 import (
 	"database/sql"
 	"errors"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,10 +20,11 @@ type ProfileHandler struct {
 	likes     *repository.LikeRepository
 	sessions  *repository.SessionRepository
 	uploadDir string
+	renderer  *PageRenderer
 }
 
 // NewProfileHandler creates a new instance
-func NewProfileHandler(db *sql.DB, uploadDir string) *ProfileHandler {
+func NewProfileHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *ProfileHandler {
 	return &ProfileHandler{
 		users:     repository.NewUserRepository(db),
 		posts:     repository.NewPostRepository(db),
@@ -33,6 +32,7 @@ func NewProfileHandler(db *sql.DB, uploadDir string) *ProfileHandler {
 		likes:     repository.NewLikeRepository(db),
 		sessions:  repository.NewSessionRepository(db),
 		uploadDir: uploadDir,
+		renderer:  renderer,
 	}
 }
 
@@ -245,28 +245,12 @@ func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 // renderEditForm renders the requested page
 func (h *ProfileHandler) renderEditForm(w http.ResponseWriter, data EditProfilePageData) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "profile", "edit_profile.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "profile/edit_profile.html", data)
 }
 
 // renderProfile renders the requested page
 func (h *ProfileHandler) renderProfile(w http.ResponseWriter, data ProfilePageData) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "profile", "profile.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "profile/profile.html", data)
 }
 
 // postsWithMeta adds display metadata to posts

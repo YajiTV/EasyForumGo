@@ -2,9 +2,7 @@ package handler
 
 import (
 	"database/sql"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -22,16 +20,18 @@ type CommentHandler struct {
 	sessions      *repository.SessionRepository
 	users         *repository.UserRepository
 	notifications *repository.NotificationRepository
+	renderer      *PageRenderer
 }
 
 // NewCommentHandler creates a new instance
-func NewCommentHandler(db *sql.DB) *CommentHandler {
+func NewCommentHandler(db *sql.DB, renderer *PageRenderer) *CommentHandler {
 	return &CommentHandler{
 		comments:      repository.NewCommentRepository(db),
 		posts:         repository.NewPostRepository(db),
 		sessions:      repository.NewSessionRepository(db),
 		users:         repository.NewUserRepository(db),
 		notifications: repository.NewNotificationRepository(db),
+		renderer:      renderer,
 	}
 }
 
@@ -256,13 +256,5 @@ func (h *CommentHandler) userFromSession(r *http.Request) *model.User {
 
 // renderTemplate renders the requested page
 func (h *CommentHandler) renderTemplate(w http.ResponseWriter, name string, data any) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", name),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, name, data)
 }
