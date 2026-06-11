@@ -11,21 +11,23 @@ import (
 )
 
 type LikeHandler struct {
-	likes    *repository.LikeRepository
-	posts    *repository.PostRepository
-	comments *repository.CommentRepository
-	sessions *repository.SessionRepository
-	users    *repository.UserRepository
+	likes         *repository.LikeRepository
+	posts         *repository.PostRepository
+	comments      *repository.CommentRepository
+	sessions      *repository.SessionRepository
+	users         *repository.UserRepository
+	notifications *repository.NotificationRepository
 }
 
 // NewLikeHandler creates a new instance
 func NewLikeHandler(db *sql.DB) *LikeHandler {
 	return &LikeHandler{
-		likes:    repository.NewLikeRepository(db),
-		posts:    repository.NewPostRepository(db),
-		comments: repository.NewCommentRepository(db),
-		sessions: repository.NewSessionRepository(db),
-		users:    repository.NewUserRepository(db),
+		likes:         repository.NewLikeRepository(db),
+		posts:         repository.NewPostRepository(db),
+		comments:      repository.NewCommentRepository(db),
+		sessions:      repository.NewSessionRepository(db),
+		users:         repository.NewUserRepository(db),
+		notifications: repository.NewNotificationRepository(db),
 	}
 }
 
