@@ -45,6 +45,12 @@ func (r *PostRepository) GetAll() ([]model.Post, error) {
 	return posts, rows.Err()
 }
 
+// GetAllPaginated gets a page of posts
+func (r *PostRepository) GetAllPaginated(limit, offset int) ([]model.Post, error) {
+	return r.queryPosts(`SELECT id, user_id, title, content, image_path, created_at, updated_at
+		FROM posts ORDER BY created_at DESC LIMIT ? OFFSET ?`, limit, max(offset, 0))
+}
+
 // GetByUserID gets stored data
 func (r *PostRepository) GetByUserID(userID string) ([]model.Post, error) {
 	rows, err := r.db.Query(`SELECT id, user_id, title, content, image_path, created_at, updated_at FROM posts WHERE user_id = ? ORDER BY created_at DESC`, userID)
@@ -62,6 +68,26 @@ func (r *PostRepository) GetByUserID(userID string) ([]model.Post, error) {
 		posts = append(posts, p)
 	}
 	return posts, rows.Err()
+}
+
+// GetByUserIDPaginated gets a page of a user's posts
+func (r *PostRepository) GetByUserIDPaginated(userID string, limit, offset int) ([]model.Post, error) {
+	return r.queryPosts(`SELECT id, user_id, title, content, image_path, created_at, updated_at
+		FROM posts WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`, userID, limit, max(offset, 0))
+}
+
+// GetFollowing gets a page of posts from followed users
+func (r *PostRepository) GetFollowing(userID string, limit, offset int) ([]model.Post, error) {
+	return r.queryPosts(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
+		FROM posts p JOIN user_follows f ON f.followed_id = p.user_id
+		WHERE f.follower_id = ? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, userID, limit, max(offset, 0))
+}
+
+// CountFollowing counts posts from followed users
+func (r *PostRepository) CountFollowing(userID string) (int, error) {
+	var count int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM posts p JOIN user_follows f ON f.followed_id = p.user_id WHERE f.follower_id = ?`, userID).Scan(&count)
+	return count, err
 }
 
 // CountByUserID counts posts created by a user
@@ -90,6 +116,13 @@ func (r *PostRepository) GetByCategory(categoryID string) ([]model.Post, error) 
 	return posts, rows.Err()
 }
 
+// GetByCategoryPaginated gets a page of posts in a category
+func (r *PostRepository) GetByCategoryPaginated(categoryID string, limit, offset int) ([]model.Post, error) {
+	return r.queryPosts(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
+		FROM posts p JOIN post_categories pc ON p.id = pc.post_id
+		WHERE pc.category_id = ? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, categoryID, limit, max(offset, 0))
+}
+
 // Create creates a new record
 func (r *PostRepository) Create(p *model.Post) error {
 	_, err := r.db.Exec(`INSERT INTO posts (id, user_id, title, content, image_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -108,4 +141,22 @@ func (r *PostRepository) Update(p *model.Post) error {
 func (r *PostRepository) Delete(id string) error {
 	_, err := r.db.Exec(`DELETE FROM posts WHERE id = ?`, id)
 	return err
+}
+
+// queryPosts runs a post list query
+func (r *PostRepository) queryPosts(query string, args ...any) ([]model.Post, error) {
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var posts []model.Post
+	for rows.Next() {
+		var post model.Post
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Title, &post.Content, &post.ImagePath, &post.CreatedAt, &post.UpdatedAt); err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+	return posts, rows.Err()
 }

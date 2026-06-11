@@ -20,7 +20,7 @@
             <h1 class="post-full-title">{{.Post.Title}}</h1>
 
             <div class="post-full-meta">
-                <span>Par <strong>{{.Author}}</strong></span>
+                <span>Par <strong><a href="/user/{{.Author}}">{{.Author}}</a></strong></span>
                 <span>{{.Post.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
             </div>
         </div>
@@ -98,7 +98,7 @@
                 {{range .Comments}}
                 <div class="comment-card">
                     <div class="comment-meta">
-                        <strong>{{.Username}}</strong>
+                        <strong><a href="/user/{{.Username}}">{{.Username}}</a></strong>
                         <span>{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
                         {{if $.User}}
                             {{if eq $.User.ID .UserID}}

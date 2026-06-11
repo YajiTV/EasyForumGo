@@ -33,7 +33,7 @@
         <ul class="notif-list">
         {{range .Notifications}}
             <li class="notif-item{{if not .IsRead}} notif-item--unread{{end}}">
-                <a href="/post/{{.PostID}}">
+                <a href="{{if eq .Type "new_follower"}}/user/{{.ActorUsername}}{{else}}/post/{{.PostID}}{{end}}">
                     <span>
                         <span class="notif-actor">{{.ActorUsername}}</span>
                         {{if eq .Type "post_like"}} a aimé votre post{{end}}
@@ -41,8 +41,12 @@
                         {{if eq .Type "comment"}} a commenté votre post{{end}}
                         {{if eq .Type "comment_like"}} a aimé votre commentaire{{end}}
                         {{if eq .Type "comment_dislike"}} n'a pas aimé votre commentaire{{end}}
+                        {{if eq .Type "new_follower"}} s'est abonné à votre profil{{end}}
+                        {{if eq .Type "new_post"}} a publié un nouveau post{{end}}
                     </span>
+                    {{if .PostTitle}}
                     <span class="notif-post">« {{.PostTitle}} »</span>
+                    {{end}}
                     <time class="notif-time">{{.CreatedAt.Format "02/01/2006 à 15:04"}}</time>
                 </a>
             </li>

@@ -15,7 +15,7 @@ The mandatory scope includes:
 - Docker delivery
 - HTTP and technical error handling
 
-Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, customizable post libraries, complete account settings, HTTPS, and rate limiting.
+Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, customizable post libraries, public social profiles, follows, discovery, complete account settings, HTTPS, and rate limiting.
 
 ## 2. Architecture
 The internal Go module is named `EasyForumGo`.
@@ -158,6 +158,14 @@ Every library read and write query includes the current user ID. This prevents u
 
 Local accounts must confirm their current password before changing their email, changing their password, or deleting the account. Password changes delete the active session and require a new login. Google-only accounts display provider-specific information and do not expose unusable email or password forms. Account deletion requires an explicit confirmation and relies on foreign key cascades to remove related forum data.
 
+### Social profiles and following feed
+
+Every user has a public profile at `/user/{username}` with a biography, registration date, counters, and paginated posts. Connected users can follow or unfollow another user through POST routes. Followers and following lists are paginated and can be hidden by their owner.
+
+The home feed accepts `feed=following` to display posts from followed users. Discovery combines follower popularity with categories from posts liked by the current user. Search and suggestions exclude the current user and already-followed users.
+
+Following and publishing create idempotent social notifications.
+
 ## 5. Database Design
 
 SQLite is used through `database/sql` and `github.com/mattn/go-sqlite3`. Application records use UUID strings as primary keys.
@@ -177,6 +185,7 @@ SQLite is used through `database/sql` and `github.com/mattn/go-sqlite3`. Applica
 | `libraries` | belongs to a user; unique name per user |
 | `library_posts` | composite primary key linking libraries and posts |
 | `schema_migrations` | records executed migration filenames |
+| `user_follows` | unique directed following relation with self-follow prevention |
 
 Foreign key cascades remove dependent records when their parent is deleted. The visual entity-relationship diagram is stored in `docs/ERD.svg`.
 
@@ -216,6 +225,7 @@ Docker serves HTTP and leaves HTTPS termination to a trusted reverse proxy in pr
 
 - CSRF tokens are not implemented.
 - The rate limiter is local to one process and resets on restart.
+- Follow and unfollow use POST routes protected by the write-action limiter.
 - Production depends on the reverse proxy for HTTPS termination.
 
 ## 7. Error Handling
@@ -277,6 +287,7 @@ docker compose -f docker/docker-compose.yml up --build
 - post and comment votes
 - mandatory filters
 - personal activity and library ownership
+- public profiles, social privacy, following feed, discovery, and notifications
 - account settings, password confirmation, session invalidation, and deletion cascade
 - custom error pages
 - database and upload persistence across container recreation

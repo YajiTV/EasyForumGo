@@ -1,0 +1,22 @@
+{{define "title"}}{{.Title}} de {{.ProfileUser.Username}} — Easy{{end}}
+{{define "extra_css"}}<link rel="stylesheet" href="/static/css/social.css">{{end}}
+{{define "content"}}
+<div class="social-page social-list-page">
+    <header class="social-list-header">
+        <a href="/user/{{.ProfileUser.Username}}">Retour au profil</a>
+        <h1>{{.Title}}</h1>
+        <p>{{.ProfileUser.Username}}</p>
+    </header>
+    {{if .Hidden}}<div class="social-empty">Cette liste est privée.</div>{{else}}
+    <div class="social-users">
+        {{range .Users}}
+        <a href="/user/{{.Username}}" class="social-user-card">
+            {{if .ProfilePicture}}<img src="{{.AvatarURL}}" alt="Photo de profil de {{.Username}}">{{else}}<span class="social-avatar">{{printf "%.1s" .Username}}</span>{{end}}
+            <span><strong>{{.Username}}</strong><small>{{if .Biography}}{{.Biography}}{{else}}Voir le profil{{end}}</small></span>
+        </a>
+        {{else}}<div class="social-empty">Cette liste est vide.</div>{{end}}
+    </div>
+    {{if or .HasPrevious .HasNext}}<nav class="social-pagination" aria-label="Pagination">{{if .HasPrevious}}<a href="?page={{.PreviousPage}}">Précédent</a>{{end}}<span>Page {{.Page}}</span>{{if .HasNext}}<a href="?page={{.NextPage}}">Suivant</a>{{end}}</nav>{{end}}
+    {{end}}
+</div>
+{{end}}

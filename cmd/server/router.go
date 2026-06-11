@@ -48,11 +48,22 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
 	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
 
+	// social profile routes
+	socialHandler := handler.NewSocialHandler(db, renderer)
+	mux.HandleFunc("GET /user/{username}", socialHandler.PublicProfile)
+	mux.HandleFunc("GET /user/{username}/followers", socialHandler.Followers)
+	mux.HandleFunc("GET /user/{username}/following", socialHandler.Following)
+	mux.Handle("POST /user/{username}/follow", writeLimiter.Wrap(http.HandlerFunc(socialHandler.Follow)))
+	mux.Handle("POST /user/{username}/unfollow", writeLimiter.Wrap(http.HandlerFunc(socialHandler.Unfollow)))
+	mux.HandleFunc("GET /discover", socialHandler.Discover)
+	mux.HandleFunc("GET /search", socialHandler.Search)
+
 	// settings routes
 	settingsHandler := handler.NewSettingsHandler(db, renderer)
 	mux.HandleFunc("GET /settings", settingsHandler.Show)
 	mux.Handle("POST /settings/email", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateEmail)))
 	mux.Handle("POST /settings/password", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdatePassword)))
+	mux.Handle("POST /settings/social", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateSocial)))
 	mux.Handle("POST /settings/delete", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.DeleteAccount)))
 
 	// library routes

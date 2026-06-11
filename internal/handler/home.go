@@ -19,6 +19,7 @@ type PostWithMeta struct {
 	Username     string
 	LikeCount    int
 	DislikeCount int
+	IsFollowing  bool
 }
 
 type HomePageData struct {
@@ -26,6 +27,13 @@ type HomePageData struct {
 	Posts           []PostWithMeta
 	Categories      []model.Category
 	CurrentCategory *model.Category
+	FollowingFeed   bool
+	Page            int
+	PreviousPage    int
+	NextPage        int
+	HasPrevious     bool
+	HasNext         bool
+	PaginationBase  string
 }
 
 type HomeHandler struct {
@@ -34,6 +42,7 @@ type HomeHandler struct {
 	sessions   *repository.SessionRepository
 	likes      *repository.LikeRepository
 	categories *repository.CategoryRepository
+	follows    *repository.FollowRepository
 	errors     *ErrorRenderer
 	renderer   *PageRenderer
 }
@@ -50,6 +59,7 @@ func NewHomeHandler(db *sql.DB, errors *ErrorRenderer, renderer *PageRenderer) *
 		sessions:   repository.NewSessionRepository(db),
 		likes:      repository.NewLikeRepository(db),
 		categories: repository.NewCategoryRepository(db),
+		follows:    repository.NewFollowRepository(db),
 		errors:     errors,
 		renderer:   renderer,
 	}
@@ -64,6 +74,8 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	page := pageNumber(r)
+	followingFeed := r.URL.Query().Get("feed") == "following"
 	categories, err := h.categories.GetAll()
 	if err != nil {
 		categories = []model.Category{}
@@ -71,37 +83,57 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 
 	var currentCategory *model.Category
 	var posts []model.Post
+	paginationBase := "/?page="
 
-	if categoryID := r.URL.Query().Get("category"); categoryID != "" {
-		cat, err := h.categories.GetByID(categoryID)
+	switch {
+	case followingFeed:
+		if currentUser == nil {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		posts, err = h.posts.GetFollowing(currentUser.ID, socialPageSize+1, (page-1)*socialPageSize)
+		paginationBase = "/?feed=following&page="
+	case r.URL.Query().Get("category") != "":
+		categoryID := r.URL.Query().Get("category")
+		currentCategory, err = h.categories.GetByID(categoryID)
 		if err != nil {
 			h.errors.RenderWithRequest(w, r, http.StatusNotFound, "Catégorie introuvable.")
 			return
 		}
-		currentCategory = cat
-		posts, err = h.posts.GetByCategory(categoryID)
-		if err != nil {
-			h.errors.InternalServerError(w)
-			return
-		}
-	} else {
-		posts, err = h.posts.GetAll()
-		if err != nil {
-			h.errors.InternalServerError(w)
-			return
-		}
+		posts, err = h.posts.GetByCategoryPaginated(categoryID, socialPageSize+1, (page-1)*socialPageSize)
+		paginationBase = "/?category=" + categoryID + "&page="
+	default:
+		posts, err = h.posts.GetAllPaginated(socialPageSize+1, (page-1)*socialPageSize)
+	}
+	if err != nil {
+		h.errors.InternalServerError(w)
+		return
 	}
 
-	h.renderer.Render(w, "home.html", HomePageData{
+	hasNext := len(posts) > socialPageSize
+	if hasNext {
+		posts = posts[:socialPageSize]
+	}
+
+	data := HomePageData{
 		User:            currentUser,
-		Posts:           h.postsWithMeta(posts),
+		Posts:           h.postsWithMeta(posts, currentUser),
 		Categories:      categories,
 		CurrentCategory: currentCategory,
-	})
+		FollowingFeed:   followingFeed,
+		Page:            page,
+		PreviousPage:    page - 1,
+		NextPage:        page + 1,
+		HasPrevious:     page > 1,
+		HasNext:         hasNext,
+		PaginationBase:  paginationBase,
+	}
+
+	h.renderer.Render(w, "home.html", data)
 }
 
 // postsWithMeta adds display metadata to posts
-func (h *HomeHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
+func (h *HomeHandler) postsWithMeta(posts []model.Post, currentUser *model.User) []PostWithMeta {
 	postsWithMeta := make([]PostWithMeta, 0, len(posts))
 	for _, post := range posts {
 		user, err := h.users.GetByID(post.UserID)
@@ -110,6 +142,10 @@ func (h *HomeHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
 		}
 		likes, _ := h.likes.CountPostLikes(post.ID)
 		dislikes, _ := h.likes.CountPostDislikes(post.ID)
+		isFollowing := false
+		if currentUser != nil {
+			isFollowing, _ = h.follows.IsFollowing(currentUser.ID, post.UserID)
+		}
 		postsWithMeta = append(postsWithMeta, PostWithMeta{
 			ID:           post.ID,
 			UserID:       post.UserID,
@@ -120,6 +156,7 @@ func (h *HomeHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
 			Username:     user.Username,
 			LikeCount:    likes,
 			DislikeCount: dislikes,
+			IsFollowing:  isFollowing,
 		})
 	}
 	return postsWithMeta

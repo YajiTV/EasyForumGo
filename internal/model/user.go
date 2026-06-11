@@ -21,6 +21,8 @@ type User struct {
 	Password       string
 	Role           Role
 	ProfilePicture string
+	Biography      string
+	FollowsVisible bool
 	CreatedAt      time.Time
 }
 

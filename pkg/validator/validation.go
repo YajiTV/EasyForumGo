@@ -20,6 +20,7 @@ const (
 	MaxPostTitleLength   = 120
 	MaxPostContentLength = 5000
 	MaxCommentLength     = 1000
+	MaxBiographyLength   = 500
 )
 
 var usernamePattern = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
@@ -75,6 +76,10 @@ type CommentInput struct {
 
 type ProfileInput struct {
 	Username string
+}
+
+type SocialProfileInput struct {
+	Biography string
 }
 
 type PasswordChangeInput struct {
@@ -242,6 +247,15 @@ func ValidateComment(input CommentInput) ValidationErrors {
 func ValidateProfile(input ProfileInput) ValidationErrors {
 	errors := ValidationErrors{}
 	validateUsername(input.Username, errors)
+	return errors
+}
+
+// ValidateSocialProfile validates public social profile fields
+func ValidateSocialProfile(input SocialProfileInput) ValidationErrors {
+	errors := ValidationErrors{}
+	if utf8.RuneCountInString(strings.TrimSpace(input.Biography)) > MaxBiographyLength {
+		errors["biography"] = "La biographie ne peut pas dépasser 500 caractères."
+	}
 	return errors
 }
 

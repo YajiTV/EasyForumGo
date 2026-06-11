@@ -25,7 +25,7 @@ func (r *NotificationRepository) Create(n *model.Notification) error {
 		commentID = n.CommentID
 	}
 	_, err := r.db.Exec(
-		`INSERT INTO notifications (id, user_id, actor_id, type, post_id, comment_id, is_read, created_at)
+		`INSERT OR IGNORE INTO notifications (id, user_id, actor_id, type, post_id, comment_id, is_read, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
 		n.ID, n.UserID, n.ActorID, n.Type, postID, commentID, n.CreatedAt,
 	)

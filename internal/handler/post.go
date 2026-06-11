@@ -26,6 +26,8 @@ type PostHandler struct {
 	libraries      *repository.LibraryRepository
 	uploadDir      string
 	renderer       *PageRenderer
+	follows        *repository.FollowRepository
+	notifications  *repository.NotificationRepository
 }
 
 // NewPostHandler creates a new instance
@@ -41,6 +43,8 @@ func NewPostHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *PostH
 		libraries:      repository.NewLibraryRepository(db),
 		uploadDir:      uploadDir,
 		renderer:       renderer,
+		follows:        repository.NewFollowRepository(db),
+		notifications:  repository.NewNotificationRepository(db),
 	}
 }
 
@@ -148,7 +152,23 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	h.notifyFollowers(post)
+
 	http.Redirect(w, r, "/post/"+post.ID, http.StatusSeeOther)
+}
+
+// notifyFollowers notifies followers about a new post
+func (h *PostHandler) notifyFollowers(post *model.Post) {
+	followerIDs, err := h.follows.FollowerIDs(post.UserID)
+	if err != nil {
+		return
+	}
+	for _, followerID := range followerIDs {
+		_ = h.notifications.Create(&model.Notification{
+			ID: utils.NewUUID(), UserID: followerID, ActorID: post.UserID,
+			Type: "new_post", PostID: post.ID, CreatedAt: time.Now(),
+		})
+	}
 }
 
 // DeletePost deletes an existing record

@@ -24,6 +24,7 @@
             <a href="#account">Compte</a>
             <a href="#email">Adresse e-mail</a>
             <a href="#password">Mot de passe</a>
+            <a href="#social">Profil social</a>
             <a href="#session">Session</a>
             <a href="#delete" class="settings-danger-link">Supprimer le compte</a>
         </nav>
@@ -58,6 +59,32 @@
                 <div><dt>Type de connexion</dt><dd>{{if .HasLocalPassword}}E-mail et mot de passe{{else}}Google{{end}}</dd></div>
                 <div><dt>Membre depuis</dt><dd>{{.User.CreatedAt.Format "02/01/2006"}}</dd></div>
             </dl>
+        </section>
+
+        <!-- social settings -->
+        <section class="settings-card" id="social">
+            <div class="settings-card-heading">
+                <div>
+                    <h2>Profil social</h2>
+                    <p>Présentez-vous et choisissez qui peut voir vos relations.</p>
+                </div>
+                <a href="/user/{{.User.Username}}">Voir le profil public</a>
+            </div>
+            <dl class="settings-account-details settings-social-stats">
+                <div><dt>Posts</dt><dd>{{.SocialStats.PostCount}}</dd></div>
+                <div><dt>Abonnés</dt><dd>{{.SocialStats.FollowerCount}}</dd></div>
+                <div><dt>Abonnements</dt><dd>{{.SocialStats.FollowingCount}}</dd></div>
+            </dl>
+            {{if and .Error (eq .ActiveSection "social")}}<p class="settings-error">{{.Error}}</p>{{end}}
+            <form action="/settings/social" method="POST" class="settings-form">
+                <label for="social-biography">Biographie</label>
+                <textarea id="social-biography" name="biography" rows="5" maxlength="500" placeholder="Parlez brièvement de vous">{{.User.Biography}}</textarea>
+                <label class="settings-checkbox">
+                    <input type="checkbox" name="follows_visible" {{if .User.FollowsVisible}}checked{{end}}>
+                    Afficher mes abonnés et abonnements sur mon profil
+                </label>
+                <button type="submit">Enregistrer les préférences</button>
+            </form>
         </section>
 
         <!-- email settings -->

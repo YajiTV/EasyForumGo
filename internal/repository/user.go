@@ -3,6 +3,8 @@ package repository
 import (
 	"EasyForumGo/internal/model"
 	"database/sql"
+	"fmt"
+	"strings"
 )
 
 type UserRepository struct {
@@ -16,8 +18,8 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 func (r *UserRepository) GetByID(id string) (*model.User, error) {
 	var u model.User
 	err := r.db.QueryRow(
-		`SELECT id, email, username, password, role, profile_picture, created_at FROM users WHERE id = ?`, id,
-	).Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.Role, &u.ProfilePicture, &u.CreatedAt)
+		userColumns+` WHERE id = ?`, id,
+	).Scan(userScanTargets(&u)...)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +29,8 @@ func (r *UserRepository) GetByID(id string) (*model.User, error) {
 func (r *UserRepository) GetByEmail(email string) (*model.User, error) {
 	var u model.User
 	err := r.db.QueryRow(
-		`SELECT id, email, username, password, role, profile_picture, created_at FROM users WHERE email = ?`, email,
-	).Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.Role, &u.ProfilePicture, &u.CreatedAt)
+		userColumns+` WHERE email = ?`, email,
+	).Scan(userScanTargets(&u)...)
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +40,8 @@ func (r *UserRepository) GetByEmail(email string) (*model.User, error) {
 func (r *UserRepository) GetByUsername(username string) (*model.User, error) {
 	var u model.User
 	err := r.db.QueryRow(
-		`SELECT id, email, username, password, role, profile_picture, created_at FROM users WHERE username = ?`, username,
-	).Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.Role, &u.ProfilePicture, &u.CreatedAt)
+		userColumns+` WHERE username = ? COLLATE NOCASE`, username,
+	).Scan(userScanTargets(&u)...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,4 +106,100 @@ func (r *UserRepository) UpdateRole(userID string, role model.Role) error {
 		role, userID,
 	)
 	return err
+}
+
+// UpdateSocialProfile updates a user's public social preferences
+func (r *UserRepository) UpdateSocialProfile(userID, biography string, followsVisible bool) error {
+	_, err := r.db.Exec(`UPDATE users SET biography = ?, follows_visible = ? WHERE id = ?`, biography, followsVisible, userID)
+	return err
+}
+
+// Search returns users matching a username
+func (r *UserRepository) Search(query, excludeUserID string, limit int) ([]model.User, error) {
+	if limit < 1 || limit > 100 {
+		return nil, fmt.Errorf("invalid limit")
+	}
+	rows, err := r.db.Query(userColumns+`
+		WHERE id <> ? AND username LIKE ? ESCAPE '\'
+		  AND NOT EXISTS (SELECT 1 FROM user_follows f WHERE f.follower_id = ? AND f.followed_id = users.id)
+		ORDER BY username COLLATE NOCASE ASC LIMIT ?`,
+		excludeUserID, "%"+escapeLike(query)+"%", excludeUserID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []model.User
+	for rows.Next() {
+		var user model.User
+		if err := scanUser(rows, &user); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, rows.Err()
+}
+
+// Popular returns popular profiles not followed by the current user
+func (r *UserRepository) Popular(currentUserID string, limit int) ([]model.User, error) {
+	return r.queryUsers(userColumns+`
+		LEFT JOIN user_follows received ON received.followed_id = users.id
+		WHERE users.id <> ?
+		  AND NOT EXISTS (SELECT 1 FROM user_follows f WHERE f.follower_id = ? AND f.followed_id = users.id)
+		GROUP BY users.id
+		ORDER BY COUNT(received.follower_id) DESC, users.created_at DESC
+		LIMIT ?`, currentUserID, currentUserID, limit)
+}
+
+// SuggestedByLikedCategories returns profiles publishing in categories liked by the current user
+func (r *UserRepository) SuggestedByLikedCategories(currentUserID string, limit int) ([]model.User, error) {
+	return r.queryUsers(userColumns+`
+		JOIN posts authored ON authored.user_id = users.id
+		JOIN post_categories authored_categories ON authored_categories.post_id = authored.id
+		WHERE users.id <> ?
+		  AND authored_categories.category_id IN (
+		      SELECT DISTINCT pc.category_id FROM post_likes pl
+		      JOIN post_categories pc ON pc.post_id = pl.post_id
+		      WHERE pl.user_id = ? AND pl.is_like = 1
+		  )
+		  AND NOT EXISTS (SELECT 1 FROM user_follows f WHERE f.follower_id = ? AND f.followed_id = users.id)
+		GROUP BY users.id
+		ORDER BY COUNT(DISTINCT authored.id) DESC, users.username COLLATE NOCASE ASC
+		LIMIT ?`, currentUserID, currentUserID, currentUserID, limit)
+}
+
+const userColumns = `SELECT users.id, users.email, users.username, users.password, users.role, users.profile_picture, users.biography, users.follows_visible, users.created_at FROM users`
+
+// userScanTargets returns user scan destinations
+func userScanTargets(user *model.User) []any {
+	return []any{&user.ID, &user.Email, &user.Username, &user.Password, &user.Role, &user.ProfilePicture, &user.Biography, &user.FollowsVisible, &user.CreatedAt}
+}
+
+// scanUser scans a user row
+func scanUser(scanner interface{ Scan(...any) error }, user *model.User) error {
+	return scanner.Scan(userScanTargets(user)...)
+}
+
+// queryUsers runs a user list query
+func (r *UserRepository) queryUsers(query string, args ...any) ([]model.User, error) {
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []model.User
+	for rows.Next() {
+		var user model.User
+		if err := scanUser(rows, &user); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, rows.Err()
+}
+
+// escapeLike escapes sqlite LIKE wildcard characters
+func escapeLike(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, `%`, `\%`)
+	return strings.ReplaceAll(value, `_`, `\_`)
 }

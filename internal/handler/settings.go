@@ -17,6 +17,8 @@ type SettingsHandler struct {
 	users    *repository.UserRepository
 	sessions *repository.SessionRepository
 	renderer *PageRenderer
+	follows  *repository.FollowRepository
+	posts    *repository.PostRepository
 }
 
 type SettingsPageData struct {
@@ -25,6 +27,7 @@ type SettingsPageData struct {
 	Message          string
 	Error            string
 	ActiveSection    string
+	SocialStats      model.SocialStats
 }
 
 // NewSettingsHandler creates a new instance
@@ -33,6 +36,8 @@ func NewSettingsHandler(db *sql.DB, renderer *PageRenderer) *SettingsHandler {
 		users:    repository.NewUserRepository(db),
 		sessions: repository.NewSessionRepository(db),
 		renderer: renderer,
+		follows:  repository.NewFollowRepository(db),
+		posts:    repository.NewPostRepository(db),
 	}
 }
 
@@ -47,7 +52,28 @@ func (h *SettingsHandler) Show(w http.ResponseWriter, r *http.Request) {
 		User:             user,
 		HasLocalPassword: hasLocalPassword(user),
 		Message:          settingsMessage(r.URL.Query().Get("status")),
+		SocialStats:      h.socialStats(user.ID),
 	})
+}
+
+// UpdateSocial updates the current user's social preferences
+func (h *SettingsHandler) UpdateSocial(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	biography := strings.TrimSpace(r.FormValue("biography"))
+	if validationErrors := validator.ValidateSocialProfile(validator.SocialProfileInput{Biography: biography}); validationErrors.HasErrors() {
+		h.renderError(w, user, "social", firstValidationMessage(validationErrors))
+		return
+	}
+	followsVisible := r.FormValue("follows_visible") == "on"
+	if err := h.users.UpdateSocialProfile(user.ID, biography, followsVisible); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/settings?status=social-updated#social", http.StatusSeeOther)
 }
 
 // UpdateEmail updates the current user's email address
@@ -160,6 +186,7 @@ func (h *SettingsHandler) renderError(w http.ResponseWriter, user *model.User, s
 		HasLocalPassword: hasLocalPassword(user),
 		Error:            message,
 		ActiveSection:    section,
+		SocialStats:      h.socialStats(user.ID),
 	})
 }
 
@@ -195,9 +222,19 @@ func settingsMessage(status string) string {
 	switch status {
 	case "email-updated":
 		return "Votre adresse e-mail a été mise à jour."
+	case "social-updated":
+		return "Vos préférences sociales ont été mises à jour."
 	default:
 		return ""
 	}
+}
+
+// socialStats returns a user's social counters
+func (h *SettingsHandler) socialStats(userID string) model.SocialStats {
+	postCount, _ := h.posts.CountByUserID(userID)
+	followerCount, _ := h.follows.CountFollowers(userID)
+	followingCount, _ := h.follows.CountFollowing(userID)
+	return model.SocialStats{PostCount: postCount, FollowerCount: followerCount, FollowingCount: followingCount}
 }
 
 // clearSettingsSessionCookie clears the current session cookie
