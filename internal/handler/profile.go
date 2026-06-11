@@ -3,9 +3,7 @@ package handler
 import (
 	"database/sql"
 	"errors"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -301,15 +299,7 @@ func (h *ProfileHandler) renderProfile(w http.ResponseWriter, data ProfilePageDa
 
 // renderActivity renders the activity page
 func (h *ProfileHandler) renderActivity(w http.ResponseWriter, data ProfileActivityPageData) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "profile", "activity.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "profile/activity.html", data)
 }
 
 // postsWithMeta adds display metadata to posts
