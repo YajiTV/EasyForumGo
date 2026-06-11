@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 
-	"ForumJS/internal/model"
+	"EasyForumGo/internal/model"
 )
 
 type PostRepository struct {
@@ -62,6 +62,13 @@ func (r *PostRepository) GetByUserID(userID string) ([]model.Post, error) {
 		posts = append(posts, p)
 	}
 	return posts, rows.Err()
+}
+
+// CountByUserID counts posts created by a user
+func (r *PostRepository) CountByUserID(userID string) (int, error) {
+	var count int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM posts WHERE user_id = ?`, userID).Scan(&count)
+	return count, err
 }
 
 // GetByCategory gets stored data

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
-	"ForumJS/pkg/utils"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
 )
 
 type LikeHandler struct {

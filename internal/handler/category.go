@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
 )
 
 type CategoryHandler struct {

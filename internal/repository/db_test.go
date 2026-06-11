@@ -20,8 +20,8 @@ func TestInitDB(t *testing.T) {
 	if err := db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&migrationCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationCount != 10 {
-		t.Fatalf("expected 10 migrations, got %d", migrationCount)
+	if migrationCount != 11 {
+		t.Fatalf("expected 11 migrations, got %d", migrationCount)
 	}
 
 	var foreignKeysEnabled int

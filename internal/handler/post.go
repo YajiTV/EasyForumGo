@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
-	"ForumJS/pkg/utils"
-	"ForumJS/pkg/validator"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
+	"EasyForumGo/pkg/validator"
 )
 
 type PostHandler struct {
@@ -23,6 +23,7 @@ type PostHandler struct {
 	users          *repository.UserRepository
 	comments       *repository.CommentRepository
 	likes          *repository.LikeRepository
+	libraries      *repository.LibraryRepository
 	uploadDir      string
 	renderer       *PageRenderer
 }
@@ -37,6 +38,7 @@ func NewPostHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *PostH
 		users:          repository.NewUserRepository(db),
 		comments:       repository.NewCommentRepository(db),
 		likes:          repository.NewLikeRepository(db),
+		libraries:      repository.NewLibraryRepository(db),
 		uploadDir:      uploadDir,
 		renderer:       renderer,
 	}
@@ -433,6 +435,7 @@ type PostDetailData struct {
 	Author       string
 	Categories   []model.Category
 	Comments     []CommentWithAuthor
+	Libraries    []model.Library
 	LikeCount    int
 	DislikeCount int
 }
@@ -488,12 +491,19 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	currentUser := h.userFromSession(r)
+	libraries := []model.Library{}
+	if currentUser != nil {
+		libraries, _ = h.libraries.GetByUserID(currentUser.ID)
+	}
+
 	data := PostDetailData{
-		User:         h.userFromSession(r),
+		User:         currentUser,
 		Post:         post,
 		Author:       author.Username,
 		Categories:   categories,
 		Comments:     comments,
+		Libraries:    libraries,
 		LikeCount:    likes,
 		DislikeCount: dislikes,
 	}

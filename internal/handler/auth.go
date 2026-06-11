@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"ForumJS/pkg/utils"
-	"ForumJS/pkg/validator"
+	"EasyForumGo/pkg/utils"
+	"EasyForumGo/pkg/validator"
 )
 
 const (

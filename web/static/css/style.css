@@ -547,16 +547,9 @@ textarea {
     gap: 7px;
 }
 
-.stat-item::before {
-    content: "";
-    width: 15px;
-    height: 15px;
-    border: 1.6px solid currentColor;
-    border-radius: 999px;
-}
-
-.stat-dislike::before {
-    border-radius: 3px;
+.stat-item .icon {
+    width: 16px;
+    height: 16px;
 }
 
 .read-link {

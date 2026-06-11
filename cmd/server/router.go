@@ -1,10 +1,10 @@
 package main
 
 import (
-	"ForumJS/config"
-	"ForumJS/internal/handler"
-	"ForumJS/internal/middleware"
-	"ForumJS/internal/repository"
+	"EasyForumGo/config"
+	"EasyForumGo/internal/handler"
+	"EasyForumGo/internal/middleware"
+	"EasyForumGo/internal/repository"
 	"database/sql"
 	"net"
 	"net/http"
@@ -43,8 +43,19 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /profile/my-posts", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/liked-posts", profileHandler.LikedPosts)
 	mux.HandleFunc("GET /profile/my-comments", profileHandler.MyComments)
+	mux.HandleFunc("GET /profile/activity", profileHandler.Activity)
 	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
 	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
+
+	// library routes
+	libraryHandler := handler.NewLibraryHandler(db)
+	mux.HandleFunc("GET /library", libraryHandler.Index)
+	mux.HandleFunc("POST /library", libraryHandler.Create)
+	mux.HandleFunc("GET /library/{id}", libraryHandler.Show)
+	mux.HandleFunc("POST /library/{id}/rename", libraryHandler.Rename)
+	mux.HandleFunc("POST /library/{id}/delete", libraryHandler.Delete)
+	mux.HandleFunc("POST /library/{libraryID}/post/{postID}/remove", libraryHandler.RemovePost)
+	mux.HandleFunc("POST /post/{postID}/library", libraryHandler.AddPost)
 
 	// post routes
 	postHandler := handler.NewPostHandler(db, cfg.UploadDir, renderer)
@@ -87,7 +98,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /contact", pageHandler.Page("contact.html"))
 
 	// OAuth routes
-	redirectURL := "http://localhost:" + cfg.Port + "/auth/google/callback"
+	redirectURL := cfg.OAuthRedirectURL()
 	oauthHandler := handler.NewOAuthHandler(db, cfg.OAuthClientID, cfg.OAuthClientSecret, redirectURL, cfg.SessionDuration, errorRenderer, renderer)
 	mux.HandleFunc("GET /auth/google", oauthHandler.GoogleLogin)
 	mux.HandleFunc("GET /auth/google/callback", oauthHandler.GoogleCallback)

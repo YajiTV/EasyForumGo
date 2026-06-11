@@ -1,8 +1,8 @@
-# ForumJS Technical Documentation
+# Easy Technical Documentation
 
 ## 1. Purpose and Scope
 
-ForumJS is a server-rendered forum written in Go for the B1 Forum project. This document describes the implementation delivered in this repository and maps its technical decisions to the subject requirements.
+Easy is a server-rendered forum written in Go for the B1 Forum project. This document describes the implementation delivered in this repository and maps its technical decisions to the subject requirements.
 
 The mandatory scope includes:
 
@@ -15,9 +15,10 @@ The mandatory scope includes:
 - Docker delivery
 - HTTP and technical error handling
 
-Implemented optional scope includes advanced image validation, personal activity pages, HTTPS, and rate limiting.
+Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, customizable post libraries, HTTPS, and rate limiting.
 
 ## 2. Architecture
+The internal Go module is named `EasyForumGo`.
 
 The application follows a layered organization while remaining deliberately small and based on the Go standard library.
 
@@ -143,6 +144,13 @@ The same behavior applies to posts and comments.
 - `/profile/my-posts` queries posts by the current user ID
 - `/profile/liked-posts` joins posts with positive post votes
 - `/profile/my-comments` queries comments by the current user ID
+- `/profile/activity` consolidates created posts, liked and disliked posts, comments, and personal counters
+
+### Personal libraries
+
+Connected users can create, rename, delete, and empty named libraries from `/library`. A post detail page provides a library selector for saving the post.
+
+Every library read and write query includes the current user ID. This prevents users from viewing or changing another user's libraries. Database constraints prevent duplicate library names per user and duplicate posts inside one library.
 
 ## 5. Database Design
 
@@ -160,6 +168,8 @@ SQLite is used through `database/sql` and `github.com/mattn/go-sqlite3`. Applica
 | `comments` | belongs to a post and user |
 | `post_likes` | unique post/user pair |
 | `comment_likes` | unique comment/user pair |
+| `libraries` | belongs to a user; unique name per user |
+| `library_posts` | composite primary key linking libraries and posts |
 | `schema_migrations` | records executed migration filenames |
 
 Foreign key cascades remove dependent records when their parent is deleted. The visual entity-relationship diagram is stored in `docs/ERD.svg`.
@@ -194,13 +204,13 @@ Handlers compare the current user ID with the resource owner before editing or d
 
 ### HTTPS and rate limiting
 
-Docker enables HTTPS with a self-signed development certificate and redirects HTTP traffic to HTTPS. The in-memory rate limiter protects general traffic, login attempts, and selected write actions.
+Docker serves HTTP and leaves HTTPS termination to a trusted reverse proxy in production. The in-memory rate limiter protects general traffic, login attempts, and selected write actions.
 
 ### Known security limits
 
 - CSRF tokens are not implemented.
 - The rate limiter is local to one process and resets on restart.
-- The self-signed certificate is for development and evaluation, not production.
+- Production depends on the reverse proxy for HTTPS termination.
 
 ## 7. Error Handling
 
@@ -219,9 +229,9 @@ Error pages can preserve the current user's navigation state. Some feature handl
 The Dockerfile uses a multi-stage build:
 
 1. Alpine Go builder with GCC and musl development packages for CGO SQLite
-2. Alpine runtime containing the application, templates, migrations, SQLite tools, and certificate support
+2. Alpine runtime containing the application, templates, migrations, and SQLite tools
 
-Compose publishes HTTP `8080` and HTTPS `8443`.
+Compose binds HTTP `8080` to localhost and connects the application to the external `web` network.
 
 Named volumes persist:
 
@@ -234,7 +244,11 @@ Container recreation does not remove named volumes. `docker compose down --volum
 
 Configuration is read from environment variables in `config/config.go`. Invalid or missing numeric values fall back to safe defaults.
 
-TLS is enabled only when both `TLS_CERT_FILE` and `TLS_KEY_FILE` are non-empty. Session duration is configurable and defaults to 24 hours. Image uploads use the 20 MB limit required by the subject.
+Session duration is configurable and defaults to 24 hours. Image uploads use the 20 MB limit required by the subject.
+
+`APP_ENV` accepts `dev` or `prod`. Production mode requires an HTTPS `APP_PUBLIC_URL` and `TRUST_PROXY=true`. `APP_BASE_PATH` mounts the application below an optional path prefix, `APP_PUBLIC_URL` defines the canonical OAuth callback base and enables secure cookies for HTTPS URLs, and `TRUST_PROXY` allows trusted forwarded client IP headers.
+
+Development and production use the same `.env`, `docker/Dockerfile`, and `docker/docker-compose.yml`. Environment variables select the runtime configuration while the reverse proxy always owns production TLS.
 
 ## 10. Verification Strategy
 
@@ -256,6 +270,7 @@ docker compose -f docker/docker-compose.yml up --build
 - image validation
 - post and comment votes
 - mandatory filters
+- personal activity and library ownership
 - custom error pages
 - database and upload persistence across container recreation
 
@@ -271,6 +286,7 @@ docker compose -f docker/docker-compose.yml up --build
 | Comments | comment handlers and repository |
 | Likes and dislikes | post and comment vote toggle |
 | Mandatory filters | category, current user's posts, liked posts |
+| Personal activity and libraries | profile activity handler, library handler, and ownership-scoped repository |
 | Guest read-only access | public feed and detail routes |
 | Docker | multi-stage Dockerfile and Compose |
 | HTTP errors | custom error renderer and templates |

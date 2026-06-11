@@ -1,12 +1,17 @@
 package config
 
 import (
+	"fmt"
+	"net/url"
 	"os"
+	"path"
 	"strconv"
+	"strings"
 	"time"
 )
 
 const (
+	defaultAppEnv               = "dev"
 	defaultPort                 = "8080"
 	defaultHTTPSPort            = "8443"
 	defaultDBPath               = "./data/forum.db"
@@ -19,6 +24,7 @@ const (
 )
 
 type Config struct {
+	AppEnv            string
 	Port              string
 	HTTPSPort         string
 	TLSCertFile       string
@@ -32,11 +38,15 @@ type Config struct {
 	SessionDuration   time.Duration
 	OAuthClientID     string
 	OAuthClientSecret string
+	AppBasePath       string
+	AppPublicURL      string
+	TrustProxy        bool
 }
 
 // Load loads the application configuration
 func Load() Config {
 	return Config{
+		AppEnv:            strings.ToLower(strings.TrimSpace(stringEnv("APP_ENV", defaultAppEnv))),
 		Port:              stringEnv("PORT", defaultPort),
 		HTTPSPort:         stringEnv("HTTPS_PORT", defaultHTTPSPort),
 		TLSCertFile:       stringEnv("TLS_CERT_FILE", ""),
@@ -50,12 +60,44 @@ func Load() Config {
 		SessionDuration:   time.Duration(intEnv("SESSION_DURATION_H", defaultSessionDurationHours)) * time.Hour,
 		OAuthClientID:     stringEnv("OAUTH_ID", ""),
 		OAuthClientSecret: stringEnv("OAUTH_KEY", ""),
+		AppBasePath:       normalizeBasePath(stringEnv("APP_BASE_PATH", "")),
+		AppPublicURL:      strings.TrimRight(strings.TrimSpace(stringEnv("APP_PUBLIC_URL", "")), "/"),
+		TrustProxy:        boolEnv("TRUST_PROXY", false),
 	}
+}
+
+// Validate checks whether the application configuration is coherent
+func (c Config) Validate() error {
+	if c.AppEnv != "dev" && c.AppEnv != "prod" {
+		return fmt.Errorf("APP_ENV must be dev or prod")
+	}
+	if c.AppEnv == "prod" {
+		if !strings.HasPrefix(strings.ToLower(c.AppPublicURL), "https://") {
+			return fmt.Errorf("APP_PUBLIC_URL must use https in production")
+		}
+		if !c.TrustProxy {
+			return fmt.Errorf("TRUST_PROXY must be true in production")
+		}
+	}
+	return nil
 }
 
 // TLSEnabled checks whether tls is enabled
 func (c Config) TLSEnabled() bool {
 	return c.TLSCertFile != "" && c.TLSKeyFile != ""
+}
+
+// SecureCookies checks whether cookies must only be sent over https
+func (c Config) SecureCookies() bool {
+	return c.TLSEnabled() || strings.HasPrefix(strings.ToLower(c.AppPublicURL), "https://")
+}
+
+// OAuthRedirectURL builds the public google oauth callback url
+func (c Config) OAuthRedirectURL() string {
+	if c.AppPublicURL != "" {
+		return c.AppPublicURL + "/auth/google/callback"
+	}
+	return "http://localhost:" + c.Port + path.Join(c.AppBasePath, "/auth/google/callback")
 }
 
 // stringEnv gets a string environment value
@@ -83,4 +125,30 @@ func int64Env(key string, fallback int64) int64 {
 		return fallback
 	}
 	return value
+}
+
+// boolEnv gets a boolean environment value
+func boolEnv(key string, fallback bool) bool {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+// normalizeBasePath normalizes an optional application url prefix
+func normalizeBasePath(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" || value == "/" {
+		return ""
+	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.IsAbs() || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return ""
+	}
+	return "/" + strings.Trim(path.Clean("/"+value), "/")
 }

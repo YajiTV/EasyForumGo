@@ -3,7 +3,7 @@ package repository
 import (
 	"database/sql"
 
-	"ForumJS/internal/model"
+	"EasyForumGo/internal/model"
 )
 
 type CommentRepository struct {
@@ -51,6 +51,13 @@ func (r *CommentRepository) GetByUserID(userID string) ([]model.Comment, error) 
 		comments = append(comments, c)
 	}
 	return comments, rows.Err()
+}
+
+// CountByUserID counts comments created by a user
+func (r *CommentRepository) CountByUserID(userID string) (int, error) {
+	var count int
+	err := r.db.QueryRow(`SELECT COUNT(*) FROM comments WHERE user_id = ?`, userID).Scan(&count)
+	return count, err
 }
 
 // Create creates a new record
