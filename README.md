@@ -29,6 +29,7 @@ Easy is a server-rendered community forum built in Go. It provides the complete 
 - Personal comments page and editable user profile
 - Consolidated personal activity page with contributions, reactions, and statistics
 - Customizable libraries for saving and organizing posts
+- Complete account settings for email, password, session, and account deletion
 - Profile picture upload
 - Password strength feedback
 - Google OAuth authentication
@@ -222,6 +223,10 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 | `GET` | `/profile/my-comments` | Connected | Current user's comments |
 | `GET` | `/profile/activity` | Connected | Current user's activity and statistics |
 | `GET`, `POST` | `/profile/edit` | Connected | Edit the current user's profile |
+| `GET` | `/settings` | Connected | Display account and security settings |
+| `POST` | `/settings/email` | Connected | Update the account email |
+| `POST` | `/settings/password` | Connected | Change the password and end the current session |
+| `POST` | `/settings/delete` | Connected | Permanently delete the account |
 | `GET`, `POST` | `/library` | Connected | List and create personal libraries |
 | `GET` | `/library/{id}` | Owner | Display a library and its saved posts |
 | `POST` | `/library/{id}/rename`, `/library/{id}/delete` | Owner | Manage a personal library |
@@ -235,6 +240,8 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 - Cookies are `HttpOnly`, use `SameSite=Lax`, and have an expiration date.
 - Creating a new session removes the user's previous session.
 - Author ownership is checked before post or comment modification.
+- Sensitive account settings require the current password for local accounts.
+- Password changes invalidate the active session, and account deletion cascades through related data.
 - SQLite foreign keys enforce relation integrity and cascading deletion.
 - Image content is checked with `http.DetectContentType`.
 - Rate limiting protects global traffic, login attempts, and write actions.

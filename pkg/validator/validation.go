@@ -77,6 +77,13 @@ type ProfileInput struct {
 	Username string
 }
 
+type PasswordChangeInput struct {
+	Username        string
+	Email           string
+	Password        string
+	ConfirmPassword string
+}
+
 type PasswordStrength struct {
 	Score          int
 	MaxScore       int
@@ -235,6 +242,23 @@ func ValidateComment(input CommentInput) ValidationErrors {
 func ValidateProfile(input ProfileInput) ValidationErrors {
 	errors := ValidationErrors{}
 	validateUsername(input.Username, errors)
+	return errors
+}
+
+// ValidateEmailChange validates a changed email address
+func ValidateEmailChange(email string) ValidationErrors {
+	errors := ValidationErrors{}
+	validateSignupEmail(email, errors)
+	return errors
+}
+
+// ValidatePasswordChange validates a changed password
+func ValidatePasswordChange(input PasswordChangeInput) ValidationErrors {
+	errors := ValidationErrors{}
+	validatePassword(input.Password, input.Username, input.Email, errors)
+	if input.ConfirmPassword != input.Password {
+		errors["confirm_password"] = "Les mots de passe ne correspondent pas."
+	}
 	return errors
 }
 

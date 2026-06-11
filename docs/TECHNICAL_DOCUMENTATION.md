@@ -15,7 +15,7 @@ The mandatory scope includes:
 - Docker delivery
 - HTTP and technical error handling
 
-Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, customizable post libraries, HTTPS, and rate limiting.
+Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, customizable post libraries, complete account settings, HTTPS, and rate limiting.
 
 ## 2. Architecture
 The internal Go module is named `EasyForumGo`.
@@ -152,6 +152,12 @@ Connected users can create, rename, delete, and empty named libraries from `/lib
 
 Every library read and write query includes the current user ID. This prevents users from viewing or changing another user's libraries. Database constraints prevent duplicate library names per user and duplicate posts inside one library.
 
+### Account settings
+
+`/settings` centralizes account information, email changes, password changes, session logout, and permanent account deletion.
+
+Local accounts must confirm their current password before changing their email, changing their password, or deleting the account. Password changes delete the active session and require a new login. Google-only accounts display provider-specific information and do not expose unusable email or password forms. Account deletion requires an explicit confirmation and relies on foreign key cascades to remove related forum data.
+
 ## 5. Database Design
 
 SQLite is used through `database/sql` and `github.com/mattn/go-sqlite3`. Application records use UUID strings as primary keys.
@@ -271,6 +277,7 @@ docker compose -f docker/docker-compose.yml up --build
 - post and comment votes
 - mandatory filters
 - personal activity and library ownership
+- account settings, password confirmation, session invalidation, and deletion cascade
 - custom error pages
 - database and upload persistence across container recreation
 
@@ -287,6 +294,7 @@ docker compose -f docker/docker-compose.yml up --build
 | Likes and dislikes | post and comment vote toggle |
 | Mandatory filters | category, current user's posts, liked posts |
 | Personal activity and libraries | profile activity handler, library handler, and ownership-scoped repository |
+| Account settings | settings handler with password confirmation and session invalidation |
 | Guest read-only access | public feed and detail routes |
 | Docker | multi-stage Dockerfile and Compose |
 | HTTP errors | custom error renderer and templates |

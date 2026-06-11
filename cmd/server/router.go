@@ -4,6 +4,7 @@ import (
 	"EasyForumGo/config"
 	"EasyForumGo/internal/handler"
 	"EasyForumGo/internal/middleware"
+	"EasyForumGo/internal/model"
 	"EasyForumGo/internal/repository"
 	"database/sql"
 	"net"
@@ -46,6 +47,13 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /profile/activity", profileHandler.Activity)
 	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
 	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
+
+	// settings routes
+	settingsHandler := handler.NewSettingsHandler(db)
+	mux.HandleFunc("GET /settings", settingsHandler.Show)
+	mux.Handle("POST /settings/email", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateEmail)))
+	mux.Handle("POST /settings/password", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdatePassword)))
+	mux.Handle("POST /settings/delete", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.DeleteAccount)))
 
 	// library routes
 	libraryHandler := handler.NewLibraryHandler(db)
@@ -112,6 +120,16 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	// home route
 	homeHandler := handler.NewHomeHandler(db, errorRenderer, renderer)
 	mux.HandleFunc("/", homeHandler.Home)
+
+	authMiddleware := middleware.NewAuthMiddleware(db)
+	moderationHandler := handler.NewModerationHandler(db)
+	mux.Handle("POST /post/{id}/report", authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportPost)))
+	mux.Handle("POST /comment/{id}/report", authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportComment)))
+	mux.Handle("POST /user/{id}/report", authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportUser)))
+	mux.Handle("GET /moderation", authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.Dashboard)))
+	mux.Handle("POST /moderation/report/{id}/resolve", authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.ResolveReport)))
+	mux.Handle("POST /moderation/report/{id}/dismiss", authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.DismissReport)))
+	mux.Handle("POST /admin/user/{id}/role", authMiddleware.RequireRole(model.RoleAdmin, http.HandlerFunc(moderationHandler.ChangeUserRole)))
 
 	return mux
 }
