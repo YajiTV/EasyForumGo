@@ -10,17 +10,19 @@ import (
 
 	"EasyForumGo/internal/model"
 	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
 )
 
 const socialPageSize = 10
 
 type SocialHandler struct {
-	users    *repository.UserRepository
-	posts    *repository.PostRepository
-	follows  *repository.FollowRepository
-	likes    *repository.LikeRepository
-	sessions *repository.SessionRepository
-	renderer *PageRenderer
+	users         *repository.UserRepository
+	posts         *repository.PostRepository
+	follows       *repository.FollowRepository
+	likes         *repository.LikeRepository
+	sessions      *repository.SessionRepository
+	renderer      *PageRenderer
+	notifications *repository.NotificationRepository
 }
 
 type PublicProfilePageData struct {
@@ -62,12 +64,13 @@ type DiscoverPageData struct {
 // NewSocialHandler creates a new instance
 func NewSocialHandler(db *sql.DB, renderer *PageRenderer) *SocialHandler {
 	return &SocialHandler{
-		users:    repository.NewUserRepository(db),
-		posts:    repository.NewPostRepository(db),
-		follows:  repository.NewFollowRepository(db),
-		likes:    repository.NewLikeRepository(db),
-		sessions: repository.NewSessionRepository(db),
-		renderer: renderer,
+		users:         repository.NewUserRepository(db),
+		posts:         repository.NewPostRepository(db),
+		follows:       repository.NewFollowRepository(db),
+		likes:         repository.NewLikeRepository(db),
+		sessions:      repository.NewSessionRepository(db),
+		renderer:      renderer,
+		notifications: repository.NewNotificationRepository(db),
 	}
 }
 
@@ -210,6 +213,12 @@ func (h *SocialHandler) changeFollow(w http.ResponseWriter, r *http.Request, fol
 	}
 	if follow {
 		err = h.follows.Follow(currentUser.ID, target.ID)
+		if err == nil {
+			_ = h.notifications.Create(&model.Notification{
+				ID: utils.NewUUID(), UserID: target.ID, ActorID: currentUser.ID,
+				Type: "new_follower", CreatedAt: time.Now(),
+			})
+		}
 	} else {
 		err = h.follows.Unfollow(currentUser.ID, target.ID)
 	}
