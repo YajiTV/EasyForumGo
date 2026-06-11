@@ -64,26 +64,40 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := h.posts.GetAll()
-	if err != nil {
-		h.errors.InternalServerError(w)
-		return
-	}
-
-	postsWithMeta := h.postsWithMeta(posts)
-
 	categories, err := h.categories.GetAll()
 	if err != nil {
 		categories = []model.Category{}
 	}
 
-	data := HomePageData{
-		User:       currentUser,
-		Posts:      postsWithMeta,
-		Categories: categories,
+	var currentCategory *model.Category
+	var posts []model.Post
+
+	if categoryID := r.URL.Query().Get("category"); categoryID != "" {
+		cat, err := h.categories.GetByID(categoryID)
+		if err != nil {
+			h.errors.RenderWithRequest(w, r, http.StatusNotFound, "Catégorie introuvable.")
+			return
+		}
+		currentCategory = cat
+		posts, err = h.posts.GetByCategory(categoryID)
+		if err != nil {
+			h.errors.InternalServerError(w)
+			return
+		}
+	} else {
+		posts, err = h.posts.GetAll()
+		if err != nil {
+			h.errors.InternalServerError(w)
+			return
+		}
 	}
 
-	h.renderer.Render(w, "home.html", data)
+	h.renderer.Render(w, "home.html", HomePageData{
+		User:            currentUser,
+		Posts:           h.postsWithMeta(posts),
+		Categories:      categories,
+		CurrentCategory: currentCategory,
+	})
 }
 
 // postsWithMeta adds display metadata to posts
