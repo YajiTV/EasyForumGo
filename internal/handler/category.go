@@ -35,7 +35,6 @@ type CategoryPageData struct {
 	Posts           []PostWithMeta
 	Categories      []model.Category
 	CurrentCategory *model.Category
-	CurrentFilter   string
 }
 
 // FilterByCategory handles the request

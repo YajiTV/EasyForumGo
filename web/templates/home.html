@@ -4,35 +4,29 @@
 <div class="home-layout">
     <!-- post feed -->
     <section class="home-feed" aria-label="Liste des posts">
-        <!-- primary filters -->
-        <div class="feed-tabs" aria-label="Filtres principaux">
-            <a href="/" class="feed-tab {{if and (not .CurrentCategory) (not .CurrentFilter)}}active{{end}}">Pour vous</a>
+        <!-- feed introduction -->
+        <header class="home-header">
+            <div>
+                <p class="home-kicker">Communauté</p>
+                <h1>{{if .CurrentCategory}}{{.CurrentCategory.Name}}{{else}}Discussions{{end}}</h1>
+                <p>{{if .CurrentCategory}}Les dernières publications de cette catégorie.{{else}}Découvrez les dernières publications de la communauté.{{end}}</p>
+            </div>
             {{if .User}}
-                <a href="/?filter=mine" class="feed-tab {{if eq .CurrentFilter "mine"}}active{{end}}">Mes posts</a>
-                <a href="/?filter=liked" class="feed-tab {{if eq .CurrentFilter "liked"}}active{{end}}">Posts aimés</a>
+            <a href="/post/new" class="home-write-link">Écrire un post</a>
             {{end}}
-        </div>
+        </header>
 
-        <!-- category filters -->
-        <div class="home-filters">
-            <a href="/" class="filter-btn {{if not .CurrentCategory}}active{{end}}">Tous</a>
+        <!-- category chooser -->
+        <nav class="category-chooser" aria-label="Choisir une catégorie">
+            <a href="/" class="category-choice {{if not .CurrentCategory}}active{{end}}">Toutes</a>
             {{range .Categories}}
-                <a href="/posts/category/{{.ID}}" class="filter-btn">{{.Name}}</a>
+                <a href="/posts/category/{{.ID}}" class="category-choice {{if and $.CurrentCategory (eq $.CurrentCategory.ID .ID)}}active{{end}}">{{.Name}}</a>
             {{else}}
-                <a href="/posts/category/general" class="filter-btn">Général</a>
-                <a href="/posts/category/aide" class="filter-btn">Aide</a>
-                <a href="/posts/category/projet" class="filter-btn">Projet</a>
-                <a href="/posts/category/annonce" class="filter-btn">Annonce</a>
-                <a href="/posts/category/hors-sujet" class="filter-btn">Hors sujet</a>
+                <a href="/posts/category/general" class="category-choice">Général</a>
+                <a href="/posts/category/aide" class="category-choice">Aide</a>
+                <a href="/posts/category/projet" class="category-choice">Projet</a>
             {{end}}
-        </div>
-
-        {{if .CurrentCategory}}
-        <div class="feed-context">
-            <span>Catégorie</span>
-            <strong>{{.CurrentCategory.Name}}</strong>
-        </div>
-        {{end}}
+        </nav>
 
         <!-- post list -->
         <div class="posts-list">
@@ -81,36 +75,13 @@
                 </article>
                 {{end}}
             {{else}}
-                {{if eq .CurrentFilter "mine"}}
-                    <p class="empty">Vous n'avez publié aucun post pour le moment.</p>
-                {{else if eq .CurrentFilter "liked"}}
-                    <p class="empty">Vous n'avez aimé aucun post pour le moment.</p>
-                {{else}}
-                    <p class="empty">Aucun post pour le moment.</p>
-                {{end}}
+                <div class="home-empty">
+                    <h2>Aucune publication</h2>
+                    <p>Cette catégorie ne contient aucun post pour le moment.</p>
+                    {{if .User}}<a href="/post/new">Créer le premier post</a>{{end}}
+                </div>
             {{end}}
         </div>
     </section>
-
-    <!-- category sidebar -->
-    <aside class="right-sidebar" aria-label="Panneau secondaire">
-        <section class="sidebar-section">
-            <h2>Catégories</h2>
-            <div class="topic-list">
-                {{range .Categories}}
-                    <a href="/posts/category/{{.ID}}" class="topic-pill">{{.Name}}</a>
-                {{else}}
-                    <a href="/posts/category/general" class="topic-pill">Général</a>
-                    <a href="/posts/category/aide" class="topic-pill">Aide</a>
-                    <a href="/posts/category/projet" class="topic-pill">Projet</a>
-                    <a href="/posts/category/annonce" class="topic-pill">Annonce</a>
-                    <a href="/posts/category/hors-sujet" class="topic-pill">Hors sujet</a>
-                    <a href="/posts/category/ressources" class="topic-pill">Ressources</a>
-                    <a href="/posts/category/questions" class="topic-pill">Questions</a>
-                {{end}}
-            </div>
-        </section>
-
-    </aside>
 </div>
 {{end}}

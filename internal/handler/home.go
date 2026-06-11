@@ -26,7 +26,6 @@ type HomePageData struct {
 	Posts           []PostWithMeta
 	Categories      []model.Category
 	CurrentCategory *model.Category
-	CurrentFilter   string
 }
 
 type HomeHandler struct {
@@ -65,17 +64,9 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentFilter := r.URL.Query().Get("filter")
-	if currentFilter != "mine" && currentFilter != "liked" {
-		currentFilter = ""
-	}
-	posts, err := h.postsForFilter(currentFilter, currentUser)
+	posts, err := h.posts.GetAll()
 	if err != nil {
 		h.errors.InternalServerError(w)
-		return
-	}
-	if (currentFilter == "mine" || currentFilter == "liked") && currentUser == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
@@ -87,25 +78,12 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := HomePageData{
-		User:          currentUser,
-		Posts:         postsWithMeta,
-		Categories:    categories,
-		CurrentFilter: currentFilter,
+		User:       currentUser,
+		Posts:      postsWithMeta,
+		Categories: categories,
 	}
 
 	h.renderer.Render(w, "home.html", data)
-}
-
-// postsForFilter gets posts matching the selected home filter
-func (h *HomeHandler) postsForFilter(filter string, user *model.User) ([]model.Post, error) {
-	switch {
-	case filter == "mine" && user != nil:
-		return h.posts.GetByUserID(user.ID)
-	case filter == "liked" && user != nil:
-		return h.likes.GetLikedPostsByUserID(user.ID)
-	default:
-		return h.posts.GetAll()
-	}
 }
 
 // postsWithMeta adds display metadata to posts
