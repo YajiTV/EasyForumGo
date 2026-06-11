@@ -1,0 +1,290 @@
+.settings-page {
+    min-height: calc(100vh - var(--topbar-height));
+    display: grid;
+    grid-template-columns: 260px minmax(0, 760px);
+    justify-content: center;
+}
+
+.settings-navigation {
+    padding: 50px 30px;
+    border-right: 1px solid var(--line);
+}
+
+.settings-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+}
+
+.settings-user img,
+.settings-user > span {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--text);
+    color: #fff;
+    font-weight: 800;
+    object-fit: cover;
+    text-transform: uppercase;
+}
+
+.settings-user strong,
+.settings-user small {
+    display: block;
+}
+
+.settings-user small {
+    max-width: 155px;
+    margin-top: 3px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 12px;
+    text-overflow: ellipsis;
+}
+
+.settings-navigation nav {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin: 24px 0;
+}
+
+.settings-navigation nav a {
+    padding: 10px 12px;
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.settings-navigation nav a:hover {
+    background: var(--soft);
+    color: var(--text);
+}
+
+.settings-navigation nav .settings-danger-link {
+    color: var(--danger);
+}
+
+.settings-profile-link {
+    color: var(--text);
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.settings-content {
+    min-width: 0;
+    padding: 50px 48px 80px;
+}
+
+.settings-header {
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--line);
+}
+
+.settings-header p {
+    margin-bottom: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.settings-header h1 {
+    margin-bottom: 8px;
+    font-family: Georgia, serif;
+    font-size: 44px;
+}
+
+.settings-header span,
+.settings-card-heading p,
+.settings-provider-note {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.settings-message,
+.settings-error {
+    margin-top: 24px;
+    padding: 12px 15px;
+    border: 1px solid #cce6d5;
+    border-radius: 6px;
+    background: #f2fbf5;
+    color: #28633d;
+    font-size: 13px;
+}
+
+.settings-error {
+    margin-bottom: 20px;
+    border-color: #f5c2c2;
+    background: #fff0f0;
+    color: var(--danger);
+}
+
+.settings-card {
+    padding: 34px 0;
+    border-bottom: 1px solid var(--line);
+    scroll-margin-top: 24px;
+}
+
+.settings-card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.settings-card-heading h2 {
+    margin-bottom: 6px;
+    font-size: 19px;
+}
+
+.settings-card-heading a,
+.settings-card-heading button,
+.settings-form button {
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.settings-card-heading a:hover,
+.settings-card-heading button:hover,
+.settings-form button:hover {
+    background: var(--soft);
+}
+
+.settings-account-details {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 26px;
+}
+
+.settings-account-details div {
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+}
+
+.settings-account-details dt {
+    margin-bottom: 5px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.settings-account-details dd {
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.settings-form {
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 24px;
+}
+
+.settings-form label {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.settings-form input {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--text);
+    font: inherit;
+}
+
+.settings-form input:focus {
+    outline: none;
+    border-color: var(--text);
+}
+
+.settings-form button {
+    margin-top: 12px;
+    background: var(--text);
+    color: #fff;
+}
+
+.settings-form button:hover {
+    background: #333;
+}
+
+.settings-provider-note {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 6px;
+    background: var(--soft);
+}
+
+.settings-danger-card {
+    border-bottom: 0;
+}
+
+.settings-danger-card h2 {
+    color: var(--danger);
+}
+
+.settings-form .settings-delete-button {
+    border-color: var(--danger);
+    background: var(--danger);
+}
+
+.settings-form .settings-delete-button:hover {
+    background: #a93226;
+}
+
+@media (max-width: 900px) {
+    .settings-page {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .settings-navigation {
+        padding: 28px 20px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .settings-navigation nav {
+        flex-direction: row;
+        overflow-x: auto;
+    }
+
+    .settings-navigation nav a {
+        white-space: nowrap;
+    }
+
+    .settings-content {
+        padding: 36px 20px 60px;
+    }
+}
+
+@media (max-width: 600px) {
+    .settings-card-heading {
+        flex-direction: column;
+    }
+
+    .settings-account-details {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

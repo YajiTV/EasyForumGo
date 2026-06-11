@@ -40,6 +40,13 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
 	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
 
+	// settings routes
+	settingsHandler := handler.NewSettingsHandler(db)
+	mux.HandleFunc("GET /settings", settingsHandler.Show)
+	mux.Handle("POST /settings/email", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateEmail)))
+	mux.Handle("POST /settings/password", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdatePassword)))
+	mux.Handle("POST /settings/delete", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.DeleteAccount)))
+
 	// library routes
 	libraryHandler := handler.NewLibraryHandler(db)
 	mux.HandleFunc("GET /library", libraryHandler.Index)

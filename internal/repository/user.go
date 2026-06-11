@@ -75,6 +75,29 @@ func (r *UserRepository) UpdateProfile(userID, username, profilePicture string) 
 	return err
 }
 
+// UpdateEmail updates a user's email address
+func (r *UserRepository) UpdateEmail(userID, email string) error {
+	_, err := r.db.Exec(`UPDATE users SET email = ? WHERE id = ?`, email, userID)
+	return err
+}
+
+// UpdatePasswordAndDeleteSessions updates a password and invalidates sessions
+func (r *UserRepository) UpdatePasswordAndDeleteSessions(userID, hashedPassword string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`UPDATE users SET password = ? WHERE id = ?`, hashedPassword, userID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM sessions WHERE user_id = ?`, userID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (r *UserRepository) UpdateRole(userID string, role model.Role) error {
 	_, err := r.db.Exec(
 		`UPDATE users SET role = ? WHERE id = ?`,
