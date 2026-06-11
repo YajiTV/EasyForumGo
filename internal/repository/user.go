@@ -3,6 +3,8 @@ package repository
 import (
 	"EasyForumGo/internal/model"
 	"database/sql"
+	"fmt"
+	"strings"
 )
 
 type UserRepository struct {
@@ -16,8 +18,8 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 func (r *UserRepository) GetByID(id string) (*model.User, error) {
 	var u model.User
 	err := r.db.QueryRow(
-		`SELECT id, email, username, password, role, profile_picture, created_at FROM users WHERE id = ?`, id,
-	).Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.Role, &u.ProfilePicture, &u.CreatedAt)
+		userColumns+` WHERE id = ?`, id,
+	).Scan(userScanTargets(&u)...)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +29,8 @@ func (r *UserRepository) GetByID(id string) (*model.User, error) {
 func (r *UserRepository) GetByEmail(email string) (*model.User, error) {
 	var u model.User
 	err := r.db.QueryRow(
-		`SELECT id, email, username, password, role, profile_picture, created_at FROM users WHERE email = ?`, email,
-	).Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.Role, &u.ProfilePicture, &u.CreatedAt)
+		userColumns+` WHERE email = ?`, email,
+	).Scan(userScanTargets(&u)...)
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +40,8 @@ func (r *UserRepository) GetByEmail(email string) (*model.User, error) {
 func (r *UserRepository) GetByUsername(username string) (*model.User, error) {
 	var u model.User
 	err := r.db.QueryRow(
-		`SELECT id, email, username, password, role, profile_picture, created_at FROM users WHERE username = ?`, username,
-	).Scan(&u.ID, &u.Email, &u.Username, &u.Password, &u.Role, &u.ProfilePicture, &u.CreatedAt)
+		userColumns+` WHERE username = ? COLLATE NOCASE`, username,
+	).Scan(userScanTargets(&u)...)
 	if err != nil {
 		return nil, err
 	}
@@ -104,4 +106,53 @@ func (r *UserRepository) UpdateRole(userID string, role model.Role) error {
 		role, userID,
 	)
 	return err
+}
+
+// UpdateSocialProfile updates a user's public social preferences
+func (r *UserRepository) UpdateSocialProfile(userID, biography string, followsVisible bool) error {
+	_, err := r.db.Exec(`UPDATE users SET biography = ?, follows_visible = ? WHERE id = ?`, biography, followsVisible, userID)
+	return err
+}
+
+// Search returns users matching a username
+func (r *UserRepository) Search(query, excludeUserID string, limit int) ([]model.User, error) {
+	if limit < 1 || limit > 100 {
+		return nil, fmt.Errorf("invalid limit")
+	}
+	rows, err := r.db.Query(userColumns+`
+		WHERE id <> ? AND username LIKE ? ESCAPE '\'
+		ORDER BY username COLLATE NOCASE ASC LIMIT ?`,
+		excludeUserID, "%"+escapeLike(query)+"%", limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var users []model.User
+	for rows.Next() {
+		var user model.User
+		if err := scanUser(rows, &user); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+	return users, rows.Err()
+}
+
+const userColumns = `SELECT id, email, username, password, role, profile_picture, biography, follows_visible, created_at FROM users`
+
+// userScanTargets returns user scan destinations
+func userScanTargets(user *model.User) []any {
+	return []any{&user.ID, &user.Email, &user.Username, &user.Password, &user.Role, &user.ProfilePicture, &user.Biography, &user.FollowsVisible, &user.CreatedAt}
+}
+
+// scanUser scans a user row
+func scanUser(scanner interface{ Scan(...any) error }, user *model.User) error {
+	return scanner.Scan(userScanTargets(user)...)
+}
+
+// escapeLike escapes sqlite LIKE wildcard characters
+func escapeLike(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, `%`, `\%`)
+	return strings.ReplaceAll(value, `_`, `\_`)
 }

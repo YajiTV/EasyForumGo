@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN biography TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN follows_visible INTEGER NOT NULL DEFAULT 1 CHECK(follows_visible IN (0, 1));
