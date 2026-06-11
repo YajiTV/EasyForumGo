@@ -1,0 +1,219 @@
+.library-page {
+    min-height: calc(100vh - var(--topbar-height));
+    display: grid;
+    grid-template-columns: 300px minmax(0, 760px);
+    justify-content: center;
+}
+
+.library-panel {
+    padding: 48px 28px;
+    border-right: 1px solid var(--line);
+}
+
+.library-panel header p,
+.library-content-header p,
+.library-welcome p {
+    margin-bottom: 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.library-panel h1,
+.library-welcome h1 {
+    font-family: Georgia, serif;
+    font-size: 34px;
+}
+
+.library-create-form {
+    margin: 32px 0 18px;
+}
+
+.library-create-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.library-create-form div,
+.library-manage form {
+    display: flex;
+    gap: 7px;
+}
+
+.library-create-form input,
+.library-manage input {
+    min-width: 0;
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+}
+
+.library-create-form button,
+.library-manage button,
+.profile-post-stats button {
+    padding: 8px 11px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.library-error {
+    margin-bottom: 16px;
+    color: var(--danger);
+    font-size: 13px;
+}
+
+.library-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.library-list a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.library-list a:hover,
+.library-list a.active {
+    background: var(--soft);
+}
+
+.library-list span,
+.library-list p,
+.library-content-header span,
+.library-welcome span,
+.library-empty p {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.library-content {
+    min-width: 0;
+    padding: 48px 48px 72px;
+}
+
+.library-content-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+}
+
+.library-content-header h2 {
+    margin-bottom: 5px;
+    font-family: Georgia, serif;
+    font-size: 38px;
+}
+
+.library-manage {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.library-manage .library-delete {
+    color: var(--danger);
+}
+
+.profile-post-stats form {
+    margin-left: auto;
+}
+
+.profile-post-stats button {
+    padding: 2px 7px;
+    color: var(--danger);
+    font-size: 12px;
+}
+
+.library-welcome,
+.library-empty {
+    padding: 70px 0;
+}
+
+.library-welcome h1,
+.library-empty h3 {
+    max-width: 560px;
+    margin-bottom: 14px;
+}
+
+.library-empty a {
+    display: inline-block;
+    margin-top: 20px;
+    text-decoration: underline;
+}
+
+.post-library-actions {
+    padding: 20px 0;
+    border-top: 1px solid var(--line);
+}
+
+.post-library-actions > div:first-child {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.post-library-actions a,
+.post-library-actions p {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.post-library-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.post-library-list button {
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.post-library-list button.saved {
+    background: var(--text);
+    color: #fff;
+}
+
+@media (max-width: 900px) {
+    .library-page {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .library-panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .library-content {
+        padding: 36px 20px 56px;
+    }
+}
+
+@media (max-width: 620px) {
+    .library-content-header {
+        flex-direction: column;
+    }
+
+    .library-manage {
+        width: 100%;
+        align-items: stretch;
+    }
+}

@@ -40,6 +40,16 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
 	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
 
+	// library routes
+	libraryHandler := handler.NewLibraryHandler(db)
+	mux.HandleFunc("GET /library", libraryHandler.Index)
+	mux.HandleFunc("POST /library", libraryHandler.Create)
+	mux.HandleFunc("GET /library/{id}", libraryHandler.Show)
+	mux.HandleFunc("POST /library/{id}/rename", libraryHandler.Rename)
+	mux.HandleFunc("POST /library/{id}/delete", libraryHandler.Delete)
+	mux.HandleFunc("POST /library/{libraryID}/post/{postID}/remove", libraryHandler.RemovePost)
+	mux.HandleFunc("POST /post/{postID}/library/{libraryID}/toggle", libraryHandler.TogglePost)
+
 	// post routes
 	postHandler := handler.NewPostHandler(db, cfg.UploadDir)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)

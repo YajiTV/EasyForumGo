@@ -24,6 +24,7 @@ type PostHandler struct {
 	users          *repository.UserRepository
 	comments       *repository.CommentRepository
 	likes          *repository.LikeRepository
+	libraries      *repository.LibraryRepository
 	uploadDir      string
 }
 
@@ -37,6 +38,7 @@ func NewPostHandler(db *sql.DB, uploadDir string) *PostHandler {
 		users:          repository.NewUserRepository(db),
 		comments:       repository.NewCommentRepository(db),
 		likes:          repository.NewLikeRepository(db),
+		libraries:      repository.NewLibraryRepository(db),
 		uploadDir:      uploadDir,
 	}
 }
@@ -456,8 +458,14 @@ type PostDetailData struct {
 	Author       string
 	Categories   []model.Category
 	Comments     []CommentWithAuthor
+	Libraries    []PostLibraryOption
 	LikeCount    int
 	DislikeCount int
+}
+
+type PostLibraryOption struct {
+	model.Library
+	ContainsPost bool
 }
 
 // PostDetail handles the request
@@ -511,12 +519,26 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	currentUser := h.userFromSession(r)
+	libraries := []PostLibraryOption{}
+	if currentUser != nil {
+		userLibraries, _ := h.libraries.GetByUserID(currentUser.ID)
+		for _, library := range userLibraries {
+			containsPost, _ := h.libraries.ContainsPost(library.ID, currentUser.ID, postID)
+			libraries = append(libraries, PostLibraryOption{
+				Library:      library,
+				ContainsPost: containsPost,
+			})
+		}
+	}
+
 	data := PostDetailData{
-		User:         h.userFromSession(r),
+		User:         currentUser,
 		Post:         post,
 		Author:       author.Username,
 		Categories:   categories,
 		Comments:     comments,
+		Libraries:    libraries,
 		LikeCount:    likes,
 		DislikeCount: dislikes,
 	}
