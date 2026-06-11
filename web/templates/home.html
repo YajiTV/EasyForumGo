@@ -26,13 +26,9 @@
 
         <!-- category chooser -->
         <nav class="category-chooser" aria-label="Choisir une catégorie">
-            <a href="/" class="category-choice {{if not .CurrentCategory}}active{{end}}">Toutes</a>
+            <a href="/" class="category-choice {{if and (not .CurrentCategory) (not .FollowingFeed)}}active{{end}}">Toutes</a>
             {{range .Categories}}
-                <a href="/posts/category/{{.ID}}" class="category-choice {{if and $.CurrentCategory (eq $.CurrentCategory.ID .ID)}}active{{end}}">{{.Name}}</a>
-            {{else}}
-                <a href="/posts/category/general" class="category-choice">Général</a>
-                <a href="/posts/category/aide" class="category-choice">Aide</a>
-                <a href="/posts/category/projet" class="category-choice">Projet</a>
+                <a href="/?category={{.ID}}" class="category-choice {{if and $.CurrentCategory (eq $.CurrentCategory.ID .ID)}}active{{end}}">{{.Name}}</a>
             {{end}}
         </nav>
 

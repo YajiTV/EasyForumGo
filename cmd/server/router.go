@@ -101,10 +101,6 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("POST /comment/{id}/like", likeHandler.LikeComment)
 	mux.HandleFunc("POST /comment/{id}/dislike", likeHandler.DislikeComment)
 
-	// category routes
-	categoryHandler := handler.NewCategoryHandler(db, renderer)
-	mux.HandleFunc("GET /posts/category/{id}", categoryHandler.FilterByCategory)
-
 	// static page routes
 	pageHandler := handler.NewPageHandler(db, errorRenderer, renderer)
 	mux.HandleFunc("GET /about", pageHandler.Page("about.html"))

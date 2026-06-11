@@ -496,33 +496,45 @@ textarea {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 20px 0;
+    padding: 20px 0 24px;
     border-bottom: 1px solid var(--line);
 }
 
 .category-choice {
-    min-height: 36px;
+    min-height: 34px;
     display: inline-flex;
     align-items: center;
-    padding: 0 16px;
-    border: 1px solid transparent;
+    gap: 6px;
+    padding: 0 14px;
+    border: 1.5px solid var(--line);
     border-radius: 999px;
-    background: var(--soft);
+    background: #fff;
     color: var(--muted);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    transition: color 0.16s ease, background-color 0.16s ease, border-color 0.16s ease;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    transition: color 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 .category-choice:hover {
-    background: #ececec;
+    border-color: var(--text);
     color: var(--text);
+    background: var(--soft);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
 .category-choice.active {
     border-color: var(--text);
     background: var(--text);
     color: #fff;
+    box-shadow: 0 2px 8px rgba(36,36,36,0.18);
+}
+
+.category-choice.active:hover {
+    background: #3a3a3a;
+    border-color: #3a3a3a;
 }
 
 .posts-list {

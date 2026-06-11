@@ -76,15 +76,33 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 
 	page := pageNumber(r)
 	followingFeed := r.URL.Query().Get("feed") == "following"
+	categories, err := h.categories.GetAll()
+	if err != nil {
+		categories = []model.Category{}
+	}
+
+	var currentCategory *model.Category
 	var posts []model.Post
-	var err error
-	if followingFeed {
+	paginationBase := "/?page="
+
+	switch {
+	case followingFeed:
 		if currentUser == nil {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 		posts, err = h.posts.GetFollowing(currentUser.ID, socialPageSize+1, (page-1)*socialPageSize)
-	} else {
+		paginationBase = "/?feed=following&page="
+	case r.URL.Query().Get("category") != "":
+		categoryID := r.URL.Query().Get("category")
+		currentCategory, err = h.categories.GetByID(categoryID)
+		if err != nil {
+			h.errors.RenderWithRequest(w, r, http.StatusNotFound, "Catégorie introuvable.")
+			return
+		}
+		posts, err = h.posts.GetByCategoryPaginated(categoryID, socialPageSize+1, (page-1)*socialPageSize)
+		paginationBase = "/?category=" + categoryID + "&page="
+	default:
 		posts, err = h.posts.GetAllPaginated(socialPageSize+1, (page-1)*socialPageSize)
 	}
 	if err != nil {
@@ -96,27 +114,19 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	if hasNext {
 		posts = posts[:socialPageSize]
 	}
-	postsWithMeta := h.postsWithMeta(posts, currentUser)
-
-	categories, err := h.categories.GetAll()
-	if err != nil {
-		categories = []model.Category{}
-	}
 
 	data := HomePageData{
-		User:           currentUser,
-		Posts:          postsWithMeta,
-		Categories:     categories,
-		FollowingFeed:  followingFeed,
-		Page:           page,
-		PreviousPage:   page - 1,
-		NextPage:       page + 1,
-		HasPrevious:    page > 1,
-		HasNext:        hasNext,
-		PaginationBase: "/?page=",
-	}
-	if followingFeed {
-		data.PaginationBase = "/?feed=following&page="
+		User:            currentUser,
+		Posts:           h.postsWithMeta(posts, currentUser),
+		Categories:      categories,
+		CurrentCategory: currentCategory,
+		FollowingFeed:   followingFeed,
+		Page:            page,
+		PreviousPage:    page - 1,
+		NextPage:        page + 1,
+		HasPrevious:     page > 1,
+		HasNext:         hasNext,
+		PaginationBase:  paginationBase,
 	}
 
 	h.renderer.Render(w, "home.html", data)

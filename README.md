@@ -207,7 +207,7 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 | Method | Route | Access | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/` | Public | Post feed |
-| `GET` | `/posts/category/{id}` | Public | Posts filtered by category |
+| `GET` | `/?category={id}` | Public | Posts filtered by category |
 | `GET` | `/post/{id}` | Public | Post details and comments |
 | `GET`, `POST` | `/register` | Public | Registration form and account creation |
 | `GET`, `POST` | `/login` | Public | Login form and authentication |
