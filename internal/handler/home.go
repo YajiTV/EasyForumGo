@@ -64,61 +64,51 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	posts, err := h.posts.GetAll()
+	if err != nil {
+		h.errors.InternalServerError(w)
+		return
+	}
+
+	postsWithMeta := h.postsWithMeta(posts)
+
 	categories, err := h.categories.GetAll()
 	if err != nil {
 		categories = []model.Category{}
 	}
 
-	var currentCategory *model.Category
-	var posts []model.Post
-
-	if categoryID := r.URL.Query().Get("category"); categoryID != "" {
-		cat, err := h.categories.GetByID(categoryID)
-		if err != nil {
-			h.errors.RenderWithRequest(w, r, http.StatusNotFound, "Catégorie introuvable.")
-			return
-		}
-		currentCategory = cat
-		posts, err = h.posts.GetByCategory(categoryID)
-		if err != nil {
-			h.errors.InternalServerError(w)
-			return
-		}
-	} else {
-		posts, err = h.posts.GetAll()
-		if err != nil {
-			h.errors.InternalServerError(w)
-			return
-		}
+	data := HomePageData{
+		User:       currentUser,
+		Posts:      postsWithMeta,
+		Categories: categories,
 	}
 
-	var postsWithMeta []PostWithMeta
-	for _, p := range posts {
-		user, err := h.users.GetByID(p.UserID)
+	h.renderer.Render(w, "home.html", data)
+}
+
+// postsWithMeta adds display metadata to posts
+func (h *HomeHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
+	postsWithMeta := make([]PostWithMeta, 0, len(posts))
+	for _, post := range posts {
+		user, err := h.users.GetByID(post.UserID)
 		if err != nil {
 			user = &model.User{Username: "Inconnu"}
 		}
-		likes, _ := h.likes.CountPostLikes(p.ID)
-		dislikes, _ := h.likes.CountPostDislikes(p.ID)
+		likes, _ := h.likes.CountPostLikes(post.ID)
+		dislikes, _ := h.likes.CountPostDislikes(post.ID)
 		postsWithMeta = append(postsWithMeta, PostWithMeta{
-			ID:           p.ID,
-			UserID:       p.UserID,
-			Title:        p.Title,
-			Content:      p.Content,
-			ImagePath:    p.ImagePath,
-			CreatedAt:    p.CreatedAt,
+			ID:           post.ID,
+			UserID:       post.UserID,
+			Title:        post.Title,
+			Content:      post.Content,
+			ImagePath:    post.ImagePath,
+			CreatedAt:    post.CreatedAt,
 			Username:     user.Username,
 			LikeCount:    likes,
 			DislikeCount: dislikes,
 		})
 	}
-
-	h.renderer.Render(w, "home.html", HomePageData{
-		User:            currentUser,
-		Posts:           postsWithMeta,
-		Categories:      categories,
-		CurrentCategory: currentCategory,
-	})
+	return postsWithMeta
 }
 
 // userFromSession gets the user from the current session
