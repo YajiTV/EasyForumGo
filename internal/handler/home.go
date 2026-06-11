@@ -26,6 +26,7 @@ type HomePageData struct {
 	Posts           []PostWithMeta
 	Categories      []model.Category
 	CurrentCategory *model.Category
+	CurrentFilter   string
 }
 
 type HomeHandler struct {
@@ -64,34 +65,21 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := h.posts.GetAll()
+	currentFilter := r.URL.Query().Get("filter")
+	if currentFilter != "mine" && currentFilter != "liked" {
+		currentFilter = ""
+	}
+	posts, err := h.postsForFilter(currentFilter, currentUser)
 	if err != nil {
 		h.errors.InternalServerError(w)
 		return
 	}
-
-	var postsWithMeta []PostWithMeta
-	for _, p := range posts {
-		user, err := h.users.GetByID(p.UserID)
-		if err != nil {
-			user = &model.User{Username: "Inconnu"}
-		}
-
-		likes, _ := h.likes.CountPostLikes(p.ID)
-		dislikes, _ := h.likes.CountPostDislikes(p.ID)
-
-		postsWithMeta = append(postsWithMeta, PostWithMeta{
-			ID:           p.ID,
-			UserID:       p.UserID,
-			Title:        p.Title,
-			Content:      p.Content,
-			ImagePath:    p.ImagePath,
-			CreatedAt:    p.CreatedAt,
-			Username:     user.Username,
-			LikeCount:    likes,
-			DislikeCount: dislikes,
-		})
+	if (currentFilter == "mine" || currentFilter == "liked") && currentUser == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
 	}
+
+	postsWithMeta := h.postsWithMeta(posts)
 
 	categories, err := h.categories.GetAll()
 	if err != nil {
@@ -99,12 +87,50 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := HomePageData{
-		User:       currentUser,
-		Posts:      postsWithMeta,
-		Categories: categories,
+		User:          currentUser,
+		Posts:         postsWithMeta,
+		Categories:    categories,
+		CurrentFilter: currentFilter,
 	}
 
 	h.renderer.Render(w, "home.html", data)
+}
+
+// postsForFilter gets posts matching the selected home filter
+func (h *HomeHandler) postsForFilter(filter string, user *model.User) ([]model.Post, error) {
+	switch {
+	case filter == "mine" && user != nil:
+		return h.posts.GetByUserID(user.ID)
+	case filter == "liked" && user != nil:
+		return h.likes.GetLikedPostsByUserID(user.ID)
+	default:
+		return h.posts.GetAll()
+	}
+}
+
+// postsWithMeta adds display metadata to posts
+func (h *HomeHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
+	postsWithMeta := make([]PostWithMeta, 0, len(posts))
+	for _, post := range posts {
+		user, err := h.users.GetByID(post.UserID)
+		if err != nil {
+			user = &model.User{Username: "Inconnu"}
+		}
+		likes, _ := h.likes.CountPostLikes(post.ID)
+		dislikes, _ := h.likes.CountPostDislikes(post.ID)
+		postsWithMeta = append(postsWithMeta, PostWithMeta{
+			ID:           post.ID,
+			UserID:       post.UserID,
+			Title:        post.Title,
+			Content:      post.Content,
+			ImagePath:    post.ImagePath,
+			CreatedAt:    post.CreatedAt,
+			Username:     user.Username,
+			LikeCount:    likes,
+			DislikeCount: dislikes,
+		})
+	}
+	return postsWithMeta
 }
 
 // userFromSession gets the user from the current session
