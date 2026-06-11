@@ -48,7 +48,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("POST /library/{id}/rename", libraryHandler.Rename)
 	mux.HandleFunc("POST /library/{id}/delete", libraryHandler.Delete)
 	mux.HandleFunc("POST /library/{libraryID}/post/{postID}/remove", libraryHandler.RemovePost)
-	mux.HandleFunc("POST /post/{postID}/library/{libraryID}/toggle", libraryHandler.TogglePost)
+	mux.HandleFunc("POST /post/{postID}/library", libraryHandler.AddPost)
 
 	// post routes
 	postHandler := handler.NewPostHandler(db, cfg.UploadDir)

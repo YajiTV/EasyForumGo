@@ -458,14 +458,9 @@ type PostDetailData struct {
 	Author       string
 	Categories   []model.Category
 	Comments     []CommentWithAuthor
-	Libraries    []PostLibraryOption
+	Libraries    []model.Library
 	LikeCount    int
 	DislikeCount int
-}
-
-type PostLibraryOption struct {
-	model.Library
-	ContainsPost bool
 }
 
 // PostDetail handles the request
@@ -520,16 +515,9 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	currentUser := h.userFromSession(r)
-	libraries := []PostLibraryOption{}
+	libraries := []model.Library{}
 	if currentUser != nil {
-		userLibraries, _ := h.libraries.GetByUserID(currentUser.ID)
-		for _, library := range userLibraries {
-			containsPost, _ := h.libraries.ContainsPost(library.ID, currentUser.ID, postID)
-			libraries = append(libraries, PostLibraryOption{
-				Library:      library,
-				ContainsPost: containsPost,
-			})
-		}
+		libraries, _ = h.libraries.GetByUserID(currentUser.ID)
 	}
 
 	data := PostDetailData{

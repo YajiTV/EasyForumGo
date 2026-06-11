@@ -40,8 +40,8 @@
         <header class="profile-hero">
             <div>
                 <p class="profile-kicker">Profil</p>
-                <h1>Mon activité</h1>
-                <p>Retrouvez vos contributions et vos réactions.</p>
+                <h1>{{.User.Username}}</h1>
+                <p>{{.User.Email}}</p>
             </div>
         </header>
 
@@ -52,6 +52,11 @@
             <a href="/profile/my-comments">Mes commentaires</a>
             <a href="/profile/activity" class="active">Activité</a>
         </nav>
+
+        <div class="profile-section-header">
+            <h2>Mon activité</h2>
+            <span>Vos contributions et réactions</span>
+        </div>
 
         <!-- activity statistics -->
         <section class="activity-stats" aria-label="Statistiques personnelles">

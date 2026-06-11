@@ -148,7 +148,7 @@ The same behavior applies to posts and comments.
 
 ### Personal libraries
 
-Connected users can create, rename, and delete named libraries from `/library`. A post detail page lists the current user's libraries and allows the post to be added or removed.
+Connected users can create, rename, delete, and empty named libraries from `/library`. A post detail page provides a library selector for saving the post.
 
 Every library read and write query includes the current user ID. This prevents users from viewing or changing another user's libraries. Database constraints prevent duplicate library names per user and duplicate posts inside one library.
 

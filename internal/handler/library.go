@@ -150,14 +150,14 @@ func (h *LibraryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/library", http.StatusSeeOther)
 }
 
-// TogglePost adds or removes a post from a library
-func (h *LibraryHandler) TogglePost(w http.ResponseWriter, r *http.Request) {
+// AddPost adds a post to the selected library
+func (h *LibraryHandler) AddPost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	libraryID := r.PathValue("libraryID")
+	libraryID := strings.TrimSpace(r.FormValue("library_id"))
 	postID := r.PathValue("postID")
 	if _, err := h.libraries.GetByIDAndUserID(libraryID, user.ID); err != nil {
 		http.NotFound(w, r)
@@ -168,17 +168,7 @@ func (h *LibraryHandler) TogglePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	containsPost, err := h.libraries.ContainsPost(libraryID, user.ID, postID)
-	if err != nil {
-		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-		return
-	}
-	if containsPost {
-		err = h.libraries.RemovePost(libraryID, user.ID, postID)
-	} else {
-		err = h.libraries.AddPost(libraryID, user.ID, postID)
-	}
-	if err != nil {
+	if err := h.libraries.AddPost(libraryID, user.ID, postID); err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}

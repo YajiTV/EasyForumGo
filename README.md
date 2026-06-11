@@ -225,7 +225,7 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 | `GET`, `POST` | `/library` | Connected | List and create personal libraries |
 | `GET` | `/library/{id}` | Owner | Display a library and its saved posts |
 | `POST` | `/library/{id}/rename`, `/library/{id}/delete` | Owner | Manage a personal library |
-| `POST` | `/post/{postID}/library/{libraryID}/toggle` | Owner | Add or remove a post from a library |
+| `POST` | `/post/{postID}/library` | Owner | Add a post to the selected library |
 
 ## Security
 

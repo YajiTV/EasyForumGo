@@ -104,20 +104,6 @@ func (r *LibraryRepository) GetPosts(libraryID, userID string) ([]model.Post, er
 	return posts, rows.Err()
 }
 
-// ContainsPost reports whether a user's library contains a post
-func (r *LibraryRepository) ContainsPost(libraryID, userID, postID string) (bool, error) {
-	var exists bool
-	err := r.db.QueryRow(`
-		SELECT EXISTS(
-			SELECT 1
-			FROM library_posts lp
-			JOIN libraries l ON l.id = lp.library_id
-			WHERE lp.library_id = ? AND l.user_id = ? AND lp.post_id = ?
-		)
-	`, libraryID, userID, postID).Scan(&exists)
-	return exists, err
-}
-
 // AddPost adds a post to a user's library
 func (r *LibraryRepository) AddPost(libraryID, userID, postID string) error {
 	_, err := r.db.Exec(`
