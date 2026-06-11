@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
 )
 
 type PageRenderer struct {

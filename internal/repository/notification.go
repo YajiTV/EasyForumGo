@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"ForumJS/internal/model"
+	"EasyForumGo/internal/model"
 	"database/sql"
 	"time"
 )
@@ -17,10 +17,17 @@ func NewNotificationRepository(db *sql.DB) *NotificationRepository {
 
 // Create creates a new record
 func (r *NotificationRepository) Create(n *model.Notification) error {
+	var postID, commentID interface{}
+	if n.PostID != "" {
+		postID = n.PostID
+	}
+	if n.CommentID != "" {
+		commentID = n.CommentID
+	}
 	_, err := r.db.Exec(
 		`INSERT INTO notifications (id, user_id, actor_id, type, post_id, comment_id, is_read, created_at)
 		 VALUES (?, ?, ?, ?, ?, ?, 0, ?)`,
-		n.ID, n.UserID, n.ActorID, n.Type, n.PostID, n.CommentID, n.CreatedAt,
+		n.ID, n.UserID, n.ActorID, n.Type, postID, commentID, n.CreatedAt,
 	)
 	return err
 }
@@ -44,12 +51,15 @@ func (r *NotificationRepository) GetByUserID(userID string) ([]model.Notificatio
 	var notifs []model.Notification
 	for rows.Next() {
 		var n model.Notification
+		var postID, commentID sql.NullString
 		if err := rows.Scan(
-			&n.ID, &n.UserID, &n.ActorID, &n.Type, &n.PostID, &n.CommentID, &n.IsRead, &n.CreatedAt,
+			&n.ID, &n.UserID, &n.ActorID, &n.Type, &postID, &commentID, &n.IsRead, &n.CreatedAt,
 			&n.ActorUsername, &n.PostTitle,
 		); err != nil {
 			return nil, err
 		}
+		n.PostID = postID.String
+		n.CommentID = commentID.String
 		notifs = append(notifs, n)
 	}
 	return notifs, rows.Err()

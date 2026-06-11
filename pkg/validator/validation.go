@@ -305,7 +305,7 @@ func validateEmailDomain(email string, validationErrors ValidationErrors) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
 	defer cancel()
 
 	mxRecords, err := net.DefaultResolver.LookupMX(ctx, domain)
