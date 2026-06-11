@@ -3,9 +3,7 @@ package handler
 import (
 	"database/sql"
 	"errors"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -18,6 +16,7 @@ import (
 type SettingsHandler struct {
 	users    *repository.UserRepository
 	sessions *repository.SessionRepository
+	renderer *PageRenderer
 }
 
 type SettingsPageData struct {
@@ -29,10 +28,11 @@ type SettingsPageData struct {
 }
 
 // NewSettingsHandler creates a new instance
-func NewSettingsHandler(db *sql.DB) *SettingsHandler {
+func NewSettingsHandler(db *sql.DB, renderer *PageRenderer) *SettingsHandler {
 	return &SettingsHandler{
 		users:    repository.NewUserRepository(db),
 		sessions: repository.NewSessionRepository(db),
+		renderer: renderer,
 	}
 }
 
@@ -165,17 +165,7 @@ func (h *SettingsHandler) renderError(w http.ResponseWriter, user *model.User, s
 
 // render renders the settings page
 func (h *SettingsHandler) render(w http.ResponseWriter, data SettingsPageData) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "settings", "settings.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-	}
+	h.renderer.Render(w, "settings/settings.html", data)
 }
 
 // userFromSession gets the user from the current session

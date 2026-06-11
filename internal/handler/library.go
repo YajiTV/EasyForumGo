@@ -2,9 +2,7 @@ package handler
 
 import (
 	"database/sql"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -19,6 +17,7 @@ type LibraryHandler struct {
 	users     *repository.UserRepository
 	likes     *repository.LikeRepository
 	sessions  *repository.SessionRepository
+	renderer  *PageRenderer
 }
 
 type LibraryPageData struct {
@@ -30,13 +29,14 @@ type LibraryPageData struct {
 }
 
 // NewLibraryHandler creates a new instance
-func NewLibraryHandler(db *sql.DB) *LibraryHandler {
+func NewLibraryHandler(db *sql.DB, renderer *PageRenderer) *LibraryHandler {
 	return &LibraryHandler{
 		libraries: repository.NewLibraryRepository(db),
 		posts:     repository.NewPostRepository(db),
 		users:     repository.NewUserRepository(db),
 		likes:     repository.NewLikeRepository(db),
 		sessions:  repository.NewSessionRepository(db),
+		renderer:  renderer,
 	}
 }
 
@@ -202,16 +202,7 @@ func (h *LibraryHandler) renderPage(w http.ResponseWriter, data LibraryPageData)
 		return
 	}
 	data.Libraries = libraries
-
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "library", "library.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "library/library.html", data)
 }
 
 // postsWithMeta adds display metadata to library posts
