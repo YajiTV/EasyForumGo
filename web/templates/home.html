@@ -8,13 +8,21 @@
         <header class="home-header">
             <div>
                 <p class="home-kicker">Communauté</p>
-                <h1>{{if .CurrentCategory}}{{.CurrentCategory.Name}}{{else}}Discussions{{end}}</h1>
-                <p>{{if .CurrentCategory}}Les dernières publications de cette catégorie.{{else}}Découvrez les dernières publications de la communauté.{{end}}</p>
+                <h1>{{if .CurrentCategory}}{{.CurrentCategory.Name}}{{else if .FollowingFeed}}Abonnements{{else}}Discussions{{end}}</h1>
+                <p>{{if .CurrentCategory}}Les dernières publications de cette catégorie.{{else if .FollowingFeed}}Les dernières publications des profils que vous suivez.{{else}}Découvrez les dernières publications de la communauté.{{end}}</p>
             </div>
             {{if .User}}
             <a href="/post/new" class="home-write-link">Écrire un post</a>
             {{end}}
         </header>
+
+        {{if .User}}
+        <nav class="feed-chooser" aria-label="Choisir un fil">
+            <a href="/" class="{{if not .FollowingFeed}}active{{end}}">Pour vous</a>
+            <a href="/?feed=following" class="{{if .FollowingFeed}}active{{end}}">Abonnements</a>
+            <a href="/discover">Découvrir des profils</a>
+        </nav>
+        {{end}}
 
         <!-- category chooser -->
         <nav class="category-chooser" aria-label="Choisir une catégorie">
@@ -38,7 +46,14 @@
                         <div class="post-card-author">
                             <span class="author-avatar">{{printf "%.1s" .Username}}</span>
                             <span>Par <a href="/user/{{.Username}}">{{.Username}}</a></span>
+                            {{if .IsFollowing}}<span class="followed-badge">Suivi</span>{{end}}
                             <span>{{.CreatedAt.Format "02/01/2006"}}</span>
+                            {{if and $.User (not .IsFollowing) (ne $.User.ID .UserID)}}
+                            <form action="/user/{{.Username}}/follow" method="POST" class="inline-follow-form">
+                                <input type="hidden" name="redirect" value="{{if $.FollowingFeed}}/?feed=following{{else}}/{{end}}">
+                                <button type="submit">Suivre</button>
+                            </form>
+                            {{end}}
                         </div>
 
                         <h2 class="post-card-title">
@@ -76,12 +91,25 @@
                 {{end}}
             {{else}}
                 <div class="home-empty">
+                    {{if .FollowingFeed}}
+                    <h2>Votre fil est encore vide</h2>
+                    <p>Suivez des profils pour retrouver leurs publications ici.</p>
+                    <a href="/discover">Découvrir des profils</a>
+                    {{else}}
                     <h2>Aucune publication</h2>
                     <p>Cette catégorie ne contient aucun post pour le moment.</p>
                     {{if .User}}<a href="/post/new">Créer le premier post</a>{{end}}
+                    {{end}}
                 </div>
             {{end}}
         </div>
+        {{if or .HasPrevious .HasNext}}
+        <nav class="feed-pagination" aria-label="Pagination">
+            {{if .HasPrevious}}<a href="/?feed=following&page={{.PreviousPage}}">Précédent</a>{{end}}
+            <span>Page {{.Page}}</span>
+            {{if .HasNext}}<a href="/?feed=following&page={{.NextPage}}">Suivant</a>{{end}}
+        </nav>
+        {{end}}
     </section>
 </div>
 {{end}}

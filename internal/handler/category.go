@@ -35,6 +35,12 @@ type CategoryPageData struct {
 	Posts           []PostWithMeta
 	Categories      []model.Category
 	CurrentCategory *model.Category
+	FollowingFeed   bool
+	Page            int
+	PreviousPage    int
+	NextPage        int
+	HasPrevious     bool
+	HasNext         bool
 }
 
 // FilterByCategory handles the request
