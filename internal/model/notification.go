@@ -11,7 +11,7 @@ type Notification struct {
 	PostID        string
 	IsRead        bool
 	CreatedAt     time.Time
-	Update        string
+	UpdatedAt     time.Time
 	ActorUsername string
 	PostTitle     string
 }
