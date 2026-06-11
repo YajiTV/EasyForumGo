@@ -387,14 +387,22 @@ func (h *ProfileHandler) activityStats(userID string) (ProfileActivityStats, err
 	if err != nil {
 		return ProfileActivityStats{}, err
 	}
+	commentLikeCount, err := h.likes.CountCommentVotesByUserID(userID, true)
+	if err != nil {
+		return ProfileActivityStats{}, err
+	}
 	dislikeCount, err := h.likes.CountPostVotesByUserID(userID, false)
+	if err != nil {
+		return ProfileActivityStats{}, err
+	}
+	commentDislikeCount, err := h.likes.CountCommentVotesByUserID(userID, false)
 	if err != nil {
 		return ProfileActivityStats{}, err
 	}
 	return ProfileActivityStats{
 		PostCount:    postCount,
 		CommentCount: commentCount,
-		LikeCount:    likeCount,
-		DislikeCount: dislikeCount,
+		LikeCount:    likeCount + commentLikeCount,
+		DislikeCount: dislikeCount + commentDislikeCount,
 	}, nil
 }

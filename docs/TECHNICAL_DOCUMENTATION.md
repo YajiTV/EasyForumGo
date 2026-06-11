@@ -15,7 +15,7 @@ The mandatory scope includes:
 - Docker delivery
 - HTTP and technical error handling
 
-Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, HTTPS, and rate limiting.
+Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, customizable post libraries, HTTPS, and rate limiting.
 
 ## 2. Architecture
 The internal Go module is named `EasyForumGo`.
@@ -144,6 +144,13 @@ The same behavior applies to posts and comments.
 - `/profile/my-posts` queries posts by the current user ID
 - `/profile/liked-posts` joins posts with positive post votes
 - `/profile/my-comments` queries comments by the current user ID
+- `/profile/activity` consolidates created posts, liked and disliked posts, comments, and personal counters
+
+### Personal libraries
+
+Connected users can create, rename, and delete named libraries from `/library`. A post detail page lists the current user's libraries and allows the post to be added or removed.
+
+Every library read and write query includes the current user ID. This prevents users from viewing or changing another user's libraries. Database constraints prevent duplicate library names per user and duplicate posts inside one library.
 
 ## 5. Database Design
 
@@ -161,6 +168,8 @@ SQLite is used through `database/sql` and `github.com/mattn/go-sqlite3`. Applica
 | `comments` | belongs to a post and user |
 | `post_likes` | unique post/user pair |
 | `comment_likes` | unique comment/user pair |
+| `libraries` | belongs to a user; unique name per user |
+| `library_posts` | composite primary key linking libraries and posts |
 | `schema_migrations` | records executed migration filenames |
 
 Foreign key cascades remove dependent records when their parent is deleted. The visual entity-relationship diagram is stored in `docs/ERD.svg`.
@@ -261,6 +270,7 @@ docker compose -f docker/docker-compose.yml up --build
 - image validation
 - post and comment votes
 - mandatory filters
+- personal activity and library ownership
 - custom error pages
 - database and upload persistence across container recreation
 
@@ -276,6 +286,7 @@ docker compose -f docker/docker-compose.yml up --build
 | Comments | comment handlers and repository |
 | Likes and dislikes | post and comment vote toggle |
 | Mandatory filters | category, current user's posts, liked posts |
+| Personal activity and libraries | profile activity handler, library handler, and ownership-scoped repository |
 | Guest read-only access | public feed and detail routes |
 | Docker | multi-stage Dockerfile and Compose |
 | HTTP errors | custom error renderer and templates |

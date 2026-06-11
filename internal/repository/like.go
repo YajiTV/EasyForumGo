@@ -197,3 +197,13 @@ func (r *LikeRepository) CountPostVotesByUserID(userID string, isLike bool) (int
 	).Scan(&count)
 	return count, err
 }
+
+// CountCommentVotesByUserID counts a user's comment votes by type
+func (r *LikeRepository) CountCommentVotesByUserID(userID string, isLike bool) (int, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM comment_likes WHERE user_id = ? AND is_like = ?`,
+		userID, isLike,
+	).Scan(&count)
+	return count, err
+}

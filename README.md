@@ -27,6 +27,8 @@ Easy is a server-rendered community forum built in Go. It provides the complete 
 ### Additional features
 
 - Personal comments page and editable user profile
+- Consolidated personal activity page with contributions, reactions, and statistics
+- Customizable libraries for saving and organizing posts
 - Profile picture upload
 - Password strength feedback
 - Google OAuth authentication
@@ -192,6 +194,8 @@ Easy uses SQLite with foreign keys enabled. Migrations run automatically at star
 | `comments` | Comments associated with posts and users |
 | `post_likes` | One like or dislike per user and post |
 | `comment_likes` | One like or dislike per user and comment |
+| `libraries` | Named post collections owned by users |
+| `library_posts` | Posts saved in user libraries |
 
 The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 
@@ -216,7 +220,12 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 | `GET` | `/profile/my-posts` | Connected | Current user's posts |
 | `GET` | `/profile/liked-posts` | Connected | Posts liked by the current user |
 | `GET` | `/profile/my-comments` | Connected | Current user's comments |
+| `GET` | `/profile/activity` | Connected | Current user's activity and statistics |
 | `GET`, `POST` | `/profile/edit` | Connected | Edit the current user's profile |
+| `GET`, `POST` | `/library` | Connected | List and create personal libraries |
+| `GET` | `/library/{id}` | Owner | Display a library and its saved posts |
+| `POST` | `/library/{id}/rename`, `/library/{id}/delete` | Owner | Manage a personal library |
+| `POST` | `/post/{postID}/library/{libraryID}/toggle` | Owner | Add or remove a post from a library |
 
 ## Security
 
