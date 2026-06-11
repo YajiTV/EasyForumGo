@@ -87,6 +87,11 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /auth/complete-profile", oauthHandler.ShowCompleteProfile)
 	mux.HandleFunc("POST /auth/complete-profile", oauthHandler.CompleteProfile)
 
+	// notification routes
+	notificationHandler := handler.NewNotificationHandler(db)
+	mux.HandleFunc("GET /notifications", notificationHandler.ShowNotifications)
+	mux.HandleFunc("GET /notifications/count", notificationHandler.GetUnreadCount)
+
 	// home route
 	homeHandler := handler.NewHomeHandler(db, errorRenderer)
 	mux.HandleFunc("/", homeHandler.Home)

@@ -17,19 +17,21 @@ import (
 const maxCommentFormSize = 16 << 10
 
 type CommentHandler struct {
-	comments *repository.CommentRepository
-	posts    *repository.PostRepository
-	sessions *repository.SessionRepository
-	users    *repository.UserRepository
+	comments      *repository.CommentRepository
+	posts         *repository.PostRepository
+	sessions      *repository.SessionRepository
+	users         *repository.UserRepository
+	notifications *repository.NotificationRepository
 }
 
 // NewCommentHandler creates a new instance
 func NewCommentHandler(db *sql.DB) *CommentHandler {
 	return &CommentHandler{
-		comments: repository.NewCommentRepository(db),
-		posts:    repository.NewPostRepository(db),
-		sessions: repository.NewSessionRepository(db),
-		users:    repository.NewUserRepository(db),
+		comments:      repository.NewCommentRepository(db),
+		posts:         repository.NewPostRepository(db),
+		sessions:      repository.NewSessionRepository(db),
+		users:         repository.NewUserRepository(db),
+		notifications: repository.NewNotificationRepository(db),
 	}
 }
 
@@ -74,7 +76,22 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// notification : seulement si ce n'est pas son propre post
+	if post, err := h.posts.GetByID(postID); err == nil && post.UserID != user.ID {
+		n := &model.Notification{
+			ID:        utils.NewUUID(),
+			UserID:    post.UserID,
+			ActorID:   user.ID,
+			Type:      "comment",
+			PostID:    postID,
+			CommentID: c.ID,
+			CreatedAt: time.Now(),
+		}
+		_ = h.notifications.Create(n)
+	}
+
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
+
 }
 
 // DeleteComment deletes an existing record
