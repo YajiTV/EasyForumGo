@@ -55,6 +55,8 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /user/{username}/following", socialHandler.Following)
 	mux.Handle("POST /user/{username}/follow", writeLimiter.Wrap(http.HandlerFunc(socialHandler.Follow)))
 	mux.Handle("POST /user/{username}/unfollow", writeLimiter.Wrap(http.HandlerFunc(socialHandler.Unfollow)))
+	mux.Handle("POST /user/{username}/block", writeLimiter.Wrap(http.HandlerFunc(socialHandler.Block)))
+	mux.Handle("POST /user/{username}/unblock", writeLimiter.Wrap(http.HandlerFunc(socialHandler.Unblock)))
 	mux.HandleFunc("GET /discover", socialHandler.Discover)
 	mux.HandleFunc("GET /search", socialHandler.Search)
 

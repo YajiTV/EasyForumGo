@@ -23,6 +23,7 @@ type SocialHandler struct {
 	sessions      *repository.SessionRepository
 	renderer      *PageRenderer
 	notifications *repository.NotificationRepository
+	blocks        *repository.BlockRepository
 }
 
 type PublicProfilePageData struct {
@@ -32,6 +33,8 @@ type PublicProfilePageData struct {
 	Stats        model.SocialStats
 	IsFollowing  bool
 	IsOwner      bool
+	HasBlocked   bool
+	IsBlocked    bool
 	Page         int
 	PreviousPage int
 	NextPage     int
@@ -71,6 +74,7 @@ func NewSocialHandler(db *sql.DB, renderer *PageRenderer) *SocialHandler {
 		sessions:      repository.NewSessionRepository(db),
 		renderer:      renderer,
 		notifications: repository.NewNotificationRepository(db),
+		blocks:        repository.NewBlockRepository(db),
 	}
 }
 
@@ -100,13 +104,19 @@ func (h *SocialHandler) PublicProfile(w http.ResponseWriter, r *http.Request) {
 	followerCount, _ := h.follows.CountFollowers(profileUser.ID)
 	followingCount, _ := h.follows.CountFollowing(profileUser.ID)
 	isFollowing := false
+	hasBlocked := false
+	isBlocked := false
 	if currentUser != nil {
 		isFollowing, _ = h.follows.IsFollowing(currentUser.ID, profileUser.ID)
+		hasBlocked, _ = h.blocks.HasBlocked(currentUser.ID, profileUser.ID)
+		blockedBetween, _ := h.blocks.IsBlockedBetween(currentUser.ID, profileUser.ID)
+		isBlocked = blockedBetween && !hasBlocked
 	}
 	h.renderer.Render(w, "social/public_profile.html", PublicProfilePageData{
 		User: currentUser, ProfileUser: profileUser, Posts: h.postsWithMeta(posts),
 		Stats:       model.SocialStats{PostCount: postCount, FollowerCount: followerCount, FollowingCount: followingCount},
 		IsFollowing: isFollowing, IsOwner: currentUser != nil && currentUser.ID == profileUser.ID,
+		HasBlocked: hasBlocked, IsBlocked: isBlocked,
 		Page: page, PreviousPage: page - 1, NextPage: page + 1, HasPrevious: page > 1, HasNext: hasNext,
 	})
 }
@@ -129,6 +139,16 @@ func (h *SocialHandler) Follow(w http.ResponseWriter, r *http.Request) {
 // Unfollow removes a following relation
 func (h *SocialHandler) Unfollow(w http.ResponseWriter, r *http.Request) {
 	h.changeFollow(w, r, false)
+}
+
+// Block blocks a user
+func (h *SocialHandler) Block(w http.ResponseWriter, r *http.Request) {
+	h.changeBlock(w, r, true)
+}
+
+// Unblock unblocks a user
+func (h *SocialHandler) Unblock(w http.ResponseWriter, r *http.Request) {
+	h.changeBlock(w, r, false)
 }
 
 // Discover renders user discovery suggestions
@@ -231,6 +251,34 @@ func (h *SocialHandler) changeFollow(w http.ResponseWriter, r *http.Request, fol
 		redirect = "/user/" + target.Username
 	}
 	http.Redirect(w, r, redirect, http.StatusSeeOther)
+}
+
+// changeBlock changes a user block
+func (h *SocialHandler) changeBlock(w http.ResponseWriter, r *http.Request, block bool) {
+	currentUser := h.userFromSession(r)
+	if currentUser == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	target, err := h.users.GetByUsername(r.PathValue("username"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if target.ID == currentUser.ID {
+		http.Error(w, "Vous ne pouvez pas vous bloquer.", http.StatusBadRequest)
+		return
+	}
+	if block {
+		err = h.blocks.Block(currentUser.ID, target.ID)
+	} else {
+		err = h.blocks.Unblock(currentUser.ID, target.ID)
+	}
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/user/"+target.Username, http.StatusSeeOther)
 }
 
 // postsWithMeta adds display metadata to posts

@@ -83,6 +83,22 @@
     color: var(--text);
 }
 
+.social-profile-action {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+
+.social-block-button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--danger);
+    font-size: 12px;
+    cursor: pointer;
+}
+
 .social-stats {
     display: flex;
     gap: 32px;
