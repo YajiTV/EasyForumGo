@@ -64,10 +64,32 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := h.posts.GetAll()
+	categories, err := h.categories.GetAll()
 	if err != nil {
-		h.errors.InternalServerError(w)
-		return
+		categories = []model.Category{}
+	}
+
+	var currentCategory *model.Category
+	var posts []model.Post
+
+	if categoryID := r.URL.Query().Get("category"); categoryID != "" {
+		cat, err := h.categories.GetByID(categoryID)
+		if err != nil {
+			h.errors.RenderWithRequest(w, r, http.StatusNotFound, "Catégorie introuvable.")
+			return
+		}
+		currentCategory = cat
+		posts, err = h.posts.GetByCategory(categoryID)
+		if err != nil {
+			h.errors.InternalServerError(w)
+			return
+		}
+	} else {
+		posts, err = h.posts.GetAll()
+		if err != nil {
+			h.errors.InternalServerError(w)
+			return
+		}
 	}
 
 	var postsWithMeta []PostWithMeta
@@ -76,10 +98,8 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			user = &model.User{Username: "Inconnu"}
 		}
-
 		likes, _ := h.likes.CountPostLikes(p.ID)
 		dislikes, _ := h.likes.CountPostDislikes(p.ID)
-
 		postsWithMeta = append(postsWithMeta, PostWithMeta{
 			ID:           p.ID,
 			UserID:       p.UserID,
@@ -93,18 +113,12 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	categories, err := h.categories.GetAll()
-	if err != nil {
-		categories = []model.Category{}
-	}
-
-	data := HomePageData{
-		User:       currentUser,
-		Posts:      postsWithMeta,
-		Categories: categories,
-	}
-
-	h.renderer.Render(w, "home.html", data)
+	h.renderer.Render(w, "home.html", HomePageData{
+		User:            currentUser,
+		Posts:           postsWithMeta,
+		Categories:      categories,
+		CurrentCategory: currentCategory,
+	})
 }
 
 // userFromSession gets the user from the current session

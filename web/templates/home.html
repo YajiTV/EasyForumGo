@@ -17,13 +17,13 @@
         <div class="home-filters">
             <a href="/" class="filter-btn {{if not .CurrentCategory}}active{{end}}">Tous</a>
             {{range .Categories}}
-                <a href="/posts/category/{{.ID}}" class="filter-btn">{{.Name}}</a>
+                <a href="/?category={{.ID}}" class="filter-btn">{{.Name}}</a>
             {{else}}
-                <a href="/posts/category/general" class="filter-btn">Général</a>
-                <a href="/posts/category/aide" class="filter-btn">Aide</a>
-                <a href="/posts/category/projet" class="filter-btn">Projet</a>
-                <a href="/posts/category/annonce" class="filter-btn">Annonce</a>
-                <a href="/posts/category/hors-sujet" class="filter-btn">Hors sujet</a>
+                <a href="/?category=general" class="filter-btn">Général</a>
+                <a href="/?category=aide" class="filter-btn">Aide</a>
+                <a href="/?category=projet" class="filter-btn">Projet</a>
+                <a href="/?category=annonce" class="filter-btn">Annonce</a>
+                <a href="/?category=hors-sujet" class="filter-btn">Hors sujet</a>
             {{end}}
         </div>
 
@@ -92,15 +92,15 @@
             <h2>Catégories</h2>
             <div class="topic-list">
                 {{range .Categories}}
-                    <a href="/posts/category/{{.ID}}" class="topic-pill">{{.Name}}</a>
+                    <a href="/?category={{.ID}}" class="topic-pill">{{.Name}}</a>
                 {{else}}
-                    <a href="/posts/category/general" class="topic-pill">Général</a>
-                    <a href="/posts/category/aide" class="topic-pill">Aide</a>
-                    <a href="/posts/category/projet" class="topic-pill">Projet</a>
-                    <a href="/posts/category/annonce" class="topic-pill">Annonce</a>
-                    <a href="/posts/category/hors-sujet" class="topic-pill">Hors sujet</a>
-                    <a href="/posts/category/ressources" class="topic-pill">Ressources</a>
-                    <a href="/posts/category/questions" class="topic-pill">Questions</a>
+                    <a href="/?category=general" class="topic-pill">Général</a>
+                    <a href="/?category=aide" class="topic-pill">Aide</a>
+                    <a href="/?category=projet" class="topic-pill">Projet</a>
+                    <a href="/?category=annonce" class="topic-pill">Annonce</a>
+                    <a href="/?category=hors-sujet" class="topic-pill">Hors sujet</a>
+                    <a href="/?category=ressources" class="topic-pill">Ressources</a>
+                    <a href="/?category=questions" class="topic-pill">Questions</a>
                 {{end}}
             </div>
         </section>
