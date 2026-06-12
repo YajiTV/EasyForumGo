@@ -26,6 +26,22 @@
         <a href="/user/{{.ProfileUser.Username}}/followers"><strong>{{.Stats.FollowerCount}}</strong> abonnés</a>
         <a href="/user/{{.ProfileUser.Username}}/following"><strong>{{.Stats.FollowingCount}}</strong> abonnements</a>
     </nav>
+    {{if .Topics}}
+    <section class="public-profile-topics" aria-labelledby="profile-topics-title">
+        <div>
+            <p>Centres d'intérêt</p>
+            <h2 id="profile-topics-title">Publie souvent dans...</h2>
+        </div>
+        <nav aria-label="Thèmes fréquents de {{.ProfileUser.Username}}">
+            {{range .Topics}}
+            <a href="/?category={{.ID}}">
+                <strong>{{.Name}}</strong>
+                {{if .Description}}<span>{{.Description}}</span>{{end}}
+            </a>
+            {{end}}
+        </nav>
+    </section>
+    {{end}}
     <section class="social-section">
         <h2>Publications</h2>
         {{range .Posts}}

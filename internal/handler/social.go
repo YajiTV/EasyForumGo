@@ -16,14 +16,15 @@ import (
 const socialPageSize = 10
 
 type SocialHandler struct {
-	users         *repository.UserRepository
-	posts         *repository.PostRepository
-	follows       *repository.FollowRepository
-	likes         *repository.LikeRepository
-	categories    *repository.CategoryRepository
-	sessions      *repository.SessionRepository
-	renderer      *PageRenderer
-	notifications *repository.NotificationRepository
+	users          *repository.UserRepository
+	posts          *repository.PostRepository
+	follows        *repository.FollowRepository
+	likes          *repository.LikeRepository
+	categories     *repository.CategoryRepository
+	postCategories *repository.PostCategoryRepository
+	sessions       *repository.SessionRepository
+	renderer       *PageRenderer
+	notifications  *repository.NotificationRepository
 }
 
 type PublicProfilePageData struct {
@@ -31,6 +32,7 @@ type PublicProfilePageData struct {
 	ProfileUser  *model.User
 	Posts        []PostWithMeta
 	Stats        model.SocialStats
+	Topics       []model.Category
 	IsFollowing  bool
 	IsOwner      bool
 	Page         int
@@ -76,14 +78,15 @@ type SearchPageData struct {
 // NewSocialHandler creates a new instance
 func NewSocialHandler(db *sql.DB, renderer *PageRenderer) *SocialHandler {
 	return &SocialHandler{
-		users:         repository.NewUserRepository(db),
-		posts:         repository.NewPostRepository(db),
-		follows:       repository.NewFollowRepository(db),
-		likes:         repository.NewLikeRepository(db),
-		categories:    repository.NewCategoryRepository(db),
-		sessions:      repository.NewSessionRepository(db),
-		renderer:      renderer,
-		notifications: repository.NewNotificationRepository(db),
+		users:          repository.NewUserRepository(db),
+		posts:          repository.NewPostRepository(db),
+		follows:        repository.NewFollowRepository(db),
+		likes:          repository.NewLikeRepository(db),
+		categories:     repository.NewCategoryRepository(db),
+		postCategories: repository.NewPostCategoryRepository(db),
+		sessions:       repository.NewSessionRepository(db),
+		renderer:       renderer,
+		notifications:  repository.NewNotificationRepository(db),
 	}
 }
 
@@ -112,6 +115,7 @@ func (h *SocialHandler) PublicProfile(w http.ResponseWriter, r *http.Request) {
 	postCount, _ := h.posts.CountByUserID(profileUser.ID)
 	followerCount, _ := h.follows.CountFollowers(profileUser.ID)
 	followingCount, _ := h.follows.CountFollowing(profileUser.ID)
+	topics, _ := h.postCategories.GetPopularByUserID(profileUser.ID, 5)
 	isFollowing := false
 	if currentUser != nil {
 		isFollowing, _ = h.follows.IsFollowing(currentUser.ID, profileUser.ID)
@@ -119,6 +123,7 @@ func (h *SocialHandler) PublicProfile(w http.ResponseWriter, r *http.Request) {
 	h.renderer.Render(w, "social/public_profile.html", PublicProfilePageData{
 		User: currentUser, ProfileUser: profileUser, Posts: h.postsWithMeta(posts),
 		Stats:       model.SocialStats{PostCount: postCount, FollowerCount: followerCount, FollowingCount: followingCount},
+		Topics:      topics,
 		IsFollowing: isFollowing, IsOwner: currentUser != nil && currentUser.ID == profileUser.ID,
 		Page: page, PreviousPage: page - 1, NextPage: page + 1, HasPrevious: page > 1, HasNext: hasNext,
 	})
