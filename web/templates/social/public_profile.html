@@ -5,13 +5,16 @@
     <header class="public-profile-header">
         {{if .ProfileUser.ProfilePicture}}<img src="{{.ProfileUser.AvatarURL}}" alt="Photo de profil de {{.ProfileUser.Username}}">{{else}}<span class="social-avatar social-avatar-large">{{printf "%.1s" .ProfileUser.Username}}</span>{{end}}
         <div class="public-profile-main">
-            <p class="social-kicker">Profil public</p>
+            <p class="social-kicker">{{if .IsOwner}}Votre profil{{else}}Profil{{end}}</p>
             <h1>{{.ProfileUser.Username}}</h1>
             <p class="social-biography">{{if .ProfileUser.Biography}}{{.ProfileUser.Biography}}{{else}}Aucune biographie pour le moment.{{end}}</p>
             <small>Membre depuis le {{.ProfileUser.CreatedAt.Format "02/01/2006"}}</small>
         </div>
         <div class="social-profile-action">
-            {{if .IsOwner}}<a href="/profile/edit" class="social-button">Modifier le profil</a>{{else if .User}}
+            {{if .IsOwner}}
+            <a href="/profile/edit" class="social-button">Modifier le profil</a>
+            <a href="/profile" class="social-button secondary">Mon activité</a>
+            {{else if .User}}
             <form action="/user/{{.ProfileUser.Username}}/{{if .IsFollowing}}unfollow{{else}}follow{{end}}" method="POST">
                 <button type="submit" class="social-button {{if .IsFollowing}}secondary{{end}}">{{if .IsFollowing}}Ne plus suivre{{else}}Suivre{{end}}</button>
             </form>

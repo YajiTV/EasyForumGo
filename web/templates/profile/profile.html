@@ -1,4 +1,4 @@
-{{define "title"}}Profil — Easy{{end}}
+{{define "title"}}Mon activité — Easy{{end}}
 
 {{define "extra_css"}}
 <link rel="stylesheet" href="/static/css/profile.css">
@@ -10,9 +10,9 @@
     <section class="profile-content" aria-label="Profil utilisateur">
         <header class="profile-hero">
             <div>
-                <p class="profile-kicker">Profil</p>
-                <h1>{{.User.Username}}</h1>
-                <p>{{.User.Email}}</p>
+                <p class="profile-kicker">Espace personnel</p>
+                <h1>Mon activité</h1>
+                <p>Retrouvez vos publications, réactions et commentaires.</p>
             </div>
         </header>
 
@@ -102,8 +102,11 @@
         {{end}}
 
         <h2>{{.User.Username}}</h2>
-        <p>{{.User.Email}}</p>
-        <a href="/profile/edit">Modifier le profil</a>
+        <p>{{if .User.Biography}}{{.User.Biography}}{{else}}Votre profil visible par la communauté.{{end}}</p>
+        <div class="profile-sidebar-actions">
+            <a href="/user/{{.User.Username}}">Voir mon profil</a>
+            <a href="/profile/edit">Modifier</a>
+        </div>
     </aside>
 </div>
 {{end}}
