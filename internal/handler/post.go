@@ -457,6 +457,7 @@ type PostDetailData struct {
 	AuthorAvatarURL string
 	AuthorBiography string
 	AuthorTopics    []model.Category
+	IsEdited        bool
 	Categories      []model.Category
 	Comments        []CommentWithAuthor
 	Libraries       []model.Library
@@ -532,6 +533,7 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 		AuthorAvatarURL: author.AvatarURL(),
 		AuthorBiography: author.Biography,
 		AuthorTopics:    authorTopics,
+		IsEdited:        post.UpdatedAt.After(post.CreatedAt.Add(time.Second)),
 		Categories:      categories,
 		Comments:        comments,
 		Libraries:       libraries,

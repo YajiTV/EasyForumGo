@@ -98,6 +98,18 @@
     font-size: 12px;
 }
 
+.reading-edited {
+    display: block;
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 11px;
+    font-style: italic;
+}
+
+.reading-edited time {
+    font-size: inherit;
+}
+
 .reading-cover {
     margin: 0 0 42px;
     overflow: hidden;

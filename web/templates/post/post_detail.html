@@ -28,6 +28,12 @@
                     <div>
                         <p>Publié par <a href="/user/{{.Author}}">{{.Author}}</a></p>
                         <time datetime="{{.Post.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Post.CreatedAt.Format "02/01/2006 à 15:04"}}</time>
+                        {{if .IsEdited}}
+                        <span class="reading-edited">
+                            Modifié le
+                            <time datetime="{{.Post.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{.Post.UpdatedAt.Format "02/01/2006 à 15:04"}}</time>
+                        </span>
+                        {{end}}
                     </div>
                 </div>
             </header>
