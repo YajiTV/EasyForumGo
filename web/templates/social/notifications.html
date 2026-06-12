@@ -1,25 +1,7 @@
 {{define "title"}}Notifications — ForumJS{{end}}
 
 {{define "extra_css"}}
-<style>
-    .notif-page { max-width: 640px; margin: 0 auto; padding: 2rem 1rem; }
-    .notif-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.5rem; }
-    .notif-header h1 { margin: 0; }
-    .notif-count { color: #6b7280; font-size: .9rem; }
-    .notif-list { list-style: none; padding: 0; margin: 0; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
-    .notif-item { border-bottom: 1px solid #e5e7eb; }
-    .notif-item:last-child { border-bottom: none; }
-    .notif-item a { display: flex; flex-direction: column; gap: .25rem; padding: 1rem 1.25rem; text-decoration: none; color: inherit; }
-    .notif-item a:hover { background: #f9fafb; }
-    .notif-item--unread { background: #eff6ff; }
-    .notif-item--unread a:hover { background: #dbeafe; }
-    .notif-actor { font-weight: 600; }
-    .notif-post { color: #6b7280; font-style: italic; font-size: .9rem; }
-    .notif-time { color: #9ca3af; font-size: .8rem; }
-    .notif-empty { text-align: center; padding: 3rem 1rem; color: #6b7280; border: 1px solid #e5e7eb; border-radius: 8px; }
-    .notif-empty h3 { margin: 0 0 .5rem; color: #374151; }
-    .notif-empty a { color: #3b82f6; }
-</style>
+<link rel="stylesheet" href="/static/css/social.css">
 {{end}}
 
 {{define "content"}}
