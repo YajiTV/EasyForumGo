@@ -8,6 +8,7 @@
     <link rel="icon" type="image/x-icon" href="/static/img/logo.ico">
     <link rel="stylesheet" href="/static/css/style.css">
     {{block "extra_css" .}}{{end}}
+    <link rel="stylesheet" href="/theme.css">
     <style>
         .notif-bell { position: relative; display: flex; align-items: center; }
         .notif-badge { position: absolute; top: -4px; right: -6px; background: #e53e3e; color: #fff;
@@ -17,9 +18,6 @@
 </head>
 <body>
     <input type="checkbox" id="menu-state" class="menu-state" aria-hidden="true">
-    <input type="radio" name="theme" id="theme-light" class="theme-state">
-    <input type="radio" name="theme" id="theme-system" class="theme-state" checked>
-    <input type="radio" name="theme" id="theme-dark" class="theme-state">
 
     <div class="theme-shell">
     <!-- top navigation -->
@@ -47,7 +45,7 @@
                 <!-- lucide theme icons -->
                 <fieldset class="theme-switcher" aria-label="Choisir le thème">
                     <legend>Thème</legend>
-                    <label for="theme-light" title="Thème clair" aria-label="Thème clair">
+                    <a href="/theme/light" data-theme="light" title="Thème clair" aria-label="Thème clair">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                             <circle cx="12" cy="12" r="4"></circle>
                             <path d="M12 2v2"></path><path d="M12 20v2"></path>
@@ -55,19 +53,19 @@
                             <path d="M2 12h2"></path><path d="M20 12h2"></path>
                             <path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.42"></path>
                         </svg>
-                    </label>
-                    <label for="theme-system" title="Utiliser le thème du système" aria-label="Utiliser le thème du système">
+                    </a>
+                    <a href="/theme/system" data-theme="system" title="Utiliser le thème du système" aria-label="Utiliser le thème du système">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                             <rect width="20" height="14" x="2" y="3" rx="2"></rect>
                             <line x1="8" x2="16" y1="21" y2="21"></line>
                             <line x1="12" x2="12" y1="17" y2="21"></line>
                         </svg>
-                    </label>
-                    <label for="theme-dark" title="Thème sombre" aria-label="Thème sombre">
+                    </a>
+                    <a href="/theme/dark" data-theme="dark" title="Thème sombre" aria-label="Thème sombre">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
                         </svg>
-                    </label>
+                    </a>
                 </fieldset>
                 {{if .User}}
                     {{$notifCount := notifCount .User}}

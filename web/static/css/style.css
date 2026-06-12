@@ -32,12 +32,8 @@ body {
     text-rendering: optimizeLegibility;
 }
 
-body:has(#theme-dark:checked) {
-    background: #151515;
-}
-
 @media (prefers-color-scheme: dark) {
-    body:has(#theme-system:checked) {
+    body {
         background: #151515;
     }
 }
@@ -49,45 +45,8 @@ body:has(#theme-dark:checked) {
     color-scheme: light;
 }
 
-.theme-state {
-    position: fixed;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    overflow: hidden;
-}
-
-#theme-light:checked ~ .theme-shell {
-    --text: #242424;
-    --muted: #6b6b6b;
-    --soft: #f7f7f7;
-    --line: #e9e9e9;
-    --surface: #fff;
-    --surface-raised: #fff;
-    --surface-input: #fff;
-    --surface-hover: #efefef;
-    --strong: #242424;
-    color-scheme: light;
-}
-
-#theme-dark:checked ~ .theme-shell {
-    --text: #ededed;
-    --muted: #aaa;
-    --soft: #202020;
-    --line: #343434;
-    --surface: #151515;
-    --surface-raised: #202020;
-    --surface-input: #272727;
-    --surface-hover: #303030;
-    --strong: #242424;
-    --accent: #58b957;
-    --accent-dark: #79cf77;
-    --danger: #ff8174;
-    color-scheme: dark;
-}
-
 @media (prefers-color-scheme: dark) {
-    #theme-system:checked ~ .theme-shell {
+    .theme-shell {
         --text: #ededed;
         --muted: #aaa;
         --soft: #202020;
@@ -161,7 +120,7 @@ textarea {
     clip: rect(0 0 0 0);
 }
 
-.theme-switcher label {
+.theme-switcher a {
     width: 30px;
     height: 30px;
     display: grid;
@@ -177,21 +136,11 @@ textarea {
     flex-basis: 16px;
 }
 
-.theme-switcher label:hover {
+.theme-switcher a:hover {
     color: var(--text);
 }
 
-#theme-light:checked ~ .theme-shell label[for="theme-light"],
-#theme-system:checked ~ .theme-shell label[for="theme-system"],
-#theme-dark:checked ~ .theme-shell label[for="theme-dark"] {
-    background: var(--surface-raised);
-    color: var(--text);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
-}
-
-#theme-light:focus-visible ~ .theme-shell label[for="theme-light"],
-#theme-system:focus-visible ~ .theme-shell label[for="theme-system"],
-#theme-dark:focus-visible ~ .theme-shell label[for="theme-dark"] {
+.theme-switcher a:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
@@ -241,7 +190,7 @@ textarea {
     display: block;
     width: 20px;
     height: 1px;
-    background: var(--strong);
+    background: var(--text);
 }
 
 .nav-logo {

@@ -19,6 +19,11 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
 
+	// theme routes
+	themeHandler := handler.NewThemeHandler()
+	mux.HandleFunc("GET /theme.css", themeHandler.CSS)
+	mux.HandleFunc("GET /theme/{theme}", themeHandler.Set)
+
 	// shared renderer : injecte notifCount dans tous les templates via FuncMap
 	notifRepo := repository.NewNotificationRepository(db)
 	renderer := handler.NewPageRenderer(notifRepo)
