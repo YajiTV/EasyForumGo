@@ -7,7 +7,6 @@ forum
 *.sqlite
 *.sqlite3
 
-# Uploads (keep directory, ignore content)
 uploads/*
 !uploads/.gitkeep
 
