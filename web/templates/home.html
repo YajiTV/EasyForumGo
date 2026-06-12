@@ -40,7 +40,11 @@
 
                     <div class="post-card-body">
                         <div class="post-card-author">
+                            {{if .AvatarURL}}
+                            <img src="{{.AvatarURL}}" alt="Photo de profil de {{.Username}}" class="author-avatar">
+                            {{else}}
                             <span class="author-avatar">{{printf "%.1s" .Username}}</span>
+                            {{end}}
                             <span>Par <a href="/user/{{.Username}}">{{.Username}}</a></span>
                             {{if .IsFollowing}}<span class="followed-badge">Suivi</span>{{end}}
                             <span>{{.CreatedAt.Format "02/01/2006"}}</span>

@@ -17,6 +17,7 @@ type PostWithMeta struct {
 	ImagePath    string
 	CreatedAt    time.Time
 	Username     string
+	AvatarURL    string
 	LikeCount    int
 	DislikeCount int
 	IsFollowing  bool
@@ -154,6 +155,7 @@ func (h *HomeHandler) postsWithMeta(posts []model.Post, currentUser *model.User)
 			ImagePath:    post.ImagePath,
 			CreatedAt:    post.CreatedAt,
 			Username:     user.Username,
+			AvatarURL:    user.AvatarURL(),
 			LikeCount:    likes,
 			DislikeCount: dislikes,
 			IsFollowing:  isFollowing,
