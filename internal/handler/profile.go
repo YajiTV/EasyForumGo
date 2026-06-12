@@ -2,37 +2,31 @@ package handler
 
 import (
 	"database/sql"
-	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"EasyForumGo/internal/model"
 	"EasyForumGo/internal/repository"
-	"EasyForumGo/pkg/utils"
-	"EasyForumGo/pkg/validator"
 )
 
 type ProfileHandler struct {
-	users     *repository.UserRepository
-	posts     *repository.PostRepository
-	comments  *repository.CommentRepository
-	likes     *repository.LikeRepository
-	sessions  *repository.SessionRepository
-	uploadDir string
-	renderer  *PageRenderer
+	users    *repository.UserRepository
+	posts    *repository.PostRepository
+	comments *repository.CommentRepository
+	likes    *repository.LikeRepository
+	sessions *repository.SessionRepository
+	renderer *PageRenderer
 }
 
 // NewProfileHandler creates a new instance
-func NewProfileHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *ProfileHandler {
+func NewProfileHandler(db *sql.DB, renderer *PageRenderer) *ProfileHandler {
 	return &ProfileHandler{
-		users:     repository.NewUserRepository(db),
-		posts:     repository.NewPostRepository(db),
-		comments:  repository.NewCommentRepository(db),
-		likes:     repository.NewLikeRepository(db),
-		sessions:  repository.NewSessionRepository(db),
-		uploadDir: uploadDir,
-		renderer:  renderer,
+		users:    repository.NewUserRepository(db),
+		posts:    repository.NewPostRepository(db),
+		comments: repository.NewCommentRepository(db),
+		likes:    repository.NewLikeRepository(db),
+		sessions: repository.NewSessionRepository(db),
+		renderer: renderer,
 	}
 }
 
@@ -52,11 +46,6 @@ type ProfilePageData struct {
 	SectionTitle string
 	EmptyTitle   string
 	EmptyMessage string
-}
-
-type EditProfilePageData struct {
-	User  *model.User
-	Error string
 }
 
 type ProfileActivityStats struct {
@@ -208,88 +197,6 @@ func (h *ProfileHandler) userFromSession(r *http.Request) *model.User {
 		return nil
 	}
 	return user
-}
-
-// ShowEditForm renders the requested page
-func (h *ProfileHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
-	if user == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	h.renderEditForm(w, EditProfilePageData{User: user})
-}
-
-// UpdateProfile updates an existing record
-func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
-	if user == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
-	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
-		h.renderEditForm(w, EditProfilePageData{
-			User:  user,
-			Error: "Fichier trop volumineux (max 20 Mo).",
-		})
-		return
-	}
-
-	username := strings.TrimSpace(r.FormValue("username"))
-	if validationErrors := validator.ValidateProfile(validator.ProfileInput{Username: username}); validationErrors.HasErrors() {
-		h.renderEditForm(w, EditProfilePageData{
-			User:  user,
-			Error: firstValidationMessage(validationErrors),
-		})
-		return
-	}
-
-	if existingUser, err := h.users.GetByUsername(username); err == nil && existingUser.ID != user.ID {
-		h.renderEditForm(w, EditProfilePageData{
-			User:  user,
-			Error: "Ce nom d'utilisateur est déjà utilisé.",
-		})
-		return
-	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-		return
-	}
-
-	profilePicture := user.ProfilePicture
-	file, header, err := r.FormFile("profile_picture")
-	if err == nil {
-		defer file.Close()
-		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
-		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrFileTooLarge) {
-			h.renderEditForm(w, EditProfilePageData{
-				User:  user,
-				Error: err.Error(),
-			})
-			return
-		}
-		if err != nil {
-			h.renderEditForm(w, EditProfilePageData{
-				User:  user,
-				Error: "La photo de profil n'a pas pu être enregistrée.",
-			})
-			return
-		}
-		profilePicture = filename
-	}
-
-	if err := h.users.UpdateProfile(user.ID, username, profilePicture); err != nil {
-		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-		return
-	}
-	http.Redirect(w, r, "/profile", http.StatusSeeOther)
-}
-
-// renderEditForm renders the requested page
-func (h *ProfileHandler) renderEditForm(w http.ResponseWriter, data EditProfilePageData) {
-	h.renderer.Render(w, "profile/edit_profile.html", data)
 }
 
 // renderProfile renders the requested page

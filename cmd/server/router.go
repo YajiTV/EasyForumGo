@@ -44,14 +44,12 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("POST /logout", authHandler.Logout)
 
 	// profile routes
-	profileHandler := handler.NewProfileHandler(db, cfg.UploadDir, renderer)
+	profileHandler := handler.NewProfileHandler(db, renderer)
 	mux.HandleFunc("GET /profile", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/my-posts", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/liked-posts", profileHandler.LikedPosts)
 	mux.HandleFunc("GET /profile/my-comments", profileHandler.MyComments)
 	mux.HandleFunc("GET /profile/activity", profileHandler.Activity)
-	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
-	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
 
 	// social profile routes
 	socialHandler := handler.NewSocialHandler(db, renderer)
@@ -64,8 +62,9 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /search", socialHandler.Search)
 
 	// settings routes
-	settingsHandler := handler.NewSettingsHandler(db, renderer)
+	settingsHandler := handler.NewSettingsHandler(db, cfg.UploadDir, renderer)
 	mux.HandleFunc("GET /settings", settingsHandler.Show)
+	mux.Handle("POST /settings/profile", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateProfile)))
 	mux.Handle("POST /settings/email", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateEmail)))
 	mux.Handle("POST /settings/password", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdatePassword)))
 	mux.Handle("POST /settings/social", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateSocial)))

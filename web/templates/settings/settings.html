@@ -22,6 +22,7 @@
 
         <nav aria-label="Sections des paramètres">
             <a href="#account">Compte</a>
+            <a href="#profile">Profil public</a>
             <a href="#email">Adresse e-mail</a>
             <a href="#password">Mot de passe</a>
             <a href="#social">Profil social</a>
@@ -29,7 +30,7 @@
             <a href="#delete" class="settings-danger-link">Supprimer le compte</a>
         </nav>
 
-        <a href="/profile/edit" class="settings-profile-link">Modifier le profil public</a>
+        <a href="/user/{{.User.Username}}" class="settings-profile-link">Voir mon profil public</a>
     </aside>
 
     <!-- settings content -->
@@ -51,7 +52,7 @@
                     <h2>Informations du compte</h2>
                     <p>Informations principales associées à votre compte Easy.</p>
                 </div>
-                <a href="/profile/edit">Modifier le profil</a>
+                <a href="#profile">Modifier le profil</a>
             </div>
             <dl class="settings-account-details">
                 <div><dt>Nom d'utilisateur</dt><dd>{{.User.Username}}</dd></div>
@@ -59,6 +60,33 @@
                 <div><dt>Type de connexion</dt><dd>{{if .HasLocalPassword}}E-mail et mot de passe{{else}}Google{{end}}</dd></div>
                 <div><dt>Membre depuis</dt><dd>{{.User.CreatedAt.Format "02/01/2006"}}</dd></div>
             </dl>
+        </section>
+
+        <!-- public profile settings -->
+        <section class="settings-card" id="profile">
+            <div class="settings-card-heading">
+                <div>
+                    <h2>Identité publique</h2>
+                    <p>Modifiez le nom et la photo affichés auprès de la communauté.</p>
+                </div>
+                <a href="/user/{{.User.Username}}">Voir le profil public</a>
+            </div>
+            {{if and .Error (eq .ActiveSection "profile")}}<p class="settings-error">{{.Error}}</p>{{end}}
+            <form action="/settings/profile" method="POST" enctype="multipart/form-data" class="settings-form">
+                <div class="settings-profile-preview">
+                    {{if .User.ProfilePicture}}
+                    <img src="{{.User.AvatarURL}}" alt="Photo de profil actuelle">
+                    {{else}}
+                    <span>{{printf "%.1s" .User.Username}}</span>
+                    {{end}}
+                    <div><strong>{{.User.Username}}</strong><small>Photo actuelle</small></div>
+                </div>
+                <label for="profile-username">Nom d'utilisateur</label>
+                <input id="profile-username" name="username" type="text" value="{{.User.Username}}" minlength="3" maxlength="30" required>
+                <label for="profile-picture">Photo de profil</label>
+                <input id="profile-picture" name="profile_picture" type="file" accept=".jpg,.jpeg,.png,.gif">
+                <button type="submit">Mettre à jour le profil</button>
+            </form>
         </section>
 
         <!-- social settings -->

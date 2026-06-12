@@ -14,11 +14,12 @@ import (
 )
 
 type SettingsHandler struct {
-	users    *repository.UserRepository
-	sessions *repository.SessionRepository
-	renderer *PageRenderer
-	follows  *repository.FollowRepository
-	posts    *repository.PostRepository
+	users     *repository.UserRepository
+	sessions  *repository.SessionRepository
+	renderer  *PageRenderer
+	follows   *repository.FollowRepository
+	posts     *repository.PostRepository
+	uploadDir string
 }
 
 type SettingsPageData struct {
@@ -31,13 +32,14 @@ type SettingsPageData struct {
 }
 
 // NewSettingsHandler creates a new instance
-func NewSettingsHandler(db *sql.DB, renderer *PageRenderer) *SettingsHandler {
+func NewSettingsHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *SettingsHandler {
 	return &SettingsHandler{
-		users:    repository.NewUserRepository(db),
-		sessions: repository.NewSessionRepository(db),
-		renderer: renderer,
-		follows:  repository.NewFollowRepository(db),
-		posts:    repository.NewPostRepository(db),
+		users:     repository.NewUserRepository(db),
+		sessions:  repository.NewSessionRepository(db),
+		renderer:  renderer,
+		follows:   repository.NewFollowRepository(db),
+		posts:     repository.NewPostRepository(db),
+		uploadDir: uploadDir,
 	}
 }
 
@@ -54,6 +56,59 @@ func (h *SettingsHandler) Show(w http.ResponseWriter, r *http.Request) {
 		Message:          settingsMessage(r.URL.Query().Get("status")),
 		SocialStats:      h.socialStats(user.ID),
 	})
+}
+
+// UpdateProfile updates the current user's public name and picture
+func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
+	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
+		h.renderError(w, user, "profile", "Fichier trop volumineux (max 20 Mo).")
+		return
+	}
+
+	username := strings.TrimSpace(r.FormValue("username"))
+	if validationErrors := validator.ValidateProfile(validator.ProfileInput{Username: username}); validationErrors.HasErrors() {
+		h.renderError(w, user, "profile", firstValidationMessage(validationErrors))
+		return
+	}
+	if existingUser, err := h.users.GetByUsername(username); err == nil && existingUser.ID != user.ID {
+		h.renderError(w, user, "profile", "Ce nom d'utilisateur est déjà utilisé.")
+		return
+	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	profilePicture := user.ProfilePicture
+	file, header, err := r.FormFile("profile_picture")
+	if err == nil {
+		defer file.Close()
+		filename, saveErr := utils.SaveUploadedImage(file, header, h.uploadDir)
+		if errors.Is(saveErr, utils.ErrInvalidMIME) || errors.Is(saveErr, utils.ErrFileTooLarge) {
+			h.renderError(w, user, "profile", saveErr.Error())
+			return
+		}
+		if saveErr != nil {
+			h.renderError(w, user, "profile", "La photo de profil n'a pas pu être enregistrée.")
+			return
+		}
+		profilePicture = filename
+	} else if !errors.Is(err, http.ErrMissingFile) {
+		h.renderError(w, user, "profile", "La photo de profil n'a pas pu être lue.")
+		return
+	}
+
+	if err := h.users.UpdateProfile(user.ID, username, profilePicture); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/settings?status=profile-updated#profile", http.StatusSeeOther)
 }
 
 // UpdateSocial updates the current user's social preferences
@@ -220,6 +275,8 @@ func hasLocalPassword(user *model.User) bool {
 // settingsMessage returns a safe confirmation message
 func settingsMessage(status string) string {
 	switch status {
+	case "profile-updated":
+		return "Votre profil public a été mis à jour."
 	case "email-updated":
 		return "Votre adresse e-mail a été mise à jour."
 	case "social-updated":
