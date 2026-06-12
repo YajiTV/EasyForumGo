@@ -103,14 +103,14 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 
 	// static page routes
 	pageHandler := handler.NewPageHandler(db, errorRenderer, renderer)
-	mux.HandleFunc("GET /about", pageHandler.Page("about.html"))
-	mux.HandleFunc("GET /rules", pageHandler.Page("rules.html"))
-	mux.HandleFunc("GET /help", pageHandler.Page("help.html"))
-	mux.HandleFunc("GET /legal", pageHandler.Page("legal.html"))
-	mux.HandleFunc("GET /privacy", pageHandler.Page("privacy.html"))
-	mux.HandleFunc("GET /terms", pageHandler.Page("terms.html"))
-	mux.HandleFunc("GET /cookies", pageHandler.Page("cookies.html"))
-	mux.HandleFunc("GET /contact", pageHandler.Page("contact.html"))
+	mux.HandleFunc("GET /about", pageHandler.Page("pages/about.html"))
+	mux.HandleFunc("GET /rules", pageHandler.Page("pages/rules.html"))
+	mux.HandleFunc("GET /help", pageHandler.Page("pages/help.html"))
+	mux.HandleFunc("GET /legal", pageHandler.Page("pages/legal.html"))
+	mux.HandleFunc("GET /privacy", pageHandler.Page("pages/privacy.html"))
+	mux.HandleFunc("GET /terms", pageHandler.Page("pages/terms.html"))
+	mux.HandleFunc("GET /cookies", pageHandler.Page("pages/cookies.html"))
+	mux.HandleFunc("GET /contact", pageHandler.Page("pages/contact.html"))
 
 	// OAuth routes
 	redirectURL := cfg.OAuthRedirectURL()
