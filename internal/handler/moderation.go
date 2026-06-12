@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+	"fmt"
 
 	"EasyForumGo/internal/model"
 	"EasyForumGo/internal/repository"
@@ -192,11 +193,12 @@ func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		Reports:     reportRows,
 	}
 
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "moderation", "pagemoderation.html"),
+	tmpl, err := template.New("base").ParseFiles(
+    filepath.Join("web", "templates", "layout", "base.html"),
+    filepath.Join("web", "templates", "moderation", "pagemoderation.html"),
 	)
 	if err != nil {
+		fmt.Println(err)
 		http.Error(w, "Erreur template", http.StatusInternalServerError)
 		return
 	}
