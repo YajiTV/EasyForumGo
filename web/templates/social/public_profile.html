@@ -12,7 +12,7 @@
         </div>
         <div class="social-profile-action">
             {{if .IsOwner}}
-            <a href="/profile/edit" class="social-button">Modifier le profil</a>
+            <a href="/settings#profile" class="social-button">Modifier le profil</a>
             <a href="/profile" class="social-button secondary">Mon activité</a>
             {{else if .User}}
             <form action="/user/{{.ProfileUser.Username}}/{{if .IsFollowing}}unfollow{{else}}follow{{end}}" method="POST">

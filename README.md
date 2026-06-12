@@ -225,7 +225,7 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 | `GET` | `/profile/liked-posts` | Connected | Posts liked by the current user |
 | `GET` | `/profile/my-comments` | Connected | Current user's comments |
 | `GET` | `/profile/activity` | Connected | Current user's activity and statistics |
-| `GET`, `POST` | `/profile/edit` | Connected | Edit the current user's profile |
+| `POST` | `/settings/profile` | Connected | Edit the current user's public name and picture |
 | `GET` | `/user/{username}` | Public | Display a public profile and its posts |
 | `GET` | `/user/{username}/followers`, `/user/{username}/following` | Public or owner | Paginated social relations |
 | `POST` | `/user/{username}/follow`, `/user/{username}/unfollow` | Connected | Manage a following relationship |
