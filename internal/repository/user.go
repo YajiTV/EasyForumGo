@@ -139,6 +139,42 @@ func (r *UserRepository) Search(query, excludeUserID string, limit int) ([]model
 	return users, rows.Err()
 }
 
+// SearchAll returns profiles matching a username or biography
+func (r *UserRepository) SearchAll(query, sort string, limit int) ([]model.User, error) {
+	if limit < 1 || limit > 100 {
+		return nil, fmt.Errorf("invalid limit")
+	}
+
+	orderBy := `CASE
+			WHEN LOWER(users.username) = LOWER(?) THEN 0
+			WHEN LOWER(users.username) LIKE LOWER(?) ESCAPE '\' THEN 1
+			ELSE 2
+		END, users.username COLLATE NOCASE ASC`
+	switch sort {
+	case "recent":
+		orderBy = "users.created_at DESC"
+	case "popular":
+		orderBy = "COUNT(received.follower_id) DESC, users.username COLLATE NOCASE ASC"
+	}
+
+	escapedQuery := escapeLike(query)
+	containsQuery := "%" + escapedQuery + "%"
+	startsWithQuery := escapedQuery + "%"
+	args := []any{query, containsQuery, containsQuery}
+	if sort != "recent" && sort != "popular" {
+		args = append(args, query, startsWithQuery)
+	}
+	args = append(args, limit)
+	return r.queryUsers(userColumns+`
+		LEFT JOIN user_follows received ON received.followed_id = users.id
+		WHERE ? = ''
+		   OR users.username LIKE ? ESCAPE '\'
+		   OR users.biography LIKE ? ESCAPE '\'
+		GROUP BY users.id
+		ORDER BY `+orderBy+`
+		LIMIT ?`, args...)
+}
+
 // Popular returns popular profiles not followed by the current user
 func (r *UserRepository) Popular(currentUserID string, limit int) ([]model.User, error) {
 	return r.queryUsers(userColumns+`

@@ -35,7 +35,8 @@
                     <circle cx="11" cy="11" r="8"></circle>
                     <path d="m21 21-4.3-4.3"></path>
                 </svg>
-                <input type="search" name="q" placeholder="Rechercher" aria-label="Rechercher">
+                <input type="search" name="q" placeholder="Posts, profils, sujets..." aria-label="Rechercher des posts ou des profils">
+                <button type="submit">Rechercher</button>
             </form>
 
             <div class="nav-links">
@@ -60,7 +61,7 @@
                             {{end}}
                         </summary>
                         <div class="user-menu-panel">
-                            <a href="/profile" class="user-menu-profile">
+                            <a href="/user/{{.User.Username}}" class="user-menu-profile">
                                 {{if .User.ProfilePicture}}
                                     <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar user-avatar-large">
                                 {{else}}
@@ -68,8 +69,15 @@
                                 {{end}}
                                 <span>
                                     <strong>{{.User.Username}}</strong>
-                                    <small>Voir le profil</small>
+                                    <small>Voir mon profil</small>
                                 </span>
+                            </a>
+                            <a href="/profile" class="user-menu-row">
+                                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M3 3v18h18"></path>
+                                    <path d="m7 16 4-4 3 3 5-6"></path>
+                                </svg>
+                                <span>Mon activité</span>
                             </a>
                             <a href="/settings" class="user-menu-row">
                                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -129,12 +137,12 @@
                         </svg>
                         <span>Nouveau post</span>
                     </a>
-                    <a href="/profile" class="side-nav-item">
+                    <a href="/user/{{.User.Username}}" class="side-nav-item">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M20 21a8 8 0 0 0-16 0"></path>
                             <circle cx="12" cy="7" r="4"></circle>
                         </svg>
-                        <span>Profil</span>
+                        <span>Mon profil</span>
                     </a>
                     <a href="/library" class="side-nav-item">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">

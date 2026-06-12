@@ -20,7 +20,14 @@
             <h1 class="post-full-title">{{.Post.Title}}</h1>
 
             <div class="post-full-meta">
-                <span>Par <strong><a href="/user/{{.Author}}">{{.Author}}</a></strong></span>
+                <span class="post-full-author">
+                    {{if .AuthorAvatarURL}}
+                    <img src="{{.AuthorAvatarURL}}" alt="Photo de profil de {{.Author}}" class="author-avatar">
+                    {{else}}
+                    <span class="author-avatar">{{printf "%.1s" .Author}}</span>
+                    {{end}}
+                    <span>Par <strong><a href="/user/{{.Author}}">{{.Author}}</a></strong></span>
+                </span>
                 <span>{{.Post.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
             </div>
         </div>
@@ -98,6 +105,11 @@
                 {{range .Comments}}
                 <div class="comment-card">
                     <div class="comment-meta">
+                        {{if .AvatarURL}}
+                        <img src="{{.AvatarURL}}" alt="Photo de profil de {{.Username}}" class="author-avatar">
+                        {{else}}
+                        <span class="author-avatar">{{printf "%.1s" .Username}}</span>
+                        {{end}}
                         <strong><a href="/user/{{.Username}}">{{.Username}}</a></strong>
                         <span>{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
                         {{if $.User}}

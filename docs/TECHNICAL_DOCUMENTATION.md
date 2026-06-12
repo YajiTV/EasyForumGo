@@ -162,7 +162,7 @@ Local accounts must confirm their current password before changing their email, 
 
 Every user has a public profile at `/user/{username}` with a biography, registration date, counters, and paginated posts. Connected users can follow or unfollow another user through POST routes. Followers and following lists are paginated and can be hidden by their owner.
 
-The home feed accepts `feed=following` to display posts from followed users. Discovery combines follower popularity with categories from posts liked by the current user. Search and suggestions exclude the current user and already-followed users.
+The home feed accepts `feed=following` to display posts from followed users. Discovery combines follower popularity with categories from posts liked by the current user. The public search covers posts and profiles, with result-type, post-category, relevance, recency, and popularity controls. Discovery suggestions exclude the current user and already-followed users.
 
 Following and publishing create idempotent social notifications.
 
