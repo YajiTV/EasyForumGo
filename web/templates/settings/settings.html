@@ -110,7 +110,6 @@
                     <h2>Connexion</h2>
                     <span>Adresse utilisée pour accéder à Easy.</span>
                 </div>
-                <strong>{{.User.Email}}</strong>
             </header>
 
             {{if and .Error (eq .ActiveSection "email")}}<p class="settings-error">{{.Error}}</p>{{end}}
