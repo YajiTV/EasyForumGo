@@ -445,19 +445,21 @@ func (h *PostHandler) validCategoryIDs(categoryIDs []string) ([]string, error) {
 type CommentWithAuthor struct {
 	model.Comment
 	Username     string
+	AvatarURL    string
 	LikeCount    int
 	DislikeCount int
 }
 
 type PostDetailData struct {
-	User         *model.User
-	Post         *model.Post
-	Author       string
-	Categories   []model.Category
-	Comments     []CommentWithAuthor
-	Libraries    []model.Library
-	LikeCount    int
-	DislikeCount int
+	User            *model.User
+	Post            *model.Post
+	Author          string
+	AuthorAvatarURL string
+	Categories      []model.Category
+	Comments        []CommentWithAuthor
+	Libraries       []model.Library
+	LikeCount       int
+	DislikeCount    int
 }
 
 // PostDetail handles the request
@@ -498,14 +500,17 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	for _, c := range rawComments {
 		u, err := h.users.GetByID(c.UserID)
 		username := "Inconnu"
+		avatarURL := ""
 		if err == nil {
 			username = u.Username
+			avatarURL = u.AvatarURL()
 		}
 		cLikes, _ := h.likes.CountCommentLikes(c.ID)
 		cDislikes, _ := h.likes.CountCommentDislikes(c.ID)
 		comments = append(comments, CommentWithAuthor{
 			Comment:      c,
 			Username:     username,
+			AvatarURL:    avatarURL,
 			LikeCount:    cLikes,
 			DislikeCount: cDislikes,
 		})
@@ -518,14 +523,15 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := PostDetailData{
-		User:         currentUser,
-		Post:         post,
-		Author:       author.Username,
-		Categories:   categories,
-		Comments:     comments,
-		Libraries:    libraries,
-		LikeCount:    likes,
-		DislikeCount: dislikes,
+		User:            currentUser,
+		Post:            post,
+		Author:          author.Username,
+		AuthorAvatarURL: author.AvatarURL(),
+		Categories:      categories,
+		Comments:        comments,
+		Libraries:       libraries,
+		LikeCount:       likes,
+		DislikeCount:    dislikes,
 	}
 
 	h.renderer.Render(w, "post/post_detail.html", data)

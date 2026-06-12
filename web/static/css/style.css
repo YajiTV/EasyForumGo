@@ -1073,9 +1073,17 @@ textarea {
 
 .post-full-meta {
     display: flex;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 16px;
     color: var(--muted);
     font-size: 14px;
+}
+
+.post-full-author {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .post-full-image {
@@ -1175,6 +1183,7 @@ textarea {
 
 .comment-meta {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
     gap: 12px;
     margin-bottom: 8px;
