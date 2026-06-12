@@ -32,7 +32,7 @@
     flex: 0 0 48px;
     place-items: center;
     border-radius: 999px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     font-weight: 800;
     text-transform: uppercase;
@@ -74,13 +74,13 @@
     padding: 0 17px;
     border: 1px solid var(--text);
     border-radius: 999px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     cursor: pointer;
 }
 
 .social-button.secondary {
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
 }
 
@@ -198,7 +198,7 @@
     padding: 0 16px;
     border: 0;
     border-radius: 6px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     cursor: pointer;
 }
@@ -276,7 +276,7 @@
     padding: 0 12px;
     border: 1px solid var(--line);
     border-radius: 6px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
 }
 
@@ -285,7 +285,7 @@
     padding: 0 18px;
     border: 0;
     border-radius: 6px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     font-weight: 700;
     cursor: pointer;
@@ -388,9 +388,9 @@
 .notif-item { border-bottom: 1px solid var(--line); }
 .notif-item:last-child { border-bottom: none; }
 .notif-item a { display: flex; flex-direction: column; gap: .25rem; padding: 1rem 1.25rem; text-decoration: none; color: inherit; }
-.notif-item a:hover { background: #f9fafb; }
-.notif-item--unread { background: #eff6ff; }
-.notif-item--unread a:hover { background: #dbeafe; }
+.notif-item a:hover { background: var(--soft); }
+.notif-item--unread { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.notif-item--unread a:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
 .notif-actor { font-weight: 600; }
 .notif-post { color: var(--muted); font-style: italic; font-size: .9rem; }
 .notif-time { color: var(--muted); font-size: .8rem; }
