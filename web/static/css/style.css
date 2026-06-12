@@ -276,6 +276,18 @@ textarea {
     font-size: 13px;
 }
 
+.user-menu-logout button {
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.user-menu-logout small {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
 .user-menu-row .icon {
     width: 24px;
     height: 24px;
