@@ -31,6 +31,7 @@ Easy is a server-rendered community forum built in Go. It provides the complete 
 - Customizable libraries for saving and organizing posts
 - Complete account settings for email, password, session, and account deletion
 - Public profiles, followers, following feed, user discovery, and social notifications
+- CSS-only light, system, and dark theme switcher
 - Profile picture upload
 - Password strength feedback
 - Google OAuth authentication
