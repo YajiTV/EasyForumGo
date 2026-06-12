@@ -1,0 +1,75 @@
+{{define "title"}}Mon titre{{end}}
+{{define "content"}}
+    <header>
+        <h1>Page Modération</h1>
+    </header>
+<details>
+  <summary>Utilisateurs</summary>
+  <table>
+  <tr>
+    <th>Pseudo</th>
+    <th>Nom</th>
+    <th>Mail</th>
+    <th>Statut</th>
+    <th>Actions</th>
+</tr>
+{{range .Users}}
+  <tr>
+    <td>{{.Username}}</td>
+    <td>{{.LastName}}</td>
+    <td>{{.Mail}}</td>
+    <td>{{.status}}</td>
+    <td>
+    <button class="btn-delete">ban</button>
+    <button class="btn-delete">mute</button>
+</td>
+    
+  </tr>
+  {{end}}
+</table>
+
+</details>
+<details>
+    <summary>Posts signalé</summary>
+    <table>
+        <tr>
+        <th>Auteur</th>
+        <th>Contenu</th>
+        <th>Date</th>
+        <th>Signalement</th>
+        <th>Actions</th>
+        </tr>
+        {{range .Posts}}
+        <tr>
+    <td>{{.Username}}</td>
+    <td>{{.Post}}</td>
+    <td>{{.date}}</td>
+    <td>{{.report}}</td>
+    <td>
+    <button class="btn-delete">supprimer</button>
+</td>
+     {{end}} 
+    </table>
+  
+</details>
+<details>
+  <summary>traiter les signalement</summary>
+  <table>
+  <tr>
+    <th>Utilisateur signalé</th>
+    <th>Raison</th>
+    <th>Action</th>
+  </tr>
+  {{range .Reports}}
+  <tr>
+    <td>{{.Username}}</td>
+    <td>{{.reason}}</td>
+    <td>
+        <button class="btn-delete"> ban temporaire</button>
+        <button class="btn-delete">ban definitif</button>
+    </td>
+  </tr>
+  {{end}}
+</table>   
+</details>
+{{end}}   
