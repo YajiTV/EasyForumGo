@@ -5,157 +5,179 @@
 {{end}}
 
 {{define "content"}}
-<div class="settings-page">
-    <!-- settings navigation -->
-    <aside class="settings-navigation">
-        <div class="settings-user">
+<div class="settings-layout">
+    <aside class="settings-sidebar">
+        <a href="/user/{{.User.Username}}" class="settings-identity">
             {{if .User.ProfilePicture}}
-                <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}">
+            <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}">
             {{else}}
-                <span>{{printf "%.1s" .User.Username}}</span>
+            <span>{{printf "%.1s" .User.Username}}</span>
             {{end}}
             <div>
                 <strong>{{.User.Username}}</strong>
-                <small>{{.User.Email}}</small>
+                <small>Voir mon profil</small>
             </div>
-        </div>
+        </a>
 
         <nav aria-label="Sections des paramètres">
-            <a href="#account">Compte</a>
-            <a href="#email">Adresse e-mail</a>
-            <a href="#password">Mot de passe</a>
-            <a href="#social">Profil social</a>
-            <a href="#session">Session</a>
-            <a href="#delete" class="settings-danger-link">Supprimer le compte</a>
+            <p>Paramètres</p>
+            <a href="#profile">Profil public</a>
+            <a href="#connection">Connexion</a>
+            <a href="#security">Sécurité</a>
+            <a href="#danger" class="settings-danger-link">Zone sensible</a>
         </nav>
 
-        <a href="/profile/edit" class="settings-profile-link">Modifier le profil public</a>
+        <dl class="settings-sidebar-meta">
+            <div><dt>Compte</dt><dd>{{if .HasLocalPassword}}E-mail{{else}}Google{{end}}</dd></div>
+            <div><dt>Membre depuis</dt><dd>{{.User.CreatedAt.Format "02/01/2006"}}</dd></div>
+        </dl>
     </aside>
 
-    <!-- settings content -->
-    <section class="settings-content">
-        <header class="settings-header">
-            <p>Compte</p>
+    <main class="settings-main">
+        <header class="settings-hero">
+            <p>Espace personnel</p>
             <h1>Paramètres</h1>
-            <span>Gérez vos informations de connexion et la sécurité de votre compte.</span>
+            <span>Gérez votre profil public, votre connexion et la sécurité de votre compte.</span>
         </header>
 
-        {{if .Message}}
-        <p class="settings-message">{{.Message}}</p>
-        {{end}}
+        {{if .Message}}<p class="settings-message">{{.Message}}</p>{{end}}
 
-        <!-- account overview -->
-        <section class="settings-card" id="account">
-            <div class="settings-card-heading">
+        <section class="settings-section" id="profile">
+            <header class="settings-section-heading">
                 <div>
-                    <h2>Informations du compte</h2>
-                    <p>Informations principales associées à votre compte Easy.</p>
+                    <p>Communauté</p>
+                    <h2>Profil public</h2>
+                    <span>Tout ce que les autres membres voient sur votre profil.</span>
                 </div>
-                <a href="/profile/edit">Modifier le profil</a>
-            </div>
-            <dl class="settings-account-details">
-                <div><dt>Nom d'utilisateur</dt><dd>{{.User.Username}}</dd></div>
-                <div><dt>Adresse e-mail</dt><dd>{{.User.Email}}</dd></div>
-                <div><dt>Type de connexion</dt><dd>{{if .HasLocalPassword}}E-mail et mot de passe{{else}}Google{{end}}</dd></div>
-                <div><dt>Membre depuis</dt><dd>{{.User.CreatedAt.Format "02/01/2006"}}</dd></div>
-            </dl>
-        </section>
+                <a href="/user/{{.User.Username}}">Voir le profil</a>
+            </header>
 
-        <!-- social settings -->
-        <section class="settings-card" id="social">
-            <div class="settings-card-heading">
-                <div>
-                    <h2>Profil social</h2>
-                    <p>Présentez-vous et choisissez qui peut voir vos relations.</p>
+            <div class="settings-profile-card">
+                <div class="settings-profile-avatar">
+                    {{if .User.ProfilePicture}}
+                    <img src="{{.User.AvatarURL}}" alt="Photo de profil actuelle">
+                    {{else}}
+                    <span>{{printf "%.1s" .User.Username}}</span>
+                    {{end}}
+                    <div>
+                        <strong>{{.User.Username}}</strong>
+                        <small>{{if .User.Biography}}{{.User.Biography}}{{else}}Aucune biographie pour le moment.{{end}}</small>
+                    </div>
                 </div>
-                <a href="/user/{{.User.Username}}">Voir le profil public</a>
+                <dl>
+                    <div><dt>Posts</dt><dd>{{.SocialStats.PostCount}}</dd></div>
+                    <div><dt>Abonnés</dt><dd>{{.SocialStats.FollowerCount}}</dd></div>
+                    <div><dt>Abonnements</dt><dd>{{.SocialStats.FollowingCount}}</dd></div>
+                </dl>
             </div>
-            <dl class="settings-account-details settings-social-stats">
-                <div><dt>Posts</dt><dd>{{.SocialStats.PostCount}}</dd></div>
-                <div><dt>Abonnés</dt><dd>{{.SocialStats.FollowerCount}}</dd></div>
-                <div><dt>Abonnements</dt><dd>{{.SocialStats.FollowingCount}}</dd></div>
-            </dl>
+
+            {{if and .Error (eq .ActiveSection "profile")}}<p class="settings-error">{{.Error}}</p>{{end}}
             {{if and .Error (eq .ActiveSection "social")}}<p class="settings-error">{{.Error}}</p>{{end}}
-            <form action="/settings/social" method="POST" class="settings-form">
-                <label for="social-biography">Biographie</label>
-                <textarea id="social-biography" name="biography" rows="5" maxlength="500" placeholder="Parlez brièvement de vous">{{.User.Biography}}</textarea>
-                <label class="settings-checkbox">
-                    <input type="checkbox" name="follows_visible" {{if .User.FollowsVisible}}checked{{end}}>
-                    Afficher mes abonnés et abonnements sur mon profil
-                </label>
-                <button type="submit">Enregistrer les préférences</button>
-            </form>
+
+            <div class="settings-form-grid">
+                <form action="/settings/profile" method="POST" enctype="multipart/form-data" class="settings-panel-form">
+                    <div class="settings-panel-heading">
+                        <h3>Identité</h3>
+                        <p>Modifiez votre nom public et votre photo.</p>
+                    </div>
+                    <label for="profile-username">Nom d'utilisateur</label>
+                    <input id="profile-username" name="username" type="text" value="{{.User.Username}}" minlength="3" maxlength="30" required>
+                    <label for="profile-picture">Nouvelle photo</label>
+                    <input id="profile-picture" name="profile_picture" type="file" accept=".jpg,.jpeg,.png,.gif">
+                    <button type="submit">Enregistrer l'identité</button>
+                </form>
+
+                <form action="/settings/social" method="POST" class="settings-panel-form">
+                    <div class="settings-panel-heading">
+                        <h3>Présentation</h3>
+                        <p>Ajoutez une biographie et gérez la visibilité sociale.</p>
+                    </div>
+                    <label for="social-biography">Biographie</label>
+                    <textarea id="social-biography" name="biography" rows="5" maxlength="500" placeholder="Parlez brièvement de vous">{{.User.Biography}}</textarea>
+                    <label class="settings-checkbox">
+                        <input type="checkbox" name="follows_visible" {{if .User.FollowsVisible}}checked{{end}}>
+                        <span>Afficher mes abonnés et abonnements</span>
+                    </label>
+                    <button type="submit">Enregistrer la présentation</button>
+                </form>
+            </div>
         </section>
 
-        <!-- email settings -->
-        <section class="settings-card" id="email">
-            <div class="settings-card-heading">
+        <section class="settings-section" id="connection">
+            <header class="settings-section-heading">
                 <div>
-                    <h2>Adresse e-mail</h2>
-                    <p>Cette adresse est utilisée pour vous connecter à Easy.</p>
+                    <p>Compte</p>
+                    <h2>Connexion</h2>
+                    <span>Adresse utilisée pour accéder à Easy.</span>
                 </div>
-            </div>
+            </header>
+
             {{if and .Error (eq .ActiveSection "email")}}<p class="settings-error">{{.Error}}</p>{{end}}
             {{if .HasLocalPassword}}
-            <form action="/settings/email" method="POST" class="settings-form">
+            <form action="/settings/email" method="POST" class="settings-panel-form settings-single-form">
                 <label for="email-address">Nouvelle adresse e-mail</label>
                 <input id="email-address" name="email" type="email" value="{{.User.Email}}" autocomplete="email" required>
                 <label for="email-current-password">Mot de passe actuel</label>
                 <input id="email-current-password" name="current_password" type="password" autocomplete="current-password" required>
-                <button type="submit">Mettre à jour l'adresse e-mail</button>
+                <button type="submit">Mettre à jour l'adresse</button>
             </form>
             {{else}}
             <p class="settings-provider-note">Votre adresse e-mail est gérée par votre compte Google.</p>
             {{end}}
         </section>
 
-        <!-- password settings -->
-        <section class="settings-card" id="password">
-            <div class="settings-card-heading">
+        <section class="settings-section" id="security">
+            <header class="settings-section-heading">
                 <div>
-                    <h2>Mot de passe</h2>
-                    <p>Utilisez un mot de passe unique d'au moins 12 caractères.</p>
+                    <p>Protection</p>
+                    <h2>Sécurité</h2>
+                    <span>Modifiez votre mot de passe ou fermez la session actuelle.</span>
                 </div>
-            </div>
-            {{if and .Error (eq .ActiveSection "password")}}<p class="settings-error">{{.Error}}</p>{{end}}
-            {{if .HasLocalPassword}}
-            <form action="/settings/password" method="POST" class="settings-form">
-                <label for="password-current">Mot de passe actuel</label>
-                <input id="password-current" name="current_password" type="password" autocomplete="current-password" required>
-                <label for="password-new">Nouveau mot de passe</label>
-                <input id="password-new" name="new_password" type="password" autocomplete="new-password" minlength="12" required>
-                <label for="password-confirm">Confirmer le nouveau mot de passe</label>
-                <input id="password-confirm" name="confirm_password" type="password" autocomplete="new-password" minlength="12" required>
-                <button type="submit">Changer le mot de passe</button>
-            </form>
-            {{else}}
-            <p class="settings-provider-note">Vous utilisez Google pour vous connecter. Votre mot de passe est géré par Google.</p>
-            {{end}}
-        </section>
+            </header>
 
-        <!-- session settings -->
-        <section class="settings-card" id="session">
-            <div class="settings-card-heading">
+            <div class="settings-form-grid">
                 <div>
-                    <h2>Session actuelle</h2>
-                    <p>Déconnectez cet appareil lorsque vous avez terminé.</p>
+                    {{if and .Error (eq .ActiveSection "password")}}<p class="settings-error">{{.Error}}</p>{{end}}
+                    {{if .HasLocalPassword}}
+                    <form action="/settings/password" method="POST" class="settings-panel-form">
+                        <div class="settings-panel-heading">
+                            <h3>Mot de passe</h3>
+                            <p>Utilisez au moins 12 caractères.</p>
+                        </div>
+                        <label for="password-current">Mot de passe actuel</label>
+                        <input id="password-current" name="current_password" type="password" autocomplete="current-password" required>
+                        <label for="password-new">Nouveau mot de passe</label>
+                        <input id="password-new" name="new_password" type="password" autocomplete="new-password" minlength="12" required>
+                        <label for="password-confirm">Confirmer le mot de passe</label>
+                        <input id="password-confirm" name="confirm_password" type="password" autocomplete="new-password" minlength="12" required>
+                        <button type="submit">Changer le mot de passe</button>
+                    </form>
+                    {{else}}
+                    <div class="settings-panel-form">
+                        <div class="settings-panel-heading"><h3>Mot de passe</h3><p>Votre connexion est gérée par Google.</p></div>
+                    </div>
+                    {{end}}
                 </div>
-                <form action="/logout" method="POST">
+                <form action="/logout" method="POST" class="settings-panel-form settings-session-panel">
+                    <div class="settings-panel-heading">
+                        <h3>Session actuelle</h3>
+                        <p>Déconnectez cet appareil lorsque vous avez terminé.</p>
+                    </div>
                     <button type="submit" class="settings-secondary-button">Se déconnecter</button>
                 </form>
             </div>
         </section>
 
-        <!-- account deletion -->
-        <section class="settings-card settings-danger-card" id="delete">
-            <div class="settings-card-heading">
+        <section class="settings-section settings-danger-section" id="danger">
+            <header class="settings-section-heading">
                 <div>
+                    <p>Irréversible</p>
                     <h2>Supprimer le compte</h2>
-                    <p>Cette action supprime définitivement votre profil, vos posts, commentaires, votes et bibliothèques.</p>
+                    <span>Votre profil, vos posts, commentaires, votes et bibliothèques seront définitivement supprimés.</span>
                 </div>
-            </div>
+            </header>
             {{if and .Error (eq .ActiveSection "delete")}}<p class="settings-error">{{.Error}}</p>{{end}}
-            <form action="/settings/delete" method="POST" class="settings-form">
+            <form action="/settings/delete" method="POST" class="settings-panel-form settings-single-form">
                 {{if .HasLocalPassword}}
                 <label for="delete-current-password">Mot de passe actuel</label>
                 <input id="delete-current-password" name="current_password" type="password" autocomplete="current-password" required>
@@ -165,6 +187,6 @@
                 <button type="submit" class="settings-delete-button">Supprimer définitivement mon compte</button>
             </form>
         </section>
-    </section>
+    </main>
 </div>
 {{end}}

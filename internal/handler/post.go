@@ -455,6 +455,9 @@ type PostDetailData struct {
 	Post            *model.Post
 	Author          string
 	AuthorAvatarURL string
+	AuthorBiography string
+	AuthorTopics    []model.Category
+	IsEdited        bool
 	Categories      []model.Category
 	Comments        []CommentWithAuthor
 	Libraries       []model.Library
@@ -492,6 +495,7 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	categories, _ := h.postCategories.GetCategoriesByPostID(postID)
+	authorTopics, _ := h.postCategories.GetPopularByUserID(post.UserID, 4)
 	likes, _ := h.likes.CountPostLikes(postID)
 	dislikes, _ := h.likes.CountPostDislikes(postID)
 
@@ -527,6 +531,9 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 		Post:            post,
 		Author:          author.Username,
 		AuthorAvatarURL: author.AvatarURL(),
+		AuthorBiography: author.Biography,
+		AuthorTopics:    authorTopics,
+		IsEdited:        post.UpdatedAt.After(post.CreatedAt.Add(time.Second)),
 		Categories:      categories,
 		Comments:        comments,
 		Libraries:       libraries,

@@ -32,7 +32,7 @@
     flex: 0 0 48px;
     place-items: center;
     border-radius: 999px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     font-weight: 800;
     text-transform: uppercase;
@@ -74,13 +74,13 @@
     padding: 0 17px;
     border: 1px solid var(--text);
     border-radius: 999px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     cursor: pointer;
 }
 
 .social-button.secondary {
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
 }
 
@@ -102,6 +102,64 @@
 
 .social-stats strong {
     color: var(--text);
+}
+
+.public-profile-topics {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 28px;
+    padding: 26px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.public-profile-topics > div p {
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.public-profile-topics h2 {
+    font-size: 17px;
+}
+
+.public-profile-topics nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.public-profile-topics a {
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.public-profile-topics a:hover {
+    background: var(--soft);
+}
+
+.public-profile-topics strong,
+.public-profile-topics span {
+    display: block;
+}
+
+.public-profile-topics strong {
+    margin-bottom: 2px;
+    font-size: 12px;
+}
+
+.public-profile-topics span {
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .social-section {
@@ -198,7 +256,7 @@
     padding: 0 16px;
     border: 0;
     border-radius: 6px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     cursor: pointer;
 }
@@ -276,7 +334,7 @@
     padding: 0 12px;
     border: 1px solid var(--line);
     border-radius: 6px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
 }
 
@@ -285,7 +343,7 @@
     padding: 0 18px;
     border: 0;
     border-radius: 6px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     font-weight: 700;
     cursor: pointer;
@@ -388,9 +446,9 @@
 .notif-item { border-bottom: 1px solid var(--line); }
 .notif-item:last-child { border-bottom: none; }
 .notif-item a { display: flex; flex-direction: column; gap: .25rem; padding: 1rem 1.25rem; text-decoration: none; color: inherit; }
-.notif-item a:hover { background: #f9fafb; }
-.notif-item--unread { background: #eff6ff; }
-.notif-item--unread a:hover { background: #dbeafe; }
+.notif-item a:hover { background: var(--soft); }
+.notif-item--unread { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.notif-item--unread a:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
 .notif-actor { font-weight: 600; }
 .notif-post { color: var(--muted); font-style: italic; font-size: .9rem; }
 .notif-time { color: var(--muted); font-size: .8rem; }
@@ -414,6 +472,14 @@
     .social-stats {
         gap: 14px;
         overflow-x: auto;
+    }
+
+    .public-profile-topics {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .public-profile-topics nav {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .discover-grid {

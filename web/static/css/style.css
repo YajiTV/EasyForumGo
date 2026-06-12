@@ -9,6 +9,11 @@
     --muted: #6b6b6b;
     --soft: #f7f7f7;
     --line: #e9e9e9;
+    --surface: #fff;
+    --surface-raised: #fff;
+    --surface-input: #fff;
+    --surface-hover: #efefef;
+    --strong: #242424;
     --accent: #1a8917;
     --accent-dark: #156912;
     --danger: #c0392b;
@@ -25,6 +30,37 @@ body {
     font-size: 16px;
     line-height: 1.6;
     text-rendering: optimizeLegibility;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #151515;
+    }
+}
+
+.theme-shell {
+    min-height: 100vh;
+    background: var(--surface);
+    color: var(--text);
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    .theme-shell {
+        --text: #ededed;
+        --muted: #aaa;
+        --soft: #202020;
+        --line: #343434;
+        --surface: #151515;
+        --surface-raised: #202020;
+        --surface-input: #272727;
+        --surface-hover: #303030;
+        --strong: #242424;
+        --accent: #58b957;
+        --accent-dark: #79cf77;
+        --danger: #ff8174;
+        color-scheme: dark;
+    }
 }
 
 a {
@@ -59,8 +95,69 @@ textarea {
     position: sticky;
     top: 0;
     z-index: 30;
-    background: #fff;
+    background: var(--surface);
     border-bottom: 1px solid var(--line);
+}
+
+.theme-switcher {
+    min-width: 0;
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 2px;
+    margin: 0;
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--soft);
+}
+
+.theme-switcher legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+.theme-switcher a {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.theme-switcher .icon {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
+}
+
+.theme-switcher a:hover {
+    color: var(--text);
+}
+
+.theme-switcher a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.theme-shell input,
+.theme-shell textarea,
+.theme-shell select {
+    color: var(--text);
+}
+
+.theme-shell option {
+    background: var(--surface-input);
+    color: var(--text);
+}
+
+.theme-shell img {
+    color-scheme: light;
 }
 
 .topbar-nav {
@@ -143,7 +240,7 @@ textarea {
     padding: 0 12px;
     border: 0;
     border-radius: 999px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
     font-size: 12px;
     font-weight: 700;
@@ -185,7 +282,7 @@ textarea {
     align-items: center;
     padding: 0 17px;
     border-radius: 999px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
 }
 
@@ -199,7 +296,7 @@ textarea {
 .nav-links .write-link,
 .nav-links .register-link:hover,
 .nav-links .write-link:hover {
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
 }
 
@@ -244,7 +341,7 @@ textarea {
     padding: 18px 0 14px;
     border: 1px solid var(--line);
     border-radius: 4px;
-    background: #fff;
+    background: var(--surface);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
     color: var(--muted);
     z-index: 60;
@@ -346,17 +443,17 @@ textarea {
     transition: grid-template-columns 0.18s ease;
 }
 
-.menu-state:checked ~ .app-shell {
+.menu-state:checked ~ .theme-shell .app-shell {
     grid-template-columns: var(--sidebar-open-width) minmax(0, 1fr);
 }
 
 .left-sidebar {
     border-right: 1px solid var(--line);
-    background: #fff;
+    background: var(--surface);
     padding: 32px 20px;
 }
 
-.menu-state:checked ~ .app-shell .left-sidebar {
+.menu-state:checked ~ .theme-shell .app-shell .left-sidebar {
     padding-right: 20px;
     padding-left: 20px;
 }
@@ -397,7 +494,7 @@ textarea {
     transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
-.menu-state:checked ~ .app-shell .side-nav-item span {
+.menu-state:checked ~ .theme-shell .app-shell .side-nav-item span {
     opacity: 1;
     transform: translateX(0);
     pointer-events: auto;
@@ -465,13 +562,13 @@ textarea {
 
 .feed-chooser .discover-profiles-link:hover {
     border-color: var(--text);
-    background: #fff;
+    background: var(--surface);
 }
 
 .followed-badge {
     padding: 1px 7px;
     border-radius: 999px;
-    background: #edf7ed;
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
     color: var(--accent-dark);
     font-size: 11px;
     font-weight: 700;
@@ -528,7 +625,7 @@ textarea {
     align-items: center;
     padding: 0 17px;
     border-radius: 999px;
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     font-size: 14px;
     font-weight: 600;
@@ -555,7 +652,7 @@ textarea {
     padding: 0 14px;
     border: 1.5px solid var(--line);
     border-radius: 999px;
-    background: #fff;
+    background: var(--surface);
     color: var(--muted);
     font-size: 13px;
     font-weight: 600;
@@ -574,7 +671,7 @@ textarea {
 
 .category-choice.active {
     border-color: var(--text);
-    background: var(--text);
+    background: var(--strong);
     color: #fff;
     box-shadow: 0 2px 8px rgba(36,36,36,0.18);
 }
@@ -622,7 +719,7 @@ textarea {
     flex: 0 0 22px;
     place-items: center;
     border-radius: 999px;
-    background: #f0f0f0;
+    background: var(--soft);
     color: var(--text);
     object-fit: cover;
     font-size: 12px;
@@ -746,7 +843,7 @@ textarea {
     transition: margin-left 0.18s ease;
 }
 
-.menu-state:checked ~ .site-footer {
+.menu-state:checked ~ .theme-shell .site-footer {
     margin-left: var(--sidebar-open-width);
 }
 
@@ -813,7 +910,7 @@ textarea {
     padding: 12px 16px;
     border: 1px solid #f5c2c2;
     border-radius: 6px;
-    background: #fff0f0;
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
     color: var(--danger);
     font-size: 14px;
 }
@@ -904,7 +1001,7 @@ textarea {
     display: block;
     border: 0;
     border-top: 1px solid var(--line);
-    background: #fff;
+    background: var(--surface);
 }
 
 .auth-switch {
@@ -939,7 +1036,7 @@ textarea {
 }
 
 .category-checkbox:hover {
-    background: #efefef;
+    background: var(--surface-hover);
 }
 
 .category-checkbox input {
@@ -955,7 +1052,7 @@ textarea {
     padding: 18px;
     border: 1px dashed #d6d6d6;
     border-radius: 8px;
-    background: #fbfbfb;
+    background: var(--soft);
 }
 
 .current-image-preview {
@@ -1011,7 +1108,7 @@ textarea {
 .btn-like,
 .btn-dislike {
     border: 1px solid var(--line);
-    background: #fff;
+    background: var(--surface);
     color: var(--muted);
 }
 
@@ -1024,13 +1121,13 @@ textarea {
 
 .btn-delete {
     border: 1px solid var(--line);
-    background: #fff;
+    background: var(--surface);
     color: var(--danger);
 }
 
 .btn-delete:hover {
     border-color: var(--danger);
-    background: #fff0f0;
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
 }
 
 .error-page {
@@ -1286,7 +1383,7 @@ textarea {
         padding: 0;
     }
 
-    .menu-state:checked ~ .app-shell .side-nav-item {
+    .menu-state:checked ~ .theme-shell .app-shell .side-nav-item {
         justify-content: flex-start;
         padding: 0 4px;
     }
@@ -1343,7 +1440,7 @@ textarea {
         overflow-x: auto;
     }
 
-    .menu-state:checked ~ .app-shell .left-sidebar {
+    .menu-state:checked ~ .theme-shell .app-shell .left-sidebar {
         display: block;
     }
 
@@ -1416,7 +1513,7 @@ textarea {
         align-items: flex-start;
     }
 
-    .menu-state:checked ~ .site-footer {
+    .menu-state:checked ~ .theme-shell .site-footer {
         margin-left: 0;
     }
 
@@ -1468,7 +1565,7 @@ textarea {
     padding: 0 20px;
     border: 1px solid var(--line);
     border-radius: 999px;
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
     font-size: 17px;
     font-family: inherit;

@@ -19,9 +19,16 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
 
+	// theme routes
+	themeHandler := handler.NewThemeHandler()
+	mux.HandleFunc("GET /theme.css", themeHandler.CSS)
+	mux.HandleFunc("GET /theme/{theme}", themeHandler.Set)
+
 	// shared renderer : injecte notifCount dans tous les templates via FuncMap
 	notifRepo := repository.NewNotificationRepository(db)
 	renderer := handler.NewPageRenderer(notifRepo)
+
+	authMiddleware := middleware.NewAuthMiddleware(db)
 
 	// error renderer
 	errorRenderer := handler.NewErrorRenderer(cfg.TemplatesDir)
@@ -39,14 +46,12 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("POST /logout", authHandler.Logout)
 
 	// profile routes
-	profileHandler := handler.NewProfileHandler(db, cfg.UploadDir, renderer)
+	profileHandler := handler.NewProfileHandler(db, renderer)
 	mux.HandleFunc("GET /profile", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/my-posts", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/liked-posts", profileHandler.LikedPosts)
 	mux.HandleFunc("GET /profile/my-comments", profileHandler.MyComments)
 	mux.HandleFunc("GET /profile/activity", profileHandler.Activity)
-	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
-	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
 
 	// social profile routes
 	socialHandler := handler.NewSocialHandler(db, renderer)
@@ -59,8 +64,9 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /search", socialHandler.Search)
 
 	// settings routes
-	settingsHandler := handler.NewSettingsHandler(db, renderer)
+	settingsHandler := handler.NewSettingsHandler(db, cfg.UploadDir, renderer)
 	mux.HandleFunc("GET /settings", settingsHandler.Show)
+	mux.Handle("POST /settings/profile", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateProfile)))
 	mux.Handle("POST /settings/email", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateEmail)))
 	mux.Handle("POST /settings/password", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdatePassword)))
 	mux.Handle("POST /settings/social", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateSocial)))
@@ -79,7 +85,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	// post routes
 	postHandler := handler.NewPostHandler(db, cfg.UploadDir, renderer)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
-	mux.Handle("POST /post/new", writeLimiter.Wrap(http.HandlerFunc(postHandler.CreatePost)))
+	mux.Handle("POST /post/new", writeLimiter.Wrap(authMiddleware.RequireNotMuted(http.HandlerFunc(postHandler.CreatePost))))
 	mux.HandleFunc("GET /post/{id}/edit", postHandler.ShowEditForm)
 	mux.HandleFunc("POST /post/{id}/edit", postHandler.EditPost)
 	mux.HandleFunc("GET /post/{id}/delete", postHandler.ShowDeleteConfirmation)
@@ -88,7 +94,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 
 	// comment routes
 	commentHandler := handler.NewCommentHandler(db, renderer)
-	mux.Handle("POST /post/{id}/comment", writeLimiter.Wrap(http.HandlerFunc(commentHandler.CreateComment)))
+	mux.Handle("POST /post/{id}/comment", writeLimiter.Wrap(authMiddleware.RequireNotMuted(http.HandlerFunc(commentHandler.CreateComment))))
 	mux.HandleFunc("GET /comment/{id}/delete", commentHandler.ShowDeleteConfirmation)
 	mux.HandleFunc("POST /comment/{id}/delete", commentHandler.DeleteComment)
 	mux.HandleFunc("GET /comment/{id}/edit", commentHandler.ShowEditForm)
@@ -128,7 +134,6 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	homeHandler := handler.NewHomeHandler(db, errorRenderer, renderer)
 	mux.HandleFunc("/", homeHandler.Home)
 
-	authMiddleware := middleware.NewAuthMiddleware(db)
 	moderationHandler := handler.NewModerationHandler(db)
 	mux.Handle("POST /post/{id}/report", authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportPost)))
 	mux.Handle("POST /comment/{id}/report", authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportComment)))
