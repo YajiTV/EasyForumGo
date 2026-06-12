@@ -1,21 +1,33 @@
-{{define "title"}}{{.Post.Title}} — ForumJS{{end}}
+{{define "title"}}{{.Post.Title}} — Easy{{end}}
+
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/library.css">
+{{end}}
 
 {{define "content"}}
 <div class="post-detail">
 
+    <!-- post content -->
     <article class="post-full">
 
         <div class="post-full-header">
             <div class="post-full-categories">
                 {{range .Categories}}
-                <a href="/posts/category/{{.ID}}" class="category-tag">{{.Name}}</a>
+                <a href="/?category={{.ID}}" class="category-tag">{{.Name}}</a>
                 {{end}}
             </div>
 
             <h1 class="post-full-title">{{.Post.Title}}</h1>
 
             <div class="post-full-meta">
-                <span>Par <strong>{{.Author}}</strong></span>
+                <span class="post-full-author">
+                    {{if .AuthorAvatarURL}}
+                    <img src="{{.AuthorAvatarURL}}" alt="Photo de profil de {{.Author}}" class="author-avatar">
+                    {{else}}
+                    <span class="author-avatar">{{printf "%.1s" .Author}}</span>
+                    {{end}}
+                    <span>Par <strong><a href="/user/{{.Author}}">{{.Author}}</a></strong></span>
+                </span>
                 <span>{{.Post.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
             </div>
         </div>
@@ -30,6 +42,7 @@
             {{.Post.Content}}
         </div>
 
+        <!-- post actions -->
         <div class="post-full-actions">
             <form action="/post/{{.Post.ID}}/like" method="POST">
                 <button type="submit" class="btn-like">J'aime {{.LikeCount}}</button>
@@ -41,18 +54,42 @@
             {{if .User}}
                 {{if eq .User.ID .Post.UserID}}
                 <a href="/post/{{.Post.ID}}/edit" class="btn-secondary">Modifier</a>
-                <form action="/post/{{.Post.ID}}/delete" method="POST" onsubmit="return confirm('Supprimer ce post ?')">
-                    <button type="submit" class="btn-delete">Supprimer</button>
-                </form>
+                <a href="/post/{{.Post.ID}}/delete" class="btn-delete">Supprimer</a>
                 {{end}}
             {{end}}
         </div>
 
+        {{if .User}}
+        <!-- library actions -->
+        <section class="post-library-actions">
+            <div>
+                <strong>Bibliothèque</strong>
+                <a href="/library">Gérer mes listes</a>
+            </div>
+            {{if .Libraries}}
+            <form action="/post/{{.Post.ID}}/library" method="POST" class="post-library-form">
+                <label for="library-id">Enregistrer dans</label>
+                <select id="library-id" name="library_id" required>
+                    <option value="" disabled selected>Choisir une bibliothèque</option>
+                    {{range .Libraries}}
+                    <option value="{{.ID}}">{{.Name}}</option>
+                    {{end}}
+                </select>
+                <button type="submit">Ajouter</button>
+            </form>
+            {{else}}
+            <p>Créez une bibliothèque pour enregistrer ce post.</p>
+            {{end}}
+        </section>
+        {{end}}
+
     </article>
 
+    <!-- comments -->
     <section class="comments-section">
         <h2 class="comments-title">{{len .Comments}} commentaire{{if gt (len .Comments) 1}}s{{end}}</h2>
 
+        <!-- comment form -->
         {{if .User}}
         <form action="/post/{{.Post.ID}}/comment" method="POST" class="comment-form">
             <textarea name="content" rows="4" placeholder="Écrire un commentaire..." required></textarea>
@@ -62,19 +99,23 @@
         <p class="login-hint"><a href="/login">Connectez-vous</a> pour laisser un commentaire.</p>
         {{end}}
 
+        <!-- comment list -->
         <div class="comments-list">
             {{if .Comments}}
                 {{range .Comments}}
                 <div class="comment-card">
                     <div class="comment-meta">
-                        <strong>{{.Username}}</strong>
+                        {{if .AvatarURL}}
+                        <img src="{{.AvatarURL}}" alt="Photo de profil de {{.Username}}" class="author-avatar">
+                        {{else}}
+                        <span class="author-avatar">{{printf "%.1s" .Username}}</span>
+                        {{end}}
+                        <strong><a href="/user/{{.Username}}">{{.Username}}</a></strong>
                         <span>{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
                         {{if $.User}}
                             {{if eq $.User.ID .UserID}}
                             <a href="/comment/{{.ID}}/edit" class="btn-secondary btn-sm">Modifier</a>
-                            <form action="/comment/{{.ID}}/delete" method="POST" style="display:inline" onsubmit="return confirm('Supprimer ce commentaire ?')">
-                                <button type="submit" class="btn-delete btn-delete-sm">Supprimer</button>
-                            </form>
+                            <a href="/comment/{{.ID}}/delete" class="btn-delete btn-delete-sm">Supprimer</a>
                             {{end}}
                         {{end}}
                     </div>

@@ -1,4 +1,4 @@
-{{define "title"}}Modifier le profil — ForumJS{{end}}
+{{define "title"}}Modifier le profil — Easy{{end}}
 
 {{define "extra_css"}}
 <link rel="stylesheet" href="/static/css/profile.css">
@@ -6,6 +6,7 @@
 
 {{define "content"}}
 <div class="profile-edit-page">
+    <!-- profile form panel -->
     <section class="profile-edit-panel">
         <header class="profile-edit-header">
             <p class="profile-kicker">Compte</p>
@@ -13,10 +14,12 @@
             <p>Mettez à jour votre nom public et votre photo de profil.</p>
         </header>
 
+        <!-- validation error -->
         {{if .Error}}
             <p class="profile-error">{{.Error}}</p>
         {{end}}
 
+        <!-- profile form -->
         <form action="/profile/edit" method="POST" enctype="multipart/form-data" class="profile-form">
             <div class="profile-picture-row">
                 {{if .User.ProfilePicture}}
@@ -43,7 +46,7 @@
             </div>
 
             <div class="profile-form-actions">
-                <a href="/profile" class="btn-secondary">Annuler</a>
+                <a href="/user/{{.User.Username}}" class="btn-secondary">Annuler</a>
                 <button type="submit" class="btn-primary">Enregistrer</button>
             </div>
         </form>

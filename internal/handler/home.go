@@ -2,13 +2,11 @@ package handler
 
 import (
 	"database/sql"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
 )
 
 type PostWithMeta struct {
@@ -19,8 +17,10 @@ type PostWithMeta struct {
 	ImagePath    string
 	CreatedAt    time.Time
 	Username     string
+	AvatarURL    string
 	LikeCount    int
 	DislikeCount int
+	IsFollowing  bool
 }
 
 type HomePageData struct {
@@ -28,6 +28,13 @@ type HomePageData struct {
 	Posts           []PostWithMeta
 	Categories      []model.Category
 	CurrentCategory *model.Category
+	FollowingFeed   bool
+	Page            int
+	PreviousPage    int
+	NextPage        int
+	HasPrevious     bool
+	HasNext         bool
+	PaginationBase  string
 }
 
 type HomeHandler struct {
@@ -36,10 +43,13 @@ type HomeHandler struct {
 	sessions   *repository.SessionRepository
 	likes      *repository.LikeRepository
 	categories *repository.CategoryRepository
+	follows    *repository.FollowRepository
 	errors     *ErrorRenderer
+	renderer   *PageRenderer
 }
 
-func NewHomeHandler(db *sql.DB, errors *ErrorRenderer) *HomeHandler {
+// NewHomeHandler creates a new instance
+func NewHomeHandler(db *sql.DB, errors *ErrorRenderer, renderer *PageRenderer) *HomeHandler {
 	if errors == nil {
 		errors = NewErrorRenderer("web/templates")
 	}
@@ -50,10 +60,13 @@ func NewHomeHandler(db *sql.DB, errors *ErrorRenderer) *HomeHandler {
 		sessions:   repository.NewSessionRepository(db),
 		likes:      repository.NewLikeRepository(db),
 		categories: repository.NewCategoryRepository(db),
+		follows:    repository.NewFollowRepository(db),
 		errors:     errors,
+		renderer:   renderer,
 	}
 }
 
+// Home handles the request
 func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 	currentUser := h.userFromSession(r)
 
@@ -62,60 +75,96 @@ func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := h.posts.GetAll()
-	if err != nil {
-		h.errors.InternalServerError(w)
-		return
-	}
-
-	var postsWithMeta []PostWithMeta
-	for _, p := range posts {
-		user, err := h.users.GetByID(p.UserID)
-		if err != nil {
-			user = &model.User{Username: "Inconnu"}
-		}
-
-		likes, _ := h.likes.CountPostLikes(p.ID)
-		dislikes, _ := h.likes.CountPostDislikes(p.ID)
-
-		postsWithMeta = append(postsWithMeta, PostWithMeta{
-			ID:           p.ID,
-			UserID:       p.UserID,
-			Title:        p.Title,
-			Content:      p.Content,
-			ImagePath:    p.ImagePath,
-			CreatedAt:    p.CreatedAt,
-			Username:     user.Username,
-			LikeCount:    likes,
-			DislikeCount: dislikes,
-		})
-	}
-
+	page := pageNumber(r)
+	followingFeed := r.URL.Query().Get("feed") == "following"
 	categories, err := h.categories.GetAll()
 	if err != nil {
 		categories = []model.Category{}
 	}
 
-	data := HomePageData{
-		User:       currentUser,
-		Posts:      postsWithMeta,
-		Categories: categories,
-	}
+	var currentCategory *model.Category
+	var posts []model.Post
+	paginationBase := "/?page="
 
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "home.html"),
-	)
+	switch {
+	case followingFeed:
+		if currentUser == nil {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		posts, err = h.posts.GetFollowing(currentUser.ID, socialPageSize+1, (page-1)*socialPageSize)
+		paginationBase = "/?feed=following&page="
+	case r.URL.Query().Get("category") != "":
+		categoryID := r.URL.Query().Get("category")
+		currentCategory, err = h.categories.GetByID(categoryID)
+		if err != nil {
+			h.errors.RenderWithRequest(w, r, http.StatusNotFound, "Catégorie introuvable.")
+			return
+		}
+		posts, err = h.posts.GetByCategoryPaginated(categoryID, socialPageSize+1, (page-1)*socialPageSize)
+		paginationBase = "/?category=" + categoryID + "&page="
+	default:
+		posts, err = h.posts.GetAllPaginated(socialPageSize+1, (page-1)*socialPageSize)
+	}
 	if err != nil {
 		h.errors.InternalServerError(w)
 		return
 	}
 
-	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
-		h.errors.InternalServerError(w)
+	hasNext := len(posts) > socialPageSize
+	if hasNext {
+		posts = posts[:socialPageSize]
 	}
+
+	data := HomePageData{
+		User:            currentUser,
+		Posts:           h.postsWithMeta(posts, currentUser),
+		Categories:      categories,
+		CurrentCategory: currentCategory,
+		FollowingFeed:   followingFeed,
+		Page:            page,
+		PreviousPage:    page - 1,
+		NextPage:        page + 1,
+		HasPrevious:     page > 1,
+		HasNext:         hasNext,
+		PaginationBase:  paginationBase,
+	}
+
+	h.renderer.Render(w, "home.html", data)
 }
 
+// postsWithMeta adds display metadata to posts
+func (h *HomeHandler) postsWithMeta(posts []model.Post, currentUser *model.User) []PostWithMeta {
+	postsWithMeta := make([]PostWithMeta, 0, len(posts))
+	for _, post := range posts {
+		user, err := h.users.GetByID(post.UserID)
+		if err != nil {
+			user = &model.User{Username: "Inconnu"}
+		}
+		likes, _ := h.likes.CountPostLikes(post.ID)
+		dislikes, _ := h.likes.CountPostDislikes(post.ID)
+		isFollowing := false
+		if currentUser != nil {
+			isFollowing, _ = h.follows.IsFollowing(currentUser.ID, post.UserID)
+		}
+		postsWithMeta = append(postsWithMeta, PostWithMeta{
+			ID:           post.ID,
+			UserID:       post.UserID,
+			Title:        post.Title,
+			Content:      post.Content,
+			ImagePath:    post.ImagePath,
+			CreatedAt:    post.CreatedAt,
+			Username:     user.Username,
+			AvatarURL:    user.AvatarURL(),
+			LikeCount:    likes,
+			DislikeCount: dislikes,
+			IsFollowing:  isFollowing,
+		})
+	}
+	return postsWithMeta
+}
+
+// userFromSession gets the user from the current session
 func (h *HomeHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {

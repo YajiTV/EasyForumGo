@@ -3,17 +3,19 @@ package repository
 import (
 	"database/sql"
 
-	"ForumJS/internal/model"
+	"EasyForumGo/internal/model"
 )
 
 type CategoryRepository struct {
 	db *sql.DB
 }
 
+// NewCategoryRepository creates a new instance
 func NewCategoryRepository(db *sql.DB) *CategoryRepository {
 	return &CategoryRepository{db: db}
 }
 
+// GetAll gets stored data
 func (r *CategoryRepository) GetAll() ([]model.Category, error) {
 	rows, err := r.db.Query(`SELECT id, name, description FROM categories ORDER BY name ASC`)
 	if err != nil {
@@ -32,6 +34,7 @@ func (r *CategoryRepository) GetAll() ([]model.Category, error) {
 	return categories, rows.Err()
 }
 
+// GetByID gets stored data
 func (r *CategoryRepository) GetByID(id string) (*model.Category, error) {
 	var c model.Category
 	err := r.db.QueryRow(`SELECT id, name, description FROM categories WHERE id = ?`, id).Scan(&c.ID, &c.Name, &c.Description)
@@ -41,6 +44,7 @@ func (r *CategoryRepository) GetByID(id string) (*model.Category, error) {
 	return &c, nil
 }
 
+// Create creates a new record
 func (r *CategoryRepository) Create(c *model.Category) error {
 	_, err := r.db.Exec(`INSERT INTO categories (id, name, description) VALUES (?, ?, ?)`, c.ID, c.Name, c.Description)
 	return err

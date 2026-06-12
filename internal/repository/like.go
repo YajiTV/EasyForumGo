@@ -4,28 +4,32 @@ import (
 	"database/sql"
 	"errors"
 
-	"ForumJS/internal/model"
+	"EasyForumGo/internal/model"
 )
 
 type LikeRepository struct {
 	db *sql.DB
 }
 
+// NewLikeRepository creates a new instance
 func NewLikeRepository(db *sql.DB) *LikeRepository {
 	return &LikeRepository{db: db}
 }
 
+// CreatePostLike creates a new record
 func (r *LikeRepository) CreatePostLike(l *model.PostLike) error {
 	_, err := r.db.Exec(`INSERT INTO post_likes (id, post_id, user_id, is_like, created_at) VALUES (?, ?, ?, ?, ?)`,
 		l.ID, l.PostID, l.UserID, l.IsLike, l.CreatedAt)
 	return err
 }
 
+// DeletePostLike deletes an existing record
 func (r *LikeRepository) DeletePostLike(postID, userID string) error {
 	_, err := r.db.Exec(`DELETE FROM post_likes WHERE post_id = ? AND user_id = ?`, postID, userID)
 	return err
 }
 
+// GetUserPostLike gets stored data
 func (r *LikeRepository) GetUserPostLike(postID, userID string) (*model.PostLike, error) {
 	var l model.PostLike
 	err := r.db.QueryRow(
@@ -41,6 +45,7 @@ func (r *LikeRepository) GetUserPostLike(postID, userID string) (*model.PostLike
 	return &l, nil
 }
 
+// UpdatePostLike updates an existing record
 func (r *LikeRepository) UpdatePostLike(postID, userID string, isLike bool) error {
 	_, err := r.db.Exec(
 		`UPDATE post_likes SET is_like = ? WHERE post_id = ? AND user_id = ?`,
@@ -49,6 +54,7 @@ func (r *LikeRepository) UpdatePostLike(postID, userID string, isLike bool) erro
 	return err
 }
 
+// GetByPostID gets stored data
 func (r *LikeRepository) GetByPostID(postID string) ([]model.PostLike, error) {
 	rows, err := r.db.Query(`SELECT id, post_id, user_id, is_like, created_at FROM post_likes WHERE post_id = ?`, postID)
 	if err != nil {
@@ -67,29 +73,34 @@ func (r *LikeRepository) GetByPostID(postID string) ([]model.PostLike, error) {
 	return likes, rows.Err()
 }
 
+// CountPostLikes counts stored records
 func (r *LikeRepository) CountPostLikes(postID string) (int, error) {
 	var count int
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM post_likes WHERE post_id = ? AND is_like = 1`, postID).Scan(&count)
 	return count, err
 }
 
+// CountPostDislikes counts stored records
 func (r *LikeRepository) CountPostDislikes(postID string) (int, error) {
 	var count int
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM post_likes WHERE post_id = ? AND is_like = 0`, postID).Scan(&count)
 	return count, err
 }
 
+// CreateCommentLike creates a new record
 func (r *LikeRepository) CreateCommentLike(l *model.CommentLike) error {
 	_, err := r.db.Exec(`INSERT INTO comment_likes (id, comment_id, user_id, is_like, created_at) VALUES (?, ?, ?, ?, ?)`,
 		l.ID, l.CommentID, l.UserID, l.IsLike, l.CreatedAt)
 	return err
 }
 
+// DeleteCommentLike deletes an existing record
 func (r *LikeRepository) DeleteCommentLike(commentID, userID string) error {
 	_, err := r.db.Exec(`DELETE FROM comment_likes WHERE comment_id = ? AND user_id = ?`, commentID, userID)
 	return err
 }
 
+// GetUserCommentLike gets stored data
 func (r *LikeRepository) GetUserCommentLike(commentID, userID string) (*model.CommentLike, error) {
 	var l model.CommentLike
 	err := r.db.QueryRow(
@@ -105,6 +116,7 @@ func (r *LikeRepository) GetUserCommentLike(commentID, userID string) (*model.Co
 	return &l, nil
 }
 
+// UpdateCommentLike updates an existing record
 func (r *LikeRepository) UpdateCommentLike(commentID, userID string, isLike bool) error {
 	_, err := r.db.Exec(
 		`UPDATE comment_likes SET is_like = ? WHERE comment_id = ? AND user_id = ?`,
@@ -113,6 +125,7 @@ func (r *LikeRepository) UpdateCommentLike(commentID, userID string, isLike bool
 	return err
 }
 
+// GetByCommentID gets stored data
 func (r *LikeRepository) GetByCommentID(commentID string) ([]model.CommentLike, error) {
 	rows, err := r.db.Query(`SELECT id, comment_id, user_id, is_like, created_at FROM comment_likes WHERE comment_id = ?`, commentID)
 	if err != nil {
@@ -131,26 +144,34 @@ func (r *LikeRepository) GetByCommentID(commentID string) ([]model.CommentLike, 
 	return likes, rows.Err()
 }
 
+// CountCommentLikes counts stored records
 func (r *LikeRepository) CountCommentLikes(commentID string) (int, error) {
 	var count int
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM comment_likes WHERE comment_id = ? AND is_like = 1`, commentID).Scan(&count)
 	return count, err
 }
 
+// CountCommentDislikes counts stored records
 func (r *LikeRepository) CountCommentDislikes(commentID string) (int, error) {
 	var count int
 	err := r.db.QueryRow(`SELECT COUNT(*) FROM comment_likes WHERE comment_id = ? AND is_like = 0`, commentID).Scan(&count)
 	return count, err
 }
 
+// GetLikedPostsByUserID gets stored data
 func (r *LikeRepository) GetLikedPostsByUserID(userID string) ([]model.Post, error) {
+	return r.GetPostsByUserVote(userID, true)
+}
+
+// GetPostsByUserVote gets posts matching a user's vote
+func (r *LikeRepository) GetPostsByUserVote(userID string, isLike bool) ([]model.Post, error) {
 	rows, err := r.db.Query(`
 		SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
 		FROM posts p
 		JOIN post_likes pl ON p.id = pl.post_id
-		WHERE pl.user_id = ? AND pl.is_like = 1
+		WHERE pl.user_id = ? AND pl.is_like = ?
 		ORDER BY pl.created_at DESC
-	`, userID)
+	`, userID, isLike)
 	if err != nil {
 		return nil, err
 	}
@@ -165,4 +186,24 @@ func (r *LikeRepository) GetLikedPostsByUserID(userID string) ([]model.Post, err
 		posts = append(posts, p)
 	}
 	return posts, rows.Err()
+}
+
+// CountPostVotesByUserID counts a user's post votes by type
+func (r *LikeRepository) CountPostVotesByUserID(userID string, isLike bool) (int, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM post_likes WHERE user_id = ? AND is_like = ?`,
+		userID, isLike,
+	).Scan(&count)
+	return count, err
+}
+
+// CountCommentVotesByUserID counts a user's comment votes by type
+func (r *LikeRepository) CountCommentVotesByUserID(userID string, isLike bool) (int, error) {
+	var count int
+	err := r.db.QueryRow(
+		`SELECT COUNT(*) FROM comment_likes WHERE user_id = ? AND is_like = ?`,
+		userID, isLike,
+	).Scan(&count)
+	return count, err
 }
