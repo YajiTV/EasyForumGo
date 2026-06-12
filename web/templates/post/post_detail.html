@@ -119,7 +119,6 @@
                     <p>Discussion</p>
                     <h2>{{len .Comments}} commentaire{{if gt (len .Comments) 1}}s{{end}}</h2>
                 </div>
-                <a href="#comment-form">Participer</a>
             </header>
 
             {{if .User}}
@@ -206,13 +205,17 @@
                 {{end}}
                 <strong>{{.Author}}</strong>
             </a>
+            <p class="reading-rail-biography">{{if .AuthorBiography}}{{.AuthorBiography}}{{else}}Aucune biographie pour le moment.{{end}}</p>
+            {{if .AuthorTopics}}
+            <div class="reading-rail-topics">
+                <span>Publie souvent dans</span>
+                <nav aria-label="Thèmes fréquents de {{.Author}}">
+                    {{range .AuthorTopics}}<a href="/?category={{.ID}}">{{.Name}}</a>{{end}}
+                </nav>
+            </div>
+            {{end}}
             <a href="/user/{{.Author}}" class="reading-rail-link">Voir le profil</a>
         </div>
-        <nav class="reading-rail-card reading-rail-nav" aria-label="Navigation dans le post">
-            <p class="reading-rail-kicker">Sur cette page</p>
-            <a href="#comments">Discussion <span>{{len .Comments}}</span></a>
-            {{if .User}}<a href="#library-title">Enregistrer</a>{{end}}
-        </nav>
     </aside>
 </div>
 {{end}}
