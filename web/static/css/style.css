@@ -1130,7 +1130,14 @@ textarea {
 .post-full-author {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+}
+
+.post-full-author .author-avatar {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+    font-size: 16px;
 }
 
 .post-full-image {
