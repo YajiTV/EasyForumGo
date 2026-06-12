@@ -77,7 +77,7 @@ func themeRedirect(r *http.Request) string {
 }
 
 const lightThemeCSS = `
-.theme-shell {
+.theme-shell, :root {
 	--text: #242424;
 	--muted: #6b6b6b;
 	--soft: #f7f7f7;
@@ -95,7 +95,7 @@ body { background: #fff; }
 `
 
 const darkThemeCSS = `
-.theme-shell {
+.theme-shell, :root {
 	--text: #ededed;
 	--muted: #aaa;
 	--soft: #202020;
