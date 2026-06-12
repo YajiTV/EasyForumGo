@@ -15,8 +15,22 @@ func NewModerationRepository(db *sql.DB) *ModerationRepository {
 
 // GetAllUsers returns all users with their role and restriction status.
 func (r *ModerationRepository) GetAllUsers() ([]model.User, error) {
-	return nil, nil
+	rows, err := r.db.Query(`SELECT id, email, username, role FROM users`)
+	if err != nil {
+		return nil, err
+	}
+		defer rows.Close()
+		var users []model.User
+		for rows.Next(){
+			var user model.User
+		if err := rows.Scan(&user.ID, &user.Email, &user.Username, &user.Role); err != nil {
+			return nil, err
+		}
+   users = append(users, user)
+	}
+	return users, rows.Err()
 }
+
 
 // GetUserStatus returns the active restriction type for a user ("active", "muted", "banned").
 func (r *ModerationRepository) GetUserStatus(userID string) (string, error) {
