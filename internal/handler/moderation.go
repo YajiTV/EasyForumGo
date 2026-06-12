@@ -1,0 +1,284 @@
+package handler
+
+import (
+	"database/sql"
+	"html/template"
+	"net/http"
+	"path/filepath"
+	"strconv"
+	"time"
+
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
+)
+
+type ModerationHandler struct {
+	reports  *repository.ReportRepository
+	posts    *repository.PostRepository
+	comments *repository.CommentRepository
+	users    *repository.UserRepository
+	sessions *repository.SessionRepository
+}
+
+func NewModerationHandler(db *sql.DB) *ModerationHandler {
+	return &ModerationHandler{
+		reports:  repository.NewReportRepository(db),
+		posts:    repository.NewPostRepository(db),
+		comments: repository.NewCommentRepository(db),
+		users:    repository.NewUserRepository(db),
+		sessions: repository.NewSessionRepository(db),
+	}
+}
+
+func (h *ModerationHandler) ReportPost(w http.ResponseWriter, r *http.Request) {
+	h.createReport(w, r, model.TargetPost)
+}
+
+func (h *ModerationHandler) ReportComment(w http.ResponseWriter, r *http.Request) {
+	h.createReport(w, r, model.TargetComment)
+}
+
+func (h *ModerationHandler) ReportUser(w http.ResponseWriter, r *http.Request) {
+	h.createReport(w, r, model.TargetUser)
+}
+
+func (h *ModerationHandler) createReport(w http.ResponseWriter, r *http.Request, targetType model.TargetType) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	targetID := r.PathValue("id")
+	category := model.ReportCategory(r.FormValue("category"))
+	reason := r.FormValue("reason")
+
+	validCategories := map[model.ReportCategory]bool{
+		model.CategorySpam:                 true,
+		model.CategoryHarassment:           true,
+		model.CategoryInappropriateContent: true,
+		model.CategoryHateSpeech:           true,
+		model.CategoryOther:                true,
+	}
+	if !validCategories[category] {
+		http.Error(w, "Catégorie invalide", http.StatusBadRequest)
+		return
+	}
+
+	already, err := h.reports.AlreadyReported(user.ID, targetType, targetID)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	if already {
+		http.Error(w, "Vous avez déjà signalé cet élément", http.StatusConflict)
+		return
+	}
+
+	report := &model.Report{
+		ID:         utils.NewUUID(),
+		ReporterID: user.ID,
+		TargetType: targetType,
+		TargetID:   targetID,
+		Category:   category,
+		Reason:     reason,
+		Status:     model.ReportPending,
+		CreatedAt:  time.Now(),
+	}
+	if err := h.reports.Create(report); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	redirectTo := r.FormValue("redirect_to")
+	if redirectTo == "" {
+		redirectTo = "/"
+	}
+	http.Redirect(w, r, redirectTo, http.StatusSeeOther)
+}
+
+func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil || !user.CanModerate() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+
+	pending, err := h.reports.GetPending()
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	history, err := h.reports.GetActionHistory()
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	tmpl, err := template.ParseFiles(
+		filepath.Join("web", "templates", "layout", "base.html"),
+		filepath.Join("web", "templates", "moderation", "dashboard.html"),
+	)
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "base", map[string]any{
+		"CurrentUser": user,
+		"Pending":     pending,
+		"History":     history,
+	})
+}
+
+func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
+	moderator := h.userFromSession(r)
+	if moderator == nil || !moderator.CanModerate() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+
+	reportID := r.PathValue("id")
+	report, err := h.reports.GetByID(reportID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	actionType := model.ActionType(r.FormValue("action_type"))
+	reason := r.FormValue("reason")
+
+	switch actionType {
+	case model.ActionDeletePost:
+		if err := h.posts.Delete(report.TargetID); err != nil && err != sql.ErrNoRows {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+	case model.ActionDeleteComment:
+		if err := h.comments.Delete(report.TargetID); err != nil && err != sql.ErrNoRows {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+	case model.ActionWarnUser:
+	case model.ActionMuteUser:
+		durationHours, _ := strconv.Atoi(r.FormValue("duration_hours"))
+		if durationHours <= 0 {
+			durationHours = 24
+		}
+		expiresAt := time.Now().Add(time.Duration(durationHours) * time.Hour)
+		restriction := &model.UserRestriction{
+			ID:        utils.NewUUID(),
+			UserID:    report.TargetID,
+			Type:      model.RestrictionMute,
+			Reason:    reason,
+			ExpiresAt: &expiresAt,
+			CreatedBy: moderator.ID,
+			CreatedAt: time.Now(),
+		}
+		if err := h.reports.CreateRestriction(restriction); err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+	case model.ActionBanUser:
+		if !moderator.IsAdmin() {
+			http.Error(w, "Seul un admin peut bannir un utilisateur", http.StatusForbidden)
+			return
+		}
+		restriction := &model.UserRestriction{
+			ID:        utils.NewUUID(),
+			UserID:    report.TargetID,
+			Type:      model.RestrictionBan,
+			Reason:    reason,
+			ExpiresAt: nil,
+			CreatedBy: moderator.ID,
+			CreatedAt: time.Now(),
+		}
+		if err := h.reports.CreateRestriction(restriction); err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+	default:
+		http.Error(w, "Action invalide", http.StatusBadRequest)
+		return
+	}
+
+	action := &model.ModerationAction{
+		ID:          utils.NewUUID(),
+		ModeratorID: moderator.ID,
+		ReportID:    reportID,
+		ActionType:  actionType,
+		TargetID:    report.TargetID,
+		Reason:      reason,
+		CreatedAt:   time.Now(),
+	}
+	h.reports.CreateAction(action)
+	h.reports.UpdateStatus(reportID, model.ReportResolved)
+
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
+
+func (h *ModerationHandler) DismissReport(w http.ResponseWriter, r *http.Request) {
+	moderator := h.userFromSession(r)
+	if moderator == nil || !moderator.CanModerate() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+
+	reportID := r.PathValue("id")
+	if err := h.reports.UpdateStatus(reportID, model.ReportDismissed); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
+
+func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Request) {
+	admin := h.userFromSession(r)
+	if admin == nil || !admin.IsAdmin() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+
+	targetUserID := r.PathValue("id")
+	newRole := model.Role(r.FormValue("role"))
+
+	if newRole != model.RoleUser && newRole != model.RoleModerator && newRole != model.RoleAdmin {
+		http.Error(w, "Rôle invalide", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.users.UpdateRole(targetUserID, newRole); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	action := &model.ModerationAction{
+		ID:          utils.NewUUID(),
+		ModeratorID: admin.ID,
+		ActionType:  model.ActionChangeRole,
+		TargetID:    targetUserID,
+		Reason:      string(newRole),
+		CreatedAt:   time.Now(),
+	}
+	h.reports.CreateAction(action)
+
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
+
+func (h *ModerationHandler) userFromSession(r *http.Request) *model.User {
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		return nil
+	}
+	session, err := h.sessions.GetByToken(cookie.Value)
+	if err != nil || session.ExpiresAt.Before(time.Now()) {
+		return nil
+	}
+	user, err := h.users.GetByID(session.UserID)
+	if err != nil {
+		return nil
+	}
+	return user
+}

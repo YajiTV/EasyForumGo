@@ -3,19 +3,17 @@ package handler
 import (
 	"database/sql"
 	"errors"
-	"html/template"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
-	"ForumJS/pkg/utils"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
+	"EasyForumGo/pkg/validator"
 )
-
-const maxImageSize = 5 << 20
 
 type PostHandler struct {
 	posts          *repository.PostRepository
@@ -25,10 +23,15 @@ type PostHandler struct {
 	users          *repository.UserRepository
 	comments       *repository.CommentRepository
 	likes          *repository.LikeRepository
+	libraries      *repository.LibraryRepository
 	uploadDir      string
+	renderer       *PageRenderer
+	follows        *repository.FollowRepository
+	notifications  *repository.NotificationRepository
 }
 
-func NewPostHandler(db *sql.DB, uploadDir string) *PostHandler {
+// NewPostHandler creates a new instance
+func NewPostHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *PostHandler {
 	return &PostHandler{
 		posts:          repository.NewPostRepository(db),
 		categories:     repository.NewCategoryRepository(db),
@@ -37,7 +40,11 @@ func NewPostHandler(db *sql.DB, uploadDir string) *PostHandler {
 		users:          repository.NewUserRepository(db),
 		comments:       repository.NewCommentRepository(db),
 		likes:          repository.NewLikeRepository(db),
+		libraries:      repository.NewLibraryRepository(db),
 		uploadDir:      uploadDir,
+		renderer:       renderer,
+		follows:        repository.NewFollowRepository(db),
+		notifications:  repository.NewNotificationRepository(db),
 	}
 }
 
@@ -49,6 +56,12 @@ type createPostData struct {
 	Content    string
 }
 
+type deletePostData struct {
+	User *model.User
+	Post *model.Post
+}
+
+// ShowCreateForm renders the requested page
 func (h *PostHandler) ShowCreateForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -64,6 +77,7 @@ func (h *PostHandler) ShowCreateForm(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// CreatePost creates a new record
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -71,8 +85,8 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxImageSize)
-	if err := r.ParseMultipartForm(maxImageSize); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
+	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
 		h.renderError(w, r, user, "Fichier trop volumineux (max 20 Mo).")
 		return
 	}
@@ -81,21 +95,18 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	content := strings.TrimSpace(r.FormValue("content"))
 	categoryIDs := r.Form["categories"]
 
-	// Validation
-	if title == "" {
-		h.renderError(w, r, user, "Le titre est obligatoire.")
+	if validationErrors := validator.ValidatePost(validator.PostInput{
+		Title:       title,
+		Content:     content,
+		CategoryIDs: categoryIDs,
+	}); validationErrors.HasErrors() {
+		h.renderError(w, r, user, firstValidationMessage(validationErrors))
 		return
 	}
-	if len(title) > 200 {
-		h.renderError(w, r, user, "Le titre ne peut pas dépasser 200 caractères.")
-		return
-	}
-	if content == "" {
-		h.renderError(w, r, user, "Le contenu est obligatoire.")
-		return
-	}
-	if len(categoryIDs) == 0 {
-		h.renderError(w, r, user, "Sélectionnez au moins une catégorie.")
+
+	categoryIDs, err := h.validCategoryIDs(categoryIDs)
+	if err != nil {
+		h.renderError(w, r, user, "Sélectionnez une catégorie valide.")
 		return
 	}
 
@@ -113,9 +124,11 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		imagePath = filename
+	} else if !errors.Is(err, http.ErrMissingFile) {
+		h.renderError(w, r, user, "L'image envoyée est invalide.")
+		return
 	}
 
-	// Insertion post
 	now := time.Now()
 	post := &model.Post{
 		ID:        utils.NewUUID(),
@@ -132,14 +145,33 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Association categories
 	for _, catID := range categoryIDs {
-		h.postCategories.AddCategory(post.ID, catID)
+		if err := h.postCategories.AddCategory(post.ID, catID); err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
 	}
+
+	h.notifyFollowers(post)
 
 	http.Redirect(w, r, "/post/"+post.ID, http.StatusSeeOther)
 }
 
+// notifyFollowers notifies followers about a new post
+func (h *PostHandler) notifyFollowers(post *model.Post) {
+	followerIDs, err := h.follows.FollowerIDs(post.UserID)
+	if err != nil {
+		return
+	}
+	for _, followerID := range followerIDs {
+		_ = h.notifications.Create(&model.Notification{
+			ID: utils.NewUUID(), UserID: followerID, ActorID: post.UserID,
+			Type: "new_post", PostID: post.ID, CreatedAt: time.Now(),
+		})
+	}
+}
+
+// DeletePost deletes an existing record
 func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -147,7 +179,7 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postID := r.PathValue("id")
+	postID := strings.TrimSuffix(r.PathValue("id"), "/delete")
 	post, err := h.posts.GetByID(postID)
 	if err != nil {
 		http.NotFound(w, r)
@@ -171,14 +203,41 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-type editPostData struct {
-	User              *model.User
-	Post              *model.Post
-	Categories        []model.Category
-	SelectedCategories map[string]bool
-	Error             string
+// ShowDeleteConfirmation renders the requested page
+func (h *PostHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := strings.TrimSuffix(r.PathValue("id"), "/delete")
+	post, err := h.posts.GetByID(postID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if post.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	h.renderer.Render(w, "post/delete_post.html", deletePostData{
+		User: user,
+		Post: post,
+	})
 }
 
+type editPostData struct {
+	User               *model.User
+	Post               *model.Post
+	Categories         []model.Category
+	SelectedCategories map[string]bool
+	Error              string
+}
+
+// ShowEditForm renders the requested page
 func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -186,7 +245,7 @@ func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postID := r.PathValue("id")
+	postID := strings.TrimSuffix(r.PathValue("id"), "/edit")
 	post, err := h.posts.GetByID(postID)
 	if err != nil {
 		http.NotFound(w, r)
@@ -214,6 +273,7 @@ func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// EditPost updates a post from the author
 func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -221,7 +281,7 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	postID := r.PathValue("id")
+	postID := strings.TrimSuffix(r.PathValue("id"), "/edit")
 	post, err := h.posts.GetByID(postID)
 	if err != nil {
 		http.NotFound(w, r)
@@ -233,8 +293,8 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxImageSize)
-	if err := r.ParseMultipartForm(maxImageSize); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
+	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
 		http.Error(w, "Fichier trop volumineux", http.StatusBadRequest)
 		return
 	}
@@ -260,20 +320,18 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if title == "" {
-		renderErr("Le titre est obligatoire.")
+	if validationErrors := validator.ValidatePost(validator.PostInput{
+		Title:       title,
+		Content:     content,
+		CategoryIDs: categoryIDs,
+	}); validationErrors.HasErrors() {
+		renderErr(firstValidationMessage(validationErrors))
 		return
 	}
-	if len(title) > 200 {
-		renderErr("Le titre ne peut pas dépasser 200 caractères.")
-		return
-	}
-	if content == "" {
-		renderErr("Le contenu est obligatoire.")
-		return
-	}
-	if len(categoryIDs) == 0 {
-		renderErr("Sélectionnez au moins une catégorie.")
+
+	categoryIDs, err = h.validCategoryIDs(categoryIDs)
+	if err != nil {
+		renderErr("Sélectionnez une catégorie valide.")
 		return
 	}
 
@@ -293,6 +351,9 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 			os.Remove(filepath.Join(h.uploadDir, post.ImagePath))
 		}
 		post.ImagePath = filename
+	} else if !errors.Is(err, http.ErrMissingFile) {
+		renderErr("L'image envoyée est invalide.")
+		return
 	}
 
 	post.Title = title
@@ -304,28 +365,26 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.postCategories.DeleteByPostID(postID)
+	if err := h.postCategories.DeleteByPostID(postID); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
 	for _, catID := range categoryIDs {
-		h.postCategories.AddCategory(postID, catID)
+		if err := h.postCategories.AddCategory(postID, catID); err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 }
 
+// renderEditForm renders the requested page
 func (h *PostHandler) renderEditForm(w http.ResponseWriter, data editPostData) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "post", "edit_post.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "post/edit_post.html", data)
 }
 
-// --- helpers ---
-
+// userFromSession gets the user from the current session
 func (h *PostHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
@@ -342,18 +401,12 @@ func (h *PostHandler) userFromSession(r *http.Request) *model.User {
 	return user
 }
 
+// renderCreateForm renders the requested page
 func (h *PostHandler) renderCreateForm(w http.ResponseWriter, data createPostData) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "post", "create_post.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, "post/create_post.html", data)
 }
 
+// renderError renders the requested page
 func (h *PostHandler) renderError(w http.ResponseWriter, r *http.Request, user *model.User, msg string) {
 	categories, _ := h.categories.GetAll()
 	h.renderCreateForm(w, createPostData{
@@ -365,27 +418,63 @@ func (h *PostHandler) renderError(w http.ResponseWriter, r *http.Request, user *
 	})
 }
 
-// --- PostDetail ---
+// validCategoryIDs removes duplicate and unknown category ids
+func (h *PostHandler) validCategoryIDs(categoryIDs []string) ([]string, error) {
+	seen := make(map[string]bool, len(categoryIDs))
+	validIDs := make([]string, 0, len(categoryIDs))
+
+	for _, categoryID := range categoryIDs {
+		categoryID = strings.TrimSpace(categoryID)
+		if categoryID == "" || seen[categoryID] {
+			continue
+		}
+		if _, err := h.categories.GetByID(categoryID); err != nil {
+			return nil, err
+		}
+		seen[categoryID] = true
+		validIDs = append(validIDs, categoryID)
+	}
+
+	if len(validIDs) == 0 {
+		return nil, errors.New("no valid category selected")
+	}
+
+	return validIDs, nil
+}
 
 type CommentWithAuthor struct {
 	model.Comment
 	Username     string
+	AvatarURL    string
 	LikeCount    int
 	DislikeCount int
 }
 
 type PostDetailData struct {
-	User         *model.User
-	Post         *model.Post
-	Author       string
-	Categories   []model.Category
-	Comments     []CommentWithAuthor
-	LikeCount    int
-	DislikeCount int
+	User            *model.User
+	Post            *model.Post
+	Author          string
+	AuthorAvatarURL string
+	Categories      []model.Category
+	Comments        []CommentWithAuthor
+	Libraries       []model.Library
+	LikeCount       int
+	DislikeCount    int
 }
 
+// PostDetail handles the request
 func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	postID := r.PathValue("id")
+	if strings.HasSuffix(postID, "/edit") {
+		r.SetPathValue("id", strings.TrimSuffix(postID, "/edit"))
+		h.ShowEditForm(w, r)
+		return
+	}
+	if strings.HasSuffix(postID, "/delete") {
+		r.SetPathValue("id", strings.TrimSuffix(postID, "/delete"))
+		h.ShowDeleteConfirmation(w, r)
+		return
+	}
 	if postID == "" {
 		http.NotFound(w, r)
 		return
@@ -411,36 +500,39 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	for _, c := range rawComments {
 		u, err := h.users.GetByID(c.UserID)
 		username := "Inconnu"
+		avatarURL := ""
 		if err == nil {
 			username = u.Username
+			avatarURL = u.AvatarURL()
 		}
 		cLikes, _ := h.likes.CountCommentLikes(c.ID)
 		cDislikes, _ := h.likes.CountCommentDislikes(c.ID)
 		comments = append(comments, CommentWithAuthor{
 			Comment:      c,
 			Username:     username,
+			AvatarURL:    avatarURL,
 			LikeCount:    cLikes,
 			DislikeCount: cDislikes,
 		})
 	}
 
-	data := PostDetailData{
-		User:         h.userFromSession(r),
-		Post:         post,
-		Author:       author.Username,
-		Categories:   categories,
-		Comments:     comments,
-		LikeCount:    likes,
-		DislikeCount: dislikes,
+	currentUser := h.userFromSession(r)
+	libraries := []model.Library{}
+	if currentUser != nil {
+		libraries, _ = h.libraries.GetByUserID(currentUser.ID)
 	}
 
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "post", "post_detail.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
+	data := PostDetailData{
+		User:            currentUser,
+		Post:            post,
+		Author:          author.Username,
+		AuthorAvatarURL: author.AvatarURL(),
+		Categories:      categories,
+		Comments:        comments,
+		Libraries:       libraries,
+		LikeCount:       likes,
+		DislikeCount:    dislikes,
 	}
-	tmpl.ExecuteTemplate(w, "base", data)
+
+	h.renderer.Render(w, "post/post_detail.html", data)
 }

@@ -4,13 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{block "title" .}}ForumJS{{end}}</title>
+    <title>{{block "title" .}}Easy{{end}}</title>
+    <link rel="icon" type="image/x-icon" href="/static/img/logo.ico">
     <link rel="stylesheet" href="/static/css/style.css">
     {{block "extra_css" .}}{{end}}
+    <style>
+        .notif-bell { position: relative; display: flex; align-items: center; }
+        .notif-badge { position: absolute; top: -4px; right: -6px; background: #e53e3e; color: #fff;
+            font-size: 10px; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px;
+            padding: 0 3px; text-align: center; line-height: 16px; }
+    </style>
 </head>
 <body>
     <input type="checkbox" id="menu-state" class="menu-state" aria-hidden="true">
 
+    <!-- top navigation -->
     <header class="topbar">
         <nav class="topbar-nav">
             <div class="topbar-left">
@@ -19,7 +27,7 @@
                     <span></span>
                     <span></span>
                 </label>
-                <a href="/" class="nav-logo">ForumJS</a>
+                <a href="/" class="nav-logo">Easy</a>
             </div>
 
             <form action="/search" method="GET" class="search-form" role="search">
@@ -27,31 +35,49 @@
                     <circle cx="11" cy="11" r="8"></circle>
                     <path d="m21 21-4.3-4.3"></path>
                 </svg>
-                <input type="search" name="q" placeholder="Rechercher" aria-label="Rechercher">
+                <input type="search" name="q" placeholder="Posts, profils, sujets..." aria-label="Rechercher des posts ou des profils">
+                <button type="submit">Rechercher</button>
             </form>
 
             <div class="nav-links">
                 {{if .User}}
+                    {{$notifCount := notifCount .User}}
+                    <a href="/notifications" class="notif-bell" aria-label="Notifications">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+                            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+                        </svg>
+                        {{if gt $notifCount 0}}
+                            <span class="notif-badge">{{if gt $notifCount 99}}99+{{else}}{{$notifCount}}{{end}}</span>
+                        {{end}}
+                    </a>
                     <a href="/post/new" class="write-link">Écrire</a>
                     <details class="user-menu">
                         <summary aria-label="Menu utilisateur">
                             {{if .User.ProfilePicture}}
-                                <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar">
+                                <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar">
                             {{else}}
                                 <span class="user-avatar">{{printf "%.1s" .User.Username}}</span>
                             {{end}}
                         </summary>
                         <div class="user-menu-panel">
-                            <a href="/profile" class="user-menu-profile">
+                            <a href="/user/{{.User.Username}}" class="user-menu-profile">
                                 {{if .User.ProfilePicture}}
-                                    <img src="/uploads/{{.User.ProfilePicture}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar user-avatar-large">
+                                    <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}" class="user-avatar user-avatar-large">
                                 {{else}}
                                     <span class="user-avatar user-avatar-large">{{printf "%.1s" .User.Username}}</span>
                                 {{end}}
                                 <span>
                                     <strong>{{.User.Username}}</strong>
-                                    <small>Voir le profil</small>
+                                    <small>Voir mon profil</small>
                                 </span>
+                            </a>
+                            <a href="/profile" class="user-menu-row">
+                                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M3 3v18h18"></path>
+                                    <path d="m7 16 4-4 3 3 5-6"></path>
+                                </svg>
+                                <span>Mon activité</span>
                             </a>
                             <a href="/settings" class="user-menu-row">
                                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -90,7 +116,9 @@
         </nav>
     </header>
 
+    <!-- application layout -->
     <div class="app-shell">
+        <!-- side navigation -->
         <aside class="left-sidebar" id="site-menu" aria-label="Navigation principale">
             <nav class="side-nav">
                 <a href="/" class="side-nav-item active">
@@ -109,12 +137,26 @@
                         </svg>
                         <span>Nouveau post</span>
                     </a>
-                    <a href="/profile" class="side-nav-item">
+                    <a href="/user/{{.User.Username}}" class="side-nav-item">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                             <path d="M20 21a8 8 0 0 0-16 0"></path>
                             <circle cx="12" cy="7" r="4"></circle>
                         </svg>
-                        <span>Profil</span>
+                        <span>Mon profil</span>
+                    </a>
+                    <a href="/library" class="side-nav-item">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span>Bibliothèque</span>
+                    </a>
+                    <a href="/discover" class="side-nav-item">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="m16.2 7.8-2.1 6.3-6.3 2.1 2.1-6.3z"></path>
+                        </svg>
+                        <span>Découvrir</span>
                     </a>
                 {{else}}
                     <a href="/login" class="side-nav-item">
@@ -126,12 +168,6 @@
                         <span>Connexion</span>
                     </a>
                 {{end}}
-                <a href="/library" class="side-nav-item">
-                    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"></path>
-                    </svg>
-                    <span>Bibliothèque</span>
-                </a>
                 <a href="/about" class="side-nav-item">
                     <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -143,11 +179,13 @@
             </nav>
         </aside>
 
+        <!-- page content -->
         <main class="main-content">
             {{block "content" .}}{{end}}
         </main>
     </div>
 
+    <!-- site footer -->
     <footer class="site-footer">
         <nav class="footer-links" aria-label="Liens secondaires">
             <a href="/">Accueil</a>
@@ -160,8 +198,7 @@
             <a href="/cookies">Cookies</a>
             <a href="/contact">Contact</a>
         </nav>
-        <p>ForumJS &copy; 2026</p>
+        <p>Easy &copy; 2026</p>
     </footer>
-</body>
 </html>
 {{end}}

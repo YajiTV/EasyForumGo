@@ -7,13 +7,13 @@ forum
 *.sqlite
 *.sqlite3
 
-# Uploads (keep directory, ignore content)
 uploads/*
 !uploads/.gitkeep
 
 # Environment
 .env
 .env.local
+.env.prod
 
 # OS
 .DS_Store
@@ -36,3 +36,6 @@ docker-compose.override.yml
 CLAUDE.md
 Forum.pdf
 .env
+cookies.txt
+cookies.txt
+server

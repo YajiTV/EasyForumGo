@@ -108,6 +108,49 @@
     font-size: 14px;
 }
 
+.activity-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 38px;
+}
+
+.activity-stats article {
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+
+.activity-stats strong,
+.activity-stats span {
+    display: block;
+}
+
+.activity-stats strong {
+    margin-bottom: 5px;
+    font-size: 26px;
+}
+
+.activity-stats span,
+.activity-empty {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.activity-section {
+    margin-top: 38px;
+}
+
+.activity-section h2 {
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 18px;
+}
+
+.activity-empty {
+    padding: 22px 0;
+}
+
 .profile-posts-list {
     display: flex;
     flex-direction: column;
@@ -163,6 +206,23 @@
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
+}
+
+.profile-comment-card {
+    padding: 26px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.profile-comment-card .profile-post-meta a {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.profile-comment-card p {
+    max-width: 680px;
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.55;
 }
 
 .profile-post-card p {
@@ -253,6 +313,13 @@
     color: var(--muted);
     font-size: 14px;
     overflow-wrap: anywhere;
+}
+
+.profile-sidebar-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
 }
 
 .profile-edit-page {
@@ -389,6 +456,10 @@
     .profile-tabs {
         gap: 24px;
         overflow-x: auto;
+    }
+
+    .activity-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .profile-post-card,

@@ -1,13 +1,16 @@
-{{define "title"}}Modifier le commentaire — ForumJS{{end}}
+{{define "title"}}Modifier le commentaire — Easy{{end}}
 
 {{define "content"}}
 <div class="form-page">
+    <!-- page heading -->
     <h1 class="form-title">Modifier le commentaire</h1>
 
+    <!-- validation error -->
     {{if .Error}}
         <p class="form-error">{{.Error}}</p>
     {{end}}
 
+    <!-- comment form -->
     <form action="/comment/{{.Comment.ID}}/edit" method="POST" class="post-form">
 
         <div class="form-group">

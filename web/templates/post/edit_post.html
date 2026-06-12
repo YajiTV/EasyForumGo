@@ -1,17 +1,20 @@
-{{define "title"}}Modifier le post — ForumJS{{end}}
+{{define "title"}}Modifier le post — Easy{{end}}
 
 {{define "content"}}
 <div class="form-page">
+    <!-- page heading -->
     <header class="form-header">
         <p class="form-kicker">Publication</p>
         <h1 class="form-title">Modifier le post</h1>
         <p class="form-subtitle">Ajustez le contenu, les catégories ou l'image du post.</p>
     </header>
 
+    <!-- validation error -->
     {{if .Error}}
         <p class="form-error">{{.Error}}</p>
     {{end}}
 
+    <!-- post form -->
     <form action="/post/{{.Post.ID}}/edit" method="POST" enctype="multipart/form-data" class="post-form">
 
         <div class="form-group">

@@ -8,14 +8,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
 )
 
 type ErrorRenderer struct {
 	templatesDir string
 	sessions     *repository.SessionRepository
 	users        *repository.UserRepository
+	renderer     *PageRenderer
 }
 
 type ErrorPageData struct {
@@ -26,47 +27,63 @@ type ErrorPageData struct {
 	Message    string
 }
 
+// NewErrorRenderer creates a new instance
 func NewErrorRenderer(templatesDir string) *ErrorRenderer {
 	return &ErrorRenderer{templatesDir: templatesDir}
 }
 
+// SetAuthRepositories enables user data on error pages
 func (r *ErrorRenderer) SetAuthRepositories(sessions *repository.SessionRepository, users *repository.UserRepository) {
 	r.sessions = sessions
 	r.users = users
 }
 
+// SetRenderer enables notification count on error pages
+func (r *ErrorRenderer) SetRenderer(renderer *PageRenderer) {
+	r.renderer = renderer
+}
+
+// BadRequest renders a bad request error
 func (r *ErrorRenderer) BadRequest(w http.ResponseWriter, message string) {
 	r.Render(w, http.StatusBadRequest, message)
 }
 
+// Unauthorized renders an unauthorized error
 func (r *ErrorRenderer) Unauthorized(w http.ResponseWriter, message string) {
 	r.Render(w, http.StatusUnauthorized, message)
 }
 
+// Forbidden renders a forbidden error
 func (r *ErrorRenderer) Forbidden(w http.ResponseWriter, message string) {
 	r.Render(w, http.StatusForbidden, message)
 }
 
+// NotFound renders a not found error
 func (r *ErrorRenderer) NotFound(w http.ResponseWriter, message string) {
 	r.Render(w, http.StatusNotFound, message)
 }
 
+// MethodNotAllowed renders a method not allowed error
 func (r *ErrorRenderer) MethodNotAllowed(w http.ResponseWriter, message string) {
 	r.Render(w, http.StatusMethodNotAllowed, message)
 }
 
+// InternalServerError renders an internal server error
 func (r *ErrorRenderer) InternalServerError(w http.ResponseWriter) {
 	r.Render(w, http.StatusInternalServerError, "Une erreur est survenue.")
 }
 
+// Render renders an error page
 func (r *ErrorRenderer) Render(w http.ResponseWriter, statusCode int, message string) {
 	r.RenderWithUser(w, statusCode, message, nil)
 }
 
+// RenderWithRequest renders an error page with request data
 func (r *ErrorRenderer) RenderWithRequest(w http.ResponseWriter, req *http.Request, statusCode int, message string) {
 	r.RenderWithUser(w, statusCode, message, r.userFromRequest(req))
 }
 
+// RenderWithUser renders an error page with user data
 func (r *ErrorRenderer) RenderWithUser(w http.ResponseWriter, statusCode int, message string, user any) {
 	if message == "" {
 		message = defaultErrorMessage(statusCode)
@@ -80,6 +97,13 @@ func (r *ErrorRenderer) RenderWithUser(w http.ResponseWriter, statusCode int, me
 		Message:    message,
 	}
 
+	w.WriteHeader(statusCode)
+
+	if r.renderer != nil {
+		r.renderer.Render(w, filepath.Join("error", fmt.Sprintf("%d.html", statusCode)), data)
+		return
+	}
+
 	tmpl, err := template.ParseFiles(
 		filepath.Join(r.templatesDir, "layout", "base.html"),
 		filepath.Join(r.templatesDir, "error", fmt.Sprintf("%d.html", statusCode)),
@@ -89,13 +113,12 @@ func (r *ErrorRenderer) RenderWithUser(w http.ResponseWriter, statusCode int, me
 		http.Error(w, message, statusCode)
 		return
 	}
-
-	w.WriteHeader(statusCode)
 	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
 		log.Printf("error template execute failed for status %d: %v", statusCode, err)
 	}
 }
 
+// userFromRequest gets the user from the request session
 func (r *ErrorRenderer) userFromRequest(req *http.Request) *model.User {
 	if req == nil || r.sessions == nil || r.users == nil {
 		return nil
@@ -115,6 +138,7 @@ func (r *ErrorRenderer) userFromRequest(req *http.Request) *model.User {
 	return user
 }
 
+// defaultErrorMessage gets the default error message
 func defaultErrorMessage(statusCode int) string {
 	switch statusCode {
 	case http.StatusBadRequest:
@@ -134,6 +158,7 @@ func defaultErrorMessage(statusCode int) string {
 	}
 }
 
+// errorHeading gets the error page heading
 func errorHeading(statusCode int) string {
 	switch statusCode {
 	case http.StatusBadRequest:

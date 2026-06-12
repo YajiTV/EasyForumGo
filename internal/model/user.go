@@ -1,12 +1,49 @@
 package model
 
-import "time"
+import (
+	"strings"
+	"time"
+)
+
+type Role string
+
+const (
+	RoleGuest     Role = "guest"
+	RoleUser      Role = "user"
+	RoleModerator Role = "moderator"
+	RoleAdmin     Role = "admin"
+)
 
 type User struct {
-	ID             string    `json:"id"`
-	Email          string    `json:"email"`
-	Username       string    `json:"username"`
-	Password       string    `json:"-"`
-	CreatedAt      time.Time `json:"created_at"`
-	ProfilePicture string    `json:"profile_picture"`
+	ID             string
+	Email          string
+	Username       string
+	Password       string
+	Role           Role
+	ProfilePicture string
+	Biography      string
+	FollowsVisible bool
+	CreatedAt      time.Time
+}
+
+func (u *User) IsAdmin() bool {
+	return u.Role == RoleAdmin
+}
+
+func (u *User) IsModerator() bool {
+	return u.Role == RoleModerator || u.Role == RoleAdmin
+}
+
+func (u *User) CanModerate() bool {
+	return u.IsModerator()
+}
+
+func (u *User) AvatarURL() string {
+	if strings.HasPrefix(u.ProfilePicture, "http") {
+		return u.ProfilePicture
+	}
+	if u.ProfilePicture == "" {
+		return ""
+	}
+	return "/uploads/" + u.ProfilePicture
 }

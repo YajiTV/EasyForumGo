@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"ForumJS/pkg/utils"
-	"ForumJS/pkg/validator"
+	"EasyForumGo/pkg/utils"
+	"EasyForumGo/pkg/validator"
 )
 
 const (
@@ -21,6 +21,7 @@ type AuthHandler struct {
 	db              *sql.DB
 	sessionDuration time.Duration
 	errors          *ErrorRenderer
+	renderer        *PageRenderer
 }
 
 type userCredentials struct {
@@ -29,11 +30,22 @@ type userCredentials struct {
 }
 
 type loginFormData struct {
+	User  any
 	Email string
 	Error string
 }
 
-func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRenderer) *AuthHandler {
+type registerFormData struct {
+	User             any
+	Username         string
+	Email            string
+	Error            string
+	PasswordStrength validator.PasswordStrength
+	PasswordChecked  bool
+}
+
+// NewAuthHandler creates a new instance
+func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRenderer, renderer *PageRenderer) *AuthHandler {
 	if sessionDuration <= 0 {
 		sessionDuration = 24 * time.Hour
 	}
@@ -45,17 +57,64 @@ func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRend
 		db:              db,
 		sessionDuration: sessionDuration,
 		errors:          errors,
+		renderer:        renderer,
 	}
 }
 
+// ShowLoginForm renders the requested page
 func (h *AuthHandler) ShowLoginForm(w http.ResponseWriter, r *http.Request) {
-	renderAuthTemplate(w, "login.html", nil)
+	renderAuthTemplate(h.renderer, w, "login.html", nil)
 }
 
+// ShowRegisterForm renders the requested page
 func (h *AuthHandler) ShowRegisterForm(w http.ResponseWriter, r *http.Request) {
-	renderAuthTemplate(w, "register.html", nil)
+	renderAuthTemplate(h.renderer, w, "register.html", registerFormData{
+		PasswordStrength: validator.EvaluatePasswordStrength("", "", ""),
+	})
 }
 
+// PasswordStrength handles the request
+func (h *AuthHandler) PasswordStrength(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
+		return
+	}
+
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'; form-action 'self'; base-uri 'none'")
+	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+	w.Header().Set("Referrer-Policy", "same-origin")
+	w.Header().Set("Cache-Control", "no-store")
+
+	input := validator.AuthInput{}
+	checked := false
+	if r.Method == http.MethodPost {
+		checked = true
+		input = validator.AuthInput{
+			Email:    strings.TrimSpace(strings.ToLower(r.FormValue("email"))),
+			Username: strings.TrimSpace(r.FormValue("username")),
+			Password: r.FormValue("password"),
+		}
+	}
+
+	data := registerFormData{
+		Username:         input.Username,
+		Email:            input.Email,
+		PasswordStrength: validator.EvaluatePasswordStrength(input.Password, input.Username, input.Email),
+		PasswordChecked:  checked,
+	}
+
+	tmpl, err := template.ParseFiles(filepath.Join("web", "templates", "auth", "password_strength.html"))
+	if err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.Execute(w, data); err != nil {
+		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		return
+	}
+}
+
+// Signup handles the request
 func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
@@ -63,13 +122,14 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input := validator.AuthInput{
-		Email:    strings.TrimSpace(strings.ToLower(r.FormValue("email"))),
-		Username: strings.TrimSpace(r.FormValue("username")),
-		Password: r.FormValue("password"),
+		Email:           strings.TrimSpace(strings.ToLower(r.FormValue("email"))),
+		Username:        strings.TrimSpace(r.FormValue("username")),
+		Password:        r.FormValue("password"),
+		ConfirmPassword: r.FormValue("confirm_password"),
 	}
 
 	if validationErrors := validator.ValidateSignup(input); validationErrors.HasErrors() {
-		h.writeValidationError(w, validationErrors)
+		h.renderRegisterError(w, input.Username, input.Email, firstValidationMessage(validationErrors))
 		return
 	}
 
@@ -79,7 +139,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exists {
-		h.errors.Render(w, http.StatusConflict, "Cette adresse e-mail ou ce nom d'utilisateur est déjà utilisé.")
+		h.renderRegisterError(w, input.Username, input.Email, "Cette adresse e-mail ou ce nom d'utilisateur est déjà utilisé.")
 		return
 	}
 
@@ -97,6 +157,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
+// Login handles the request
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
@@ -146,6 +207,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// Logout handles the request
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		h.errors.MethodNotAllowed(w, "Méthode non autorisée.")
@@ -169,6 +231,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// userExists checks whether an account already exists
 func (h *AuthHandler) userExists(email, username string) (bool, error) {
 	var id string
 	err := h.db.QueryRow(
@@ -186,6 +249,7 @@ func (h *AuthHandler) userExists(email, username string) (bool, error) {
 	return true, nil
 }
 
+// findUserCredentials finds the requested data
 func (h *AuthHandler) findUserCredentials(email string) (userCredentials, error) {
 	var user userCredentials
 	err := h.db.QueryRow(
@@ -195,6 +259,7 @@ func (h *AuthHandler) findUserCredentials(email string) (userCredentials, error)
 	return user, err
 }
 
+// createSession replaces the current user session
 func (h *AuthHandler) createSession(userID string) (string, time.Time, error) {
 	sessionToken := utils.NewSessionToken()
 	expiresAt := time.Now().Add(h.sessionDuration)
@@ -227,6 +292,7 @@ func (h *AuthHandler) createSession(userID string) (string, time.Time, error) {
 	return sessionToken, expiresAt, nil
 }
 
+// createUser stores a new user account
 func (h *AuthHandler) createUser(email, username, hashedPassword string) error {
 	_, err := h.db.Exec(
 		"INSERT INTO users (id, email, username, password) VALUES (?, ?, ?, ?)",
@@ -238,20 +304,31 @@ func (h *AuthHandler) createUser(email, username, hashedPassword string) error {
 	return err
 }
 
-func (h *AuthHandler) writeValidationError(w http.ResponseWriter, validationErrors validator.ValidationErrors) {
-	h.errors.BadRequest(w, firstValidationMessage(validationErrors))
-}
-
+// renderLoginError renders the requested page
 func (h *AuthHandler) renderLoginError(w http.ResponseWriter, email, message string) {
 	if message == "" {
 		message = "Formulaire invalide."
 	}
-	renderAuthTemplate(w, "login.html", loginFormData{
+	renderAuthTemplate(h.renderer, w, "login.html", loginFormData{
 		Email: email,
 		Error: message,
 	})
 }
 
+// renderRegisterError renders the requested page
+func (h *AuthHandler) renderRegisterError(w http.ResponseWriter, username, email, message string) {
+	if message == "" {
+		message = "Formulaire invalide."
+	}
+	renderAuthTemplate(h.renderer, w, "register.html", registerFormData{
+		Username:         username,
+		Email:            email,
+		Error:            message,
+		PasswordStrength: validator.EvaluatePasswordStrength("", username, email),
+	})
+}
+
+// firstValidationMessage gets the first validation message
 func firstValidationMessage(validationErrors validator.ValidationErrors) string {
 	for _, message := range validationErrors {
 		return message
@@ -260,11 +337,7 @@ func firstValidationMessage(validationErrors validator.ValidationErrors) string 
 	return "Formulaire invalide."
 }
 
-func renderAuthTemplate(w http.ResponseWriter, filename string, data any) {
-	tmpl, err := template.ParseFiles(filepath.Join("web", "templates", "auth", filename))
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.Execute(w, data)
+// renderAuthTemplate renders an authentication template
+func renderAuthTemplate(renderer *PageRenderer, w http.ResponseWriter, filename string, data any) {
+	renderer.Render(w, filepath.Join("auth", filename), data)
 }

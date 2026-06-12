@@ -3,36 +3,55 @@ package handler
 import (
 	"database/sql"
 	"errors"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
-	"ForumJS/pkg/utils"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
+	"EasyForumGo/pkg/validator"
 )
 
 type ProfileHandler struct {
 	users     *repository.UserRepository
+	posts     *repository.PostRepository
+	comments  *repository.CommentRepository
 	likes     *repository.LikeRepository
 	sessions  *repository.SessionRepository
 	uploadDir string
+	renderer  *PageRenderer
 }
 
-func NewProfileHandler(db *sql.DB, uploadDir string) *ProfileHandler {
+// NewProfileHandler creates a new instance
+func NewProfileHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *ProfileHandler {
 	return &ProfileHandler{
 		users:     repository.NewUserRepository(db),
+		posts:     repository.NewPostRepository(db),
+		comments:  repository.NewCommentRepository(db),
 		likes:     repository.NewLikeRepository(db),
 		sessions:  repository.NewSessionRepository(db),
 		uploadDir: uploadDir,
+		renderer:  renderer,
 	}
 }
 
+type ProfileCommentWithPost struct {
+	ID        string
+	PostID    string
+	PostTitle string
+	Content   string
+	CreatedAt time.Time
+}
+
 type ProfilePageData struct {
-	User  *model.User
-	Posts []PostWithMeta // PostWithMeta existe déjà dans home.go
+	User         *model.User
+	Posts        []PostWithMeta
+	Comments     []ProfileCommentWithPost
+	ActiveTab    string
+	SectionTitle string
+	EmptyTitle   string
+	EmptyMessage string
 }
 
 type EditProfilePageData struct {
@@ -40,61 +59,141 @@ type EditProfilePageData struct {
 	Error string
 }
 
+type ProfileActivityStats struct {
+	PostCount    int
+	CommentCount int
+	LikeCount    int
+	DislikeCount int
+}
+
+type ProfileActivityPageData struct {
+	User          *model.User
+	CreatedPosts  []PostWithMeta
+	LikedPosts    []PostWithMeta
+	DislikedPosts []PostWithMeta
+	Comments      []ProfileCommentWithPost
+	Stats         ProfileActivityStats
+}
+
+// LikedPosts renders posts liked by the current user
 func (h *ProfileHandler) LikedPosts(w http.ResponseWriter, r *http.Request) {
-	// 1. Vérifie que l'utilisateur est connecté
 	user := h.userFromSession(r)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
-	// 2. Récupère les posts aimés via le JOIN SQL
 	posts, err := h.likes.GetLikedPostsByUserID(user.ID)
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
 
-	// 3. Enrichit chaque post avec username + compteurs de likes
-	var postsWithMeta []PostWithMeta
-	for _, p := range posts {
-		author, err := h.users.GetByID(p.UserID)
-		if err != nil {
-			author = &model.User{Username: "Inconnu"}
-		}
-		likes, _ := h.likes.CountPostLikes(p.ID)
-		dislikes, _ := h.likes.CountPostDislikes(p.ID)
+	postsWithMeta := h.postsWithMeta(posts)
 
-		postsWithMeta = append(postsWithMeta, PostWithMeta{
-			ID:           p.ID,
-			UserID:       p.UserID,
-			Title:        p.Title,
-			Content:      p.Content,
-			ImagePath:    p.ImagePath,
-			CreatedAt:    p.CreatedAt,
-			Username:     author.Username,
-			LikeCount:    likes,
-			DislikeCount: dislikes,
-		})
-	}
-
-	// 4. Affiche le template
-	data := ProfilePageData{
-		User:  user,
-		Posts: postsWithMeta,
-	}
-
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "profile", "profile.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderProfile(w, ProfilePageData{
+		User:         user,
+		Posts:        postsWithMeta,
+		ActiveTab:    "liked-posts",
+		SectionTitle: "Posts aimés",
+		EmptyTitle:   "Aucun post aimé",
+		EmptyMessage: "Les posts que vous aimez apparaîtront ici.",
+	})
 }
 
+// MyPosts handles the request
+func (h *ProfileHandler) MyPosts(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	posts, err := h.posts.GetByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	h.renderProfile(w, ProfilePageData{
+		User:         user,
+		Posts:        h.postsWithMeta(posts),
+		ActiveTab:    "my-posts",
+		SectionTitle: "Mes posts",
+		EmptyTitle:   "Aucun post publié",
+		EmptyMessage: "Vos publications apparaîtront ici.",
+	})
+}
+
+// MyComments handles the request
+func (h *ProfileHandler) MyComments(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	comments, err := h.comments.GetByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	h.renderProfile(w, ProfilePageData{
+		User:         user,
+		Comments:     h.commentsWithPost(comments),
+		ActiveTab:    "my-comments",
+		SectionTitle: "Mes commentaires",
+		EmptyTitle:   "Aucun commentaire",
+		EmptyMessage: "Vos commentaires apparaîtront ici.",
+	})
+}
+
+// Activity renders the current user's activity summary
+func (h *ProfileHandler) Activity(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	createdPosts, err := h.posts.GetByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	likedPosts, err := h.likes.GetPostsByUserVote(user.ID, true)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	dislikedPosts, err := h.likes.GetPostsByUserVote(user.ID, false)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	comments, err := h.comments.GetByUserID(user.ID)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	stats, err := h.activityStats(user.ID)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	h.renderActivity(w, ProfileActivityPageData{
+		User:          user,
+		CreatedPosts:  h.postsWithMeta(createdPosts),
+		LikedPosts:    h.postsWithMeta(likedPosts),
+		DislikedPosts: h.postsWithMeta(dislikedPosts),
+		Comments:      h.commentsWithPost(comments),
+		Stats:         stats,
+	})
+}
+
+// userFromSession gets the user from the current session
 func (h *ProfileHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
@@ -111,6 +210,7 @@ func (h *ProfileHandler) userFromSession(r *http.Request) *model.User {
 	return user
 }
 
+// ShowEditForm renders the requested page
 func (h *ProfileHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -121,6 +221,7 @@ func (h *ProfileHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	h.renderEditForm(w, EditProfilePageData{User: user})
 }
 
+// UpdateProfile updates an existing record
 func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -128,10 +229,33 @@ func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseMultipartForm(5 << 20)
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
+	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
+		h.renderEditForm(w, EditProfilePageData{
+			User:  user,
+			Error: "Fichier trop volumineux (max 20 Mo).",
+		})
+		return
+	}
+
 	username := strings.TrimSpace(r.FormValue("username"))
-	if username == "" {
-		username = user.Username
+	if validationErrors := validator.ValidateProfile(validator.ProfileInput{Username: username}); validationErrors.HasErrors() {
+		h.renderEditForm(w, EditProfilePageData{
+			User:  user,
+			Error: firstValidationMessage(validationErrors),
+		})
+		return
+	}
+
+	if existingUser, err := h.users.GetByUsername(username); err == nil && existingUser.ID != user.ID {
+		h.renderEditForm(w, EditProfilePageData{
+			User:  user,
+			Error: "Ce nom d'utilisateur est déjà utilisé.",
+		})
+		return
+	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
 	}
 
 	profilePicture := user.ProfilePicture
@@ -156,18 +280,105 @@ func (h *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		profilePicture = filename
 	}
 
-	h.users.UpdateProfile(user.ID, username, profilePicture)
+	if err := h.users.UpdateProfile(user.ID, username, profilePicture); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
 }
 
+// renderEditForm renders the requested page
 func (h *ProfileHandler) renderEditForm(w http.ResponseWriter, data EditProfilePageData) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "profile", "edit_profile.html"),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
+	h.renderer.Render(w, "profile/edit_profile.html", data)
+}
+
+// renderProfile renders the requested page
+func (h *ProfileHandler) renderProfile(w http.ResponseWriter, data ProfilePageData) {
+	h.renderer.Render(w, "profile/profile.html", data)
+}
+
+// renderActivity renders the activity page
+func (h *ProfileHandler) renderActivity(w http.ResponseWriter, data ProfileActivityPageData) {
+	h.renderer.Render(w, "profile/activity.html", data)
+}
+
+// postsWithMeta adds display metadata to posts
+func (h *ProfileHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
+	postsWithMeta := make([]PostWithMeta, 0, len(posts))
+
+	for _, p := range posts {
+		author, err := h.users.GetByID(p.UserID)
+		if err != nil {
+			author = &model.User{Username: "Inconnu"}
+		}
+		likes, _ := h.likes.CountPostLikes(p.ID)
+		dislikes, _ := h.likes.CountPostDislikes(p.ID)
+
+		postsWithMeta = append(postsWithMeta, PostWithMeta{
+			ID:           p.ID,
+			UserID:       p.UserID,
+			Title:        p.Title,
+			Content:      p.Content,
+			ImagePath:    p.ImagePath,
+			CreatedAt:    p.CreatedAt,
+			Username:     author.Username,
+			LikeCount:    likes,
+			DislikeCount: dislikes,
+		})
 	}
-	tmpl.ExecuteTemplate(w, "base", data)
+
+	return postsWithMeta
+}
+
+// commentsWithPost adds post details to comments
+func (h *ProfileHandler) commentsWithPost(comments []model.Comment) []ProfileCommentWithPost {
+	commentsWithPost := make([]ProfileCommentWithPost, 0, len(comments))
+	for _, comment := range comments {
+		postTitle := "Post supprimé"
+		if post, err := h.posts.GetByID(comment.PostID); err == nil {
+			postTitle = post.Title
+		}
+		commentsWithPost = append(commentsWithPost, ProfileCommentWithPost{
+			ID:        comment.ID,
+			PostID:    comment.PostID,
+			PostTitle: postTitle,
+			Content:   comment.Content,
+			CreatedAt: comment.CreatedAt,
+		})
+	}
+	return commentsWithPost
+}
+
+// activityStats gets the current user's activity counters
+func (h *ProfileHandler) activityStats(userID string) (ProfileActivityStats, error) {
+	postCount, err := h.posts.CountByUserID(userID)
+	if err != nil {
+		return ProfileActivityStats{}, err
+	}
+	commentCount, err := h.comments.CountByUserID(userID)
+	if err != nil {
+		return ProfileActivityStats{}, err
+	}
+	likeCount, err := h.likes.CountPostVotesByUserID(userID, true)
+	if err != nil {
+		return ProfileActivityStats{}, err
+	}
+	commentLikeCount, err := h.likes.CountCommentVotesByUserID(userID, true)
+	if err != nil {
+		return ProfileActivityStats{}, err
+	}
+	dislikeCount, err := h.likes.CountPostVotesByUserID(userID, false)
+	if err != nil {
+		return ProfileActivityStats{}, err
+	}
+	commentDislikeCount, err := h.likes.CountCommentVotesByUserID(userID, false)
+	if err != nil {
+		return ProfileActivityStats{}, err
+	}
+	return ProfileActivityStats{
+		PostCount:    postCount,
+		CommentCount: commentCount,
+		LikeCount:    likeCount + commentLikeCount,
+		DislikeCount: dislikeCount + commentDislikeCount,
+	}, nil
 }

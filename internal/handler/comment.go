@@ -2,33 +2,40 @@ package handler
 
 import (
 	"database/sql"
-	"html/template"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
-	"ForumJS/pkg/utils"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
+	"EasyForumGo/pkg/validator"
 )
 
+const maxCommentFormSize = 16 << 10
+
 type CommentHandler struct {
-	comments *repository.CommentRepository
-	posts    *repository.PostRepository
-	sessions *repository.SessionRepository
-	users    *repository.UserRepository
+	comments      *repository.CommentRepository
+	posts         *repository.PostRepository
+	sessions      *repository.SessionRepository
+	users         *repository.UserRepository
+	notifications *repository.NotificationRepository
+	renderer      *PageRenderer
 }
 
-func NewCommentHandler(db *sql.DB) *CommentHandler {
+// NewCommentHandler creates a new instance
+func NewCommentHandler(db *sql.DB, renderer *PageRenderer) *CommentHandler {
 	return &CommentHandler{
-		comments: repository.NewCommentRepository(db),
-		posts:    repository.NewPostRepository(db),
-		sessions: repository.NewSessionRepository(db),
-		users:    repository.NewUserRepository(db),
+		comments:      repository.NewCommentRepository(db),
+		posts:         repository.NewPostRepository(db),
+		sessions:      repository.NewSessionRepository(db),
+		users:         repository.NewUserRepository(db),
+		notifications: repository.NewNotificationRepository(db),
+		renderer:      renderer,
 	}
 }
 
+// CreateComment creates a new record
 func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -42,18 +49,15 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxCommentFormSize)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Requête invalide", http.StatusBadRequest)
 		return
 	}
 
 	content := strings.TrimSpace(r.FormValue("content"))
-	if content == "" {
-		http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
-		return
-	}
-	if len(content) > 2000 {
-		http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
+	if validationErrors := validator.ValidateComment(validator.CommentInput{Content: content}); validationErrors.HasErrors() {
+		http.Error(w, firstValidationMessage(validationErrors), http.StatusBadRequest)
 		return
 	}
 
@@ -72,9 +76,25 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// notification : seulement si ce n'est pas son propre post
+	if post, err := h.posts.GetByID(postID); err == nil && post.UserID != user.ID {
+		n := &model.Notification{
+			ID:        utils.NewUUID(),
+			UserID:    post.UserID,
+			ActorID:   user.ID,
+			Type:      "comment",
+			PostID:    postID,
+			CommentID: c.ID,
+			CreatedAt: time.Now(),
+		}
+		_ = h.notifications.Create(n)
+	}
+
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
+
 }
 
+// DeleteComment deletes an existing record
 func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -108,6 +128,38 @@ type editCommentData struct {
 	Error   string
 }
 
+type deleteCommentData struct {
+	User    *model.User
+	Comment *model.Comment
+}
+
+// ShowDeleteConfirmation renders the requested page
+func (h *CommentHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	commentID := r.PathValue("id")
+	comment, err := h.comments.GetByID(commentID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if comment.UserID != user.ID {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	h.renderTemplate(w, "comment/delete_comment.html", deleteCommentData{
+		User:    user,
+		Comment: comment,
+	})
+}
+
+// ShowEditForm renders the requested page
 func (h *CommentHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -133,6 +185,7 @@ func (h *CommentHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// EditComment updates a comment from the author
 func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -152,6 +205,7 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxCommentFormSize)
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Requête invalide", http.StatusBadRequest)
 		return
@@ -167,12 +221,8 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if content == "" {
-		renderErr("Le contenu ne peut pas être vide.")
-		return
-	}
-	if len(content) > 2000 {
-		renderErr("Le contenu ne peut pas dépasser 2000 caractères.")
+	if validationErrors := validator.ValidateComment(validator.CommentInput{Content: content}); validationErrors.HasErrors() {
+		renderErr(firstValidationMessage(validationErrors))
 		return
 	}
 
@@ -187,6 +237,7 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/post/"+comment.PostID, http.StatusSeeOther)
 }
 
+// userFromSession gets the user from the current session
 func (h *CommentHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
@@ -203,14 +254,7 @@ func (h *CommentHandler) userFromSession(r *http.Request) *model.User {
 	return user
 }
 
+// renderTemplate renders the requested page
 func (h *CommentHandler) renderTemplate(w http.ResponseWriter, name string, data any) {
-	tmpl, err := template.ParseFiles(
-		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", name),
-	)
-	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	h.renderer.Render(w, name, data)
 }

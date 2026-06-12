@@ -5,29 +5,33 @@ import (
 	"net/http"
 	"time"
 
-	"ForumJS/internal/model"
-	"ForumJS/internal/repository"
-	"ForumJS/pkg/utils"
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
 )
 
 type LikeHandler struct {
-	likes    *repository.LikeRepository
-	posts    *repository.PostRepository
-	comments *repository.CommentRepository
-	sessions *repository.SessionRepository
-	users    *repository.UserRepository
+	likes         *repository.LikeRepository
+	posts         *repository.PostRepository
+	comments      *repository.CommentRepository
+	sessions      *repository.SessionRepository
+	users         *repository.UserRepository
+	notifications *repository.NotificationRepository
 }
 
+// NewLikeHandler creates a new instance
 func NewLikeHandler(db *sql.DB) *LikeHandler {
 	return &LikeHandler{
-		likes:    repository.NewLikeRepository(db),
-		posts:    repository.NewPostRepository(db),
-		comments: repository.NewCommentRepository(db),
-		sessions: repository.NewSessionRepository(db),
-		users:    repository.NewUserRepository(db),
+		likes:         repository.NewLikeRepository(db),
+		posts:         repository.NewPostRepository(db),
+		comments:      repository.NewCommentRepository(db),
+		sessions:      repository.NewSessionRepository(db),
+		users:         repository.NewUserRepository(db),
+		notifications: repository.NewNotificationRepository(db),
 	}
 }
 
+// LikePost handles a like request
 func (h *LikeHandler) LikePost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -44,6 +48,7 @@ func (h *LikeHandler) LikePost(w http.ResponseWriter, r *http.Request) {
 	h.togglePostVote(w, r, user.ID, postID, true)
 }
 
+// DislikePost handles a dislike request
 func (h *LikeHandler) DislikePost(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -60,6 +65,7 @@ func (h *LikeHandler) DislikePost(w http.ResponseWriter, r *http.Request) {
 	h.togglePostVote(w, r, user.ID, postID, false)
 }
 
+// togglePostVote toggles the requested vote
 func (h *LikeHandler) togglePostVote(w http.ResponseWriter, r *http.Request, userID, postID string, isLike bool) {
 	existing, err := h.likes.GetUserPostLike(postID, userID)
 	if err != nil {
@@ -79,6 +85,23 @@ func (h *LikeHandler) togglePostVote(w http.ResponseWriter, r *http.Request, use
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
+
+		// notification : seulement si ce n'est pas son propre post
+		if post, err := h.posts.GetByID(postID); err == nil && post.UserID != userID {
+			notifType := "post_like"
+			if !isLike {
+				notifType = "post_dislike"
+			}
+			n := &model.Notification{
+				ID:        utils.NewUUID(),
+				UserID:    post.UserID,
+				ActorID:   userID,
+				Type:      notifType,
+				PostID:    postID,
+				CreatedAt: time.Now(),
+			}
+			_ = h.notifications.Create(n)
+		}
 	} else if existing.IsLike == isLike {
 		if err := h.likes.DeletePostLike(postID, userID); err != nil {
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
@@ -94,6 +117,7 @@ func (h *LikeHandler) togglePostVote(w http.ResponseWriter, r *http.Request, use
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 }
 
+// LikeComment handles a like request
 func (h *LikeHandler) LikeComment(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -111,6 +135,7 @@ func (h *LikeHandler) LikeComment(w http.ResponseWriter, r *http.Request) {
 	h.toggleCommentVote(w, r, user.ID, commentID, comment.PostID, true)
 }
 
+// DislikeComment handles a dislike request
 func (h *LikeHandler) DislikeComment(w http.ResponseWriter, r *http.Request) {
 	user := h.userFromSession(r)
 	if user == nil {
@@ -128,6 +153,7 @@ func (h *LikeHandler) DislikeComment(w http.ResponseWriter, r *http.Request) {
 	h.toggleCommentVote(w, r, user.ID, commentID, comment.PostID, false)
 }
 
+// toggleCommentVote toggles the requested vote
 func (h *LikeHandler) toggleCommentVote(w http.ResponseWriter, r *http.Request, userID, commentID, postID string, isLike bool) {
 	existing, err := h.likes.GetUserCommentLike(commentID, userID)
 	if err != nil {
@@ -147,6 +173,24 @@ func (h *LikeHandler) toggleCommentVote(w http.ResponseWriter, r *http.Request, 
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
+
+		// notification : seulement si ce n'est pas son propre commentaire
+		if comment, err := h.comments.GetByID(commentID); err == nil && comment.UserID != userID {
+			notifType := "comment_like"
+			if !isLike {
+				notifType = "comment_dislike"
+			}
+			n := &model.Notification{
+				ID:        utils.NewUUID(),
+				UserID:    comment.UserID,
+				ActorID:   userID,
+				Type:      notifType,
+				PostID:    postID,
+				CommentID: commentID,
+				CreatedAt: time.Now(),
+			}
+			_ = h.notifications.Create(n)
+		}
 	} else if existing.IsLike == isLike {
 		if err := h.likes.DeleteCommentLike(commentID, userID); err != nil {
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
@@ -162,6 +206,7 @@ func (h *LikeHandler) toggleCommentVote(w http.ResponseWriter, r *http.Request, 
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 }
 
+// userFromSession gets the user from the current session
 func (h *LikeHandler) userFromSession(r *http.Request) *model.User {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
