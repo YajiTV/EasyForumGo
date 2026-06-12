@@ -2,6 +2,8 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 
 	"EasyForumGo/internal/model"
 )
@@ -123,6 +125,53 @@ func (r *PostRepository) GetByCategoryPaginated(categoryID string, limit, offset
 		WHERE pc.category_id = ? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, categoryID, limit, max(offset, 0))
 }
 
+// Search returns posts matching a query and optional category
+func (r *PostRepository) Search(query, categoryID, sort string, limit int) ([]model.Post, error) {
+	if limit < 1 || limit > 100 {
+		return nil, fmt.Errorf("invalid limit")
+	}
+
+	orderBy := `CASE
+			WHEN LOWER(p.title) = LOWER(?) THEN 0
+			WHEN LOWER(p.title) LIKE LOWER(?) ESCAPE '\' THEN 1
+			ELSE 2
+		END, p.created_at DESC`
+	switch sort {
+	case "recent":
+		orderBy = "p.created_at DESC"
+	case "popular":
+		orderBy = `(SELECT COUNT(*) FROM post_likes pl WHERE pl.post_id = p.id AND pl.is_like = 1) DESC, p.created_at DESC`
+	}
+
+	escapedQuery := escapePostLike(query)
+	containsQuery := "%" + escapedQuery + "%"
+	startsWithQuery := escapedQuery + "%"
+	args := []any{query, containsQuery, containsQuery, containsQuery}
+	categoryFilter := ""
+	if categoryID != "" {
+		categoryFilter = ` AND EXISTS (
+			SELECT 1 FROM post_categories filtered_categories
+			WHERE filtered_categories.post_id = p.id AND filtered_categories.category_id = ?
+		)`
+		args = append(args, categoryID)
+	}
+	if sort != "recent" && sort != "popular" {
+		args = append(args, query, startsWithQuery)
+	}
+	args = append(args, limit)
+
+	return r.queryPosts(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
+		FROM posts p
+		JOIN users author ON author.id = p.user_id
+		WHERE (
+			? = ''
+			OR p.title LIKE ? ESCAPE '\'
+			OR p.content LIKE ? ESCAPE '\'
+			OR author.username LIKE ? ESCAPE '\'
+		)`+categoryFilter+`
+		ORDER BY `+orderBy+` LIMIT ?`, args...)
+}
+
 // Create creates a new record
 func (r *PostRepository) Create(p *model.Post) error {
 	_, err := r.db.Exec(`INSERT INTO posts (id, user_id, title, content, image_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -159,4 +208,11 @@ func (r *PostRepository) queryPosts(query string, args ...any) ([]model.Post, er
 		posts = append(posts, post)
 	}
 	return posts, rows.Err()
+}
+
+// escapePostLike escapes sqlite LIKE wildcard characters
+func escapePostLike(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, `%`, `\%`)
+	return strings.ReplaceAll(value, `_`, `\_`)
 }

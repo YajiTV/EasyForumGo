@@ -20,6 +20,7 @@ type SocialHandler struct {
 	posts         *repository.PostRepository
 	follows       *repository.FollowRepository
 	likes         *repository.LikeRepository
+	categories    *repository.CategoryRepository
 	sessions      *repository.SessionRepository
 	renderer      *PageRenderer
 	notifications *repository.NotificationRepository
@@ -61,6 +62,17 @@ type DiscoverPageData struct {
 	Suggestions []model.User
 }
 
+type SearchPageData struct {
+	User       *model.User
+	Query      string
+	ResultType string
+	Sort       string
+	CategoryID string
+	Categories []model.Category
+	Posts      []PostWithMeta
+	Users      []model.User
+}
+
 // NewSocialHandler creates a new instance
 func NewSocialHandler(db *sql.DB, renderer *PageRenderer) *SocialHandler {
 	return &SocialHandler{
@@ -68,6 +80,7 @@ func NewSocialHandler(db *sql.DB, renderer *PageRenderer) *SocialHandler {
 		posts:         repository.NewPostRepository(db),
 		follows:       repository.NewFollowRepository(db),
 		likes:         repository.NewLikeRepository(db),
+		categories:    repository.NewCategoryRepository(db),
 		sessions:      repository.NewSessionRepository(db),
 		renderer:      renderer,
 		notifications: repository.NewNotificationRepository(db),
@@ -143,19 +156,46 @@ func (h *SocialHandler) Discover(w http.ResponseWriter, r *http.Request) {
 	h.renderer.Render(w, "social/discover.html", DiscoverPageData{User: currentUser, Popular: popular, Suggestions: suggestions})
 }
 
-// Search renders user search results
+// Search renders post and profile search results
 func (h *SocialHandler) Search(w http.ResponseWriter, r *http.Request) {
 	currentUser := h.userFromSession(r)
-	if currentUser == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
-	var results []model.User
-	if query != "" {
-		results, _ = h.users.Search(query, currentUser.ID, 30)
+	resultType := r.URL.Query().Get("type")
+	if resultType != "posts" && resultType != "users" {
+		resultType = "all"
 	}
-	h.renderer.Render(w, "social/discover.html", DiscoverPageData{User: currentUser, Query: query, Results: results})
+	sort := r.URL.Query().Get("sort")
+	if sort != "recent" && sort != "popular" {
+		sort = "relevance"
+	}
+	categoryID := strings.TrimSpace(r.URL.Query().Get("category"))
+	if resultType == "users" {
+		categoryID = ""
+	}
+	categories, _ := h.categories.GetAll()
+
+	var posts []model.Post
+	var users []model.User
+	var err error
+	if resultType != "users" {
+		posts, err = h.posts.Search(query, categoryID, sort, 30)
+		if err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+	}
+	if resultType != "posts" && categoryID == "" {
+		users, err = h.users.SearchAll(query, sort, 30)
+		if err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	h.renderer.Render(w, "social/search.html", SearchPageData{
+		User: currentUser, Query: query, ResultType: resultType, Sort: sort,
+		CategoryID: categoryID, Categories: categories, Posts: h.postsWithMeta(posts), Users: users,
+	})
 }
 
 // renderUserList renders followers or following users
@@ -239,12 +279,14 @@ func (h *SocialHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
 	for _, post := range posts {
 		author, _ := h.users.GetByID(post.UserID)
 		username := "Inconnu"
+		avatarURL := ""
 		if author != nil {
 			username = author.Username
+			avatarURL = author.AvatarURL()
 		}
 		likes, _ := h.likes.CountPostLikes(post.ID)
 		dislikes, _ := h.likes.CountPostDislikes(post.ID)
-		result = append(result, PostWithMeta{ID: post.ID, UserID: post.UserID, Title: post.Title, Content: post.Content, ImagePath: post.ImagePath, CreatedAt: post.CreatedAt, Username: username, LikeCount: likes, DislikeCount: dislikes})
+		result = append(result, PostWithMeta{ID: post.ID, UserID: post.UserID, Title: post.Title, Content: post.Content, ImagePath: post.ImagePath, CreatedAt: post.CreatedAt, Username: username, AvatarURL: avatarURL, LikeCount: likes, DislikeCount: dislikes})
 	}
 	return result
 }

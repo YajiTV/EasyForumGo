@@ -229,7 +229,8 @@ The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
 | `GET` | `/user/{username}/followers`, `/user/{username}/following` | Public or owner | Paginated social relations |
 | `POST` | `/user/{username}/follow`, `/user/{username}/unfollow` | Connected | Manage a following relationship |
 | `GET` | `/?feed=following` | Connected | Display posts from followed users |
-| `GET` | `/discover`, `/search?q=...` | Connected | Discover and search profiles |
+| `GET` | `/discover` | Connected | Discover suggested profiles |
+| `GET` | `/search?q=...&type=...&category=...&sort=...` | Public | Search and filter posts or profiles |
 | `GET` | `/settings` | Connected | Display account and security settings |
 | `POST` | `/settings/email` | Connected | Update the account email |
 | `POST` | `/settings/password` | Connected | Change the password and end the current session |

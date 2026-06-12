@@ -106,7 +106,7 @@ textarea {
 }
 
 .search-form {
-    width: min(100%, 260px);
+    width: min(100%, 430px);
     min-height: 42px;
     display: flex;
     align-items: center;
@@ -136,6 +136,22 @@ textarea {
 
 .search-form input::placeholder {
     color: var(--muted);
+}
+
+.search-form button {
+    min-height: 30px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.search-form:focus-within {
+    box-shadow: 0 0 0 2px var(--line);
 }
 
 .nav-links {
@@ -1290,6 +1306,10 @@ textarea {
     .search-form {
         width: min(44vw, 220px);
         min-height: 38px;
+    }
+
+    .search-form button {
+        display: none;
     }
 
     .nav-links a:not(.register-link):not(.write-link),
