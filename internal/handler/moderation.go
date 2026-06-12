@@ -14,21 +14,56 @@ import (
 )
 
 type ModerationHandler struct {
-	reports  *repository.ReportRepository
-	posts    *repository.PostRepository
-	comments *repository.CommentRepository
-	users    *repository.UserRepository
-	sessions *repository.SessionRepository
+	reports    *repository.ReportRepository
+	posts      *repository.PostRepository
+	comments   *repository.CommentRepository
+	users      *repository.UserRepository
+	sessions   *repository.SessionRepository
+	moderation *repository.ModerationRepository
 }
 
 func NewModerationHandler(db *sql.DB) *ModerationHandler {
 	return &ModerationHandler{
-		reports:  repository.NewReportRepository(db),
-		posts:    repository.NewPostRepository(db),
-		comments: repository.NewCommentRepository(db),
-		users:    repository.NewUserRepository(db),
-		sessions: repository.NewSessionRepository(db),
+		reports:    repository.NewReportRepository(db),
+		posts:      repository.NewPostRepository(db),
+		comments:   repository.NewCommentRepository(db),
+		users:      repository.NewUserRepository(db),
+		sessions:   repository.NewSessionRepository(db),
+		moderation: repository.NewModerationRepository(db),
 	}
+}
+
+// ModerationUserRow is the view data for one user row in the moderation page.
+type ModerationUserRow struct {
+	ID       string
+	Username string
+	Mail     string
+	Role     string
+	Status   string
+}
+
+// ModerationPostRow is the view data for one reported post row.
+type ModerationPostRow struct {
+	ID       string
+	Username string
+	Post     string
+	Date     string
+	Report   string
+}
+
+// ModerationReportRow is the view data for one pending report row.
+type ModerationReportRow struct {
+	ID       string
+	Username string
+	Reason   string
+}
+
+// ModerationPageData holds all data passed to pagemoderation.html.
+type ModerationPageData struct {
+	CurrentUser *model.User
+	Users       []ModerationUserRow
+	Posts       []ModerationPostRow
+	Reports     []ModerationReportRow
 }
 
 func (h *ModerationHandler) ReportPost(w http.ResponseWriter, r *http.Request) {
@@ -105,31 +140,66 @@ func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pending, err := h.reports.GetPending()
-	if err != nil {
-		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-		return
+	allUsers, _ := h.moderation.GetAllUsers()
+	var userRows []ModerationUserRow
+	for _, u := range allUsers {
+		status, _ := h.moderation.GetUserStatus(u.ID)
+		userRows = append(userRows, ModerationUserRow{
+			ID:       u.ID,
+			Username: u.Username,
+			Mail:     u.Email,
+			Role:     string(u.Role),
+			Status:   status,
+		})
 	}
 
-	history, err := h.reports.GetActionHistory()
-	if err != nil {
-		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-		return
+	reportedPosts, _ := h.moderation.GetReportedPosts()
+	var postRows []ModerationPostRow
+	for _, p := range reportedPosts {
+		author, _ := h.users.GetByID(p.UserID)
+		username := "Inconnu"
+		if author != nil {
+			username = author.Username
+		}
+		count, _ := h.moderation.GetReportCountForPost(p.ID)
+		postRows = append(postRows, ModerationPostRow{
+			ID:       p.ID,
+			Username: username,
+			Post:     p.Content,
+			Date:     p.CreatedAt.Format("02/01/2006"),
+			Report:   strconv.Itoa(count),
+		})
+	}
+
+	pending, _ := h.reports.GetPending()
+	var reportRows []ModerationReportRow
+	for _, rep := range pending {
+		if rep.TargetType != model.TargetUser {
+			continue
+		}
+		reportRows = append(reportRows, ModerationReportRow{
+			ID:       rep.ID,
+			Username: rep.ReporterName,
+			Reason:   rep.Reason,
+		})
+	}
+
+	data := ModerationPageData{
+		CurrentUser: user,
+		Users:       userRows,
+		Posts:       postRows,
+		Reports:     reportRows,
 	}
 
 	tmpl, err := template.ParseFiles(
 		filepath.Join("web", "templates", "layout", "base.html"),
-		filepath.Join("web", "templates", "moderation", "dashboard.html"),
+		filepath.Join("web", "templates", "moderation", "pagemoderation.html"),
 	)
 	if err != nil {
 		http.Error(w, "Erreur template", http.StatusInternalServerError)
 		return
 	}
-	tmpl.ExecuteTemplate(w, "base", map[string]any{
-		"CurrentUser": user,
-		"Pending":     pending,
-		"History":     history,
-	})
+	tmpl.ExecuteTemplate(w, "base", data)
 }
 
 func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {

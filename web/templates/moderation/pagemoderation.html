@@ -1,4 +1,4 @@
-{{define "title"}}Mon titre{{end}}
+{{define "title"}}Modération{{end}}
 {{define "content"}}
     <header>
         <h1>Page Modération</h1>
@@ -8,68 +8,80 @@
   <table>
   <tr>
     <th>Pseudo</th>
-    <th>Nom</th>
     <th>Mail</th>
+    <th>Rôle</th>
     <th>Statut</th>
     <th>Actions</th>
-</tr>
-{{range .Users}}
+  </tr>
+  {{range .Users}}
   <tr>
     <td>{{.Username}}</td>
-    <td>{{.LastName}}</td>
     <td>{{.Mail}}</td>
-    <td>{{.status}}</td>
+    <td>{{.Role}}</td>
+    <td>{{.Status}}</td>
     <td>
-    <button class="btn-delete">ban</button>
-    <button class="btn-delete">mute</button>
-</td>
-    
-  </tr>
-  {{end}}
-</table>
-
-</details>
-<details>
-    <summary>Posts signalé</summary>
-    <table>
-        <tr>
-        <th>Auteur</th>
-        <th>Contenu</th>
-        <th>Date</th>
-        <th>Signalement</th>
-        <th>Actions</th>
-        </tr>
-        {{range .Posts}}
-        <tr>
-    <td>{{.Username}}</td>
-    <td>{{.Post}}</td>
-    <td>{{.date}}</td>
-    <td>{{.report}}</td>
-    <td>
-    <button class="btn-delete">supprimer</button>
-</td>
-     {{end}} 
-    </table>
-  
-</details>
-<details>
-  <summary>traiter les signalement</summary>
-  <table>
-  <tr>
-    <th>Utilisateur signalé</th>
-    <th>Raison</th>
-    <th>Action</th>
-  </tr>
-  {{range .Reports}}
-  <tr>
-    <td>{{.Username}}</td>
-    <td>{{.reason}}</td>
-    <td>
-        <button class="btn-delete"> ban temporaire</button>
-        <button class="btn-delete">ban definitif</button>
+      <form method="POST" action="/admin/user/{{.ID}}/ban" style="display:inline">
+        <button class="btn-delete" type="submit">ban</button>
+      </form>
+      <form method="POST" action="/admin/user/{{.ID}}/mute" style="display:inline">
+        <button class="btn-delete" type="submit">mute</button>
+      </form>
     </td>
   </tr>
   {{end}}
-</table>   
+  </table>
 </details>
-{{end}}   
+
+<details>
+  <summary>Posts signalés</summary>
+  <table>
+    <tr>
+      <th>Auteur</th>
+      <th>Contenu</th>
+      <th>Date</th>
+      <th>Signalements</th>
+      <th>Actions</th>
+    </tr>
+    {{range .Posts}}
+    <tr>
+      <td>{{.Username}}</td>
+      <td>{{.Post}}</td>
+      <td>{{.Date}}</td>
+      <td>{{.Report}}</td>
+      <td>
+        <form method="POST" action="/post/{{.ID}}/delete" style="display:inline">
+          <button class="btn-delete" type="submit">supprimer</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+</details>
+
+<details>
+  <summary>Traiter les signalements</summary>
+  <table>
+    <tr>
+      <th>Utilisateur signalé</th>
+      <th>Raison</th>
+      <th>Action</th>
+    </tr>
+    {{range .Reports}}
+    <tr>
+      <td>{{.Username}}</td>
+      <td>{{.Reason}}</td>
+      <td>
+        <form method="POST" action="/moderation/report/{{.ID}}/resolve" style="display:inline">
+          <input type="hidden" name="action_type" value="mute_user">
+          <button class="btn-delete" type="submit">ban temporaire</button>
+        </form>
+        <form method="POST" action="/moderation/report/{{.ID}}/resolve" style="display:inline">
+          <input type="hidden" name="action_type" value="ban_user">
+          <button class="btn-delete" type="submit">ban définitif</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+</details>
+{{end}}
