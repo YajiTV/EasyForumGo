@@ -62,10 +62,11 @@ type ModerationReportRow struct {
 
 // ModerationPageData holds all data passed to pagemoderation.html.
 type ModerationPageData struct {
-	CurrentUser *model.User
-	Users       []ModerationUserRow
-	Posts       []ModerationPostRow
-	Reports     []ModerationReportRow
+    User        *model.User
+    CurrentUser *model.User
+    Users       []ModerationUserRow
+    Posts       []ModerationPostRow
+    Reports     []ModerationReportRow
 }
 
 func (h *ModerationHandler) ReportPost(w http.ResponseWriter, r *http.Request) {
@@ -187,22 +188,33 @@ func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := ModerationPageData{
+		User:        user,
 		CurrentUser: user,
 		Users:       userRows,
 		Posts:       postRows,
 		Reports:     reportRows,
 	}
 
-	tmpl, err := template.New("base").ParseFiles(
+	funcMap := template.FuncMap{
+    "notifCount": func(user *model.User) int {
+        if user == nil {
+            return 0
+        }
+        count, _ := h.notifications.CountUnread(user.ID)
+        return count
+    },
+}
+
+tmpl, err := template.New("base").Funcs(funcMap).ParseFiles(
     filepath.Join("web", "templates", "layout", "base.html"),
     filepath.Join("web", "templates", "moderation", "pagemoderation.html"),
-	)
-	if err != nil {
-		fmt.Println(err)
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
-	}
-	tmpl.ExecuteTemplate(w, "base", data)
+)
+if err != nil {
+    fmt.Println(err)
+    http.Error(w, "Erreur template", http.StatusInternalServerError)
+    return
+}
+tmpl.ExecuteTemplate(w, "base", data)
 }
 
 func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
