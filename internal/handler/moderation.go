@@ -14,20 +14,22 @@ import (
 )
 
 type ModerationHandler struct {
-	reports  *repository.ReportRepository
-	posts    *repository.PostRepository
-	comments *repository.CommentRepository
-	users    *repository.UserRepository
-	sessions *repository.SessionRepository
+	reports       *repository.ReportRepository
+	posts         *repository.PostRepository
+	comments      *repository.CommentRepository
+	users         *repository.UserRepository
+	sessions      *repository.SessionRepository
+	notifications *repository.NotificationRepository
 }
 
 func NewModerationHandler(db *sql.DB) *ModerationHandler {
 	return &ModerationHandler{
-		reports:  repository.NewReportRepository(db),
-		posts:    repository.NewPostRepository(db),
-		comments: repository.NewCommentRepository(db),
-		users:    repository.NewUserRepository(db),
-		sessions: repository.NewSessionRepository(db),
+		reports:       repository.NewReportRepository(db),
+		posts:         repository.NewPostRepository(db),
+		comments:      repository.NewCommentRepository(db),
+		users:         repository.NewUserRepository(db),
+		sessions:      repository.NewSessionRepository(db),
+		notifications: repository.NewNotificationRepository(db),
 	}
 }
 
@@ -149,18 +151,30 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 	actionType := model.ActionType(r.FormValue("action_type"))
 	reason := r.FormValue("reason")
 
+	targetUserID, targetPostID, targetCommentID, err := h.resolveTargetIDs(report)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
 	switch actionType {
 	case model.ActionDeletePost:
 		if err := h.posts.Delete(report.TargetID); err != nil && err != sql.ErrNoRows {
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
+		h.notify(targetUserID, moderator.ID, "moderation_delete_post", "", "")
+
 	case model.ActionDeleteComment:
 		if err := h.comments.Delete(report.TargetID); err != nil && err != sql.ErrNoRows {
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
+		h.notify(targetUserID, moderator.ID, "moderation_delete_comment", "", "")
+
 	case model.ActionWarnUser:
+		h.notify(targetUserID, moderator.ID, "moderation_warn", targetPostID, targetCommentID)
+
 	case model.ActionMuteUser:
 		durationHours, _ := strconv.Atoi(r.FormValue("duration_hours"))
 		if durationHours <= 0 {
@@ -169,7 +183,7 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 		expiresAt := time.Now().Add(time.Duration(durationHours) * time.Hour)
 		restriction := &model.UserRestriction{
 			ID:        utils.NewUUID(),
-			UserID:    report.TargetID,
+			UserID:    targetUserID,
 			Type:      model.RestrictionMute,
 			Reason:    reason,
 			ExpiresAt: &expiresAt,
@@ -180,6 +194,8 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
+		h.notify(targetUserID, moderator.ID, "moderation_mute", "", "")
+
 	case model.ActionBanUser:
 		if !moderator.IsAdmin() {
 			http.Error(w, "Seul un admin peut bannir un utilisateur", http.StatusForbidden)
@@ -187,7 +203,7 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 		}
 		restriction := &model.UserRestriction{
 			ID:        utils.NewUUID(),
-			UserID:    report.TargetID,
+			UserID:    targetUserID,
 			Type:      model.RestrictionBan,
 			Reason:    reason,
 			ExpiresAt: nil,
@@ -198,6 +214,8 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
+		h.notify(targetUserID, moderator.ID, "moderation_ban", "", "")
+
 	default:
 		http.Error(w, "Action invalide", http.StatusBadRequest)
 		return
@@ -208,7 +226,7 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 		ModeratorID: moderator.ID,
 		ReportID:    reportID,
 		ActionType:  actionType,
-		TargetID:    report.TargetID,
+		TargetID:    targetUserID,
 		Reason:      reason,
 		CreatedAt:   time.Now(),
 	}
@@ -265,6 +283,45 @@ func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Reques
 	h.reports.CreateAction(action)
 
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
+
+func (h *ModerationHandler) resolveTargetIDs(report *model.Report) (userID, postID, commentID string, err error) {
+	switch report.TargetType {
+	case model.TargetUser:
+		userID = report.TargetID
+	case model.TargetPost:
+		post, e := h.posts.GetByID(report.TargetID)
+		if e != nil {
+			return "", "", "", e
+		}
+		userID = post.UserID
+		postID = report.TargetID
+	case model.TargetComment:
+		comment, e := h.comments.GetByID(report.TargetID)
+		if e != nil {
+			return "", "", "", e
+		}
+		userID = comment.UserID
+		postID = comment.PostID
+		commentID = report.TargetID
+	}
+	return
+}
+
+func (h *ModerationHandler) notify(userID, actorID, notifType, postID, commentID string) {
+	if userID == "" || userID == actorID {
+		return
+	}
+	n := &model.Notification{
+		ID:        utils.NewUUID(),
+		UserID:    userID,
+		ActorID:   actorID,
+		Type:      notifType,
+		PostID:    postID,
+		CommentID: commentID,
+		CreatedAt: time.Now(),
+	}
+	_ = h.notifications.Create(n)
 }
 
 func (h *ModerationHandler) userFromSession(r *http.Request) *model.User {
