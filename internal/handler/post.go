@@ -26,13 +26,14 @@ type PostHandler struct {
 	likes          *repository.LikeRepository
 	libraries      *repository.LibraryRepository
 	uploadDir      string
+	maxUploadBytes int64
 	renderer       *PageRenderer
 	follows        *repository.FollowRepository
 	notifications  *repository.NotificationRepository
 }
 
 // NewPostHandler creates a new instance
-func NewPostHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *PostHandler {
+func NewPostHandler(db *sql.DB, uploadDir string, maxUploadBytes int64, renderer *PageRenderer) *PostHandler {
 	return &PostHandler{
 		posts:          repository.NewPostRepository(db),
 		categories:     repository.NewCategoryRepository(db),
@@ -43,6 +44,7 @@ func NewPostHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *PostH
 		likes:          repository.NewLikeRepository(db),
 		libraries:      repository.NewLibraryRepository(db),
 		uploadDir:      uploadDir,
+		maxUploadBytes: maxUploadBytes,
 		renderer:       renderer,
 		follows:        repository.NewFollowRepository(db),
 		notifications:  repository.NewNotificationRepository(db),
@@ -86,9 +88,9 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
-	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
-		h.renderError(w, r, user, "Fichier trop volumineux (max 20 Mo).")
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxMultipartBodySize(h.maxUploadBytes))
+	if err := r.ParseMultipartForm(h.maxUploadBytes); err != nil {
+		h.renderError(w, r, user, "Fichier trop volumineux (max "+utils.UploadSizeLabel(h.maxUploadBytes)+").")
 		return
 	}
 
@@ -115,8 +117,8 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("image")
 	if err == nil {
 		defer file.Close()
-		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
-		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrFileTooLarge) {
+		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir, h.maxUploadBytes)
+		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrInvalidImage) || errors.Is(err, utils.ErrFileTooLarge) {
 			h.renderError(w, r, user, err.Error())
 			return
 		}
@@ -298,9 +300,9 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
-	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
-		http.Error(w, "Fichier trop volumineux", http.StatusBadRequest)
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxMultipartBodySize(h.maxUploadBytes))
+	if err := r.ParseMultipartForm(h.maxUploadBytes); err != nil {
+		http.Error(w, "Fichier trop volumineux (max "+utils.UploadSizeLabel(h.maxUploadBytes)+").", http.StatusBadRequest)
 		return
 	}
 
@@ -345,8 +347,8 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 	file, header, err := r.FormFile("image")
 	if err == nil {
 		defer file.Close()
-		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir)
-		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrFileTooLarge) {
+		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir, h.maxUploadBytes)
+		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrInvalidImage) || errors.Is(err, utils.ErrFileTooLarge) {
 			renderErr(err.Error())
 			return
 		}

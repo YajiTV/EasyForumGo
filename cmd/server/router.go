@@ -64,7 +64,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /search", socialHandler.Search)
 
 	// settings routes
-	settingsHandler := handler.NewSettingsHandler(db, cfg.UploadDir, renderer)
+	settingsHandler := handler.NewSettingsHandler(db, cfg.UploadDir, cfg.MaxUploadBytes, renderer)
 	mux.HandleFunc("GET /settings", settingsHandler.Show)
 	mux.Handle("POST /settings/profile", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateProfile)))
 	mux.Handle("POST /settings/email", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateEmail)))
@@ -83,7 +83,7 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("POST /post/{postID}/library", libraryHandler.AddPost)
 
 	// post routes
-	postHandler := handler.NewPostHandler(db, cfg.UploadDir, renderer)
+	postHandler := handler.NewPostHandler(db, cfg.UploadDir, cfg.MaxUploadBytes, renderer)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
 	mux.Handle("POST /post/new", writeLimiter.Wrap(authMiddleware.RequireNotMuted(http.HandlerFunc(postHandler.CreatePost))))
 	mux.HandleFunc("GET /post/{id}/edit", postHandler.ShowEditForm)

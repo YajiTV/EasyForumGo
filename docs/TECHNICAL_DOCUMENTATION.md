@@ -118,8 +118,8 @@ Creating a new session replaces the previous session, satisfying the subject's s
 
 1. A connected user submits a title, content, category IDs, and optional image.
 2. The server validates text lengths and verifies that selected category IDs exist.
-3. The image MIME type and size are validated when an image is present.
-4. The post and its category relations are stored.
+3. The image size, signature, and complete JPEG/PNG/GIF decoding are validated when an image is present.
+4. The post and its category relations are stored atomically.
 5. The user is redirected to the post detail page.
 
 Only the author may edit or delete a post.
@@ -265,7 +265,7 @@ Container recreation does not remove named volumes. `docker compose down --volum
 
 Configuration is read from environment variables in `config/config.go`. Invalid or missing numeric values fall back to safe defaults.
 
-Session duration is configurable and defaults to 24 hours. Image uploads use the 20 MB limit required by the subject.
+Session duration is configurable and defaults to 24 hours. Image uploads use the `MAX_UPLOAD_MB` limit, with the subject's 20 MB limit as the default.
 
 `APP_ENV` accepts `dev` or `prod`. Production mode requires an HTTPS `APP_PUBLIC_URL` and `TRUST_PROXY=true`. `APP_BASE_PATH` mounts the application below an optional path prefix, `APP_PUBLIC_URL` defines the canonical OAuth callback base and enables secure cookies for HTTPS URLs, and `TRUST_PROXY` allows trusted forwarded client IP headers.
 

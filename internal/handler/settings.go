@@ -17,12 +17,13 @@ import (
 )
 
 type SettingsHandler struct {
-	users     *repository.UserRepository
-	sessions  *repository.SessionRepository
-	renderer  *PageRenderer
-	follows   *repository.FollowRepository
-	posts     *repository.PostRepository
-	uploadDir string
+	users          *repository.UserRepository
+	sessions       *repository.SessionRepository
+	renderer       *PageRenderer
+	follows        *repository.FollowRepository
+	posts          *repository.PostRepository
+	uploadDir      string
+	maxUploadBytes int64
 }
 
 type SettingsPageData struct {
@@ -35,14 +36,15 @@ type SettingsPageData struct {
 }
 
 // NewSettingsHandler creates a new instance
-func NewSettingsHandler(db *sql.DB, uploadDir string, renderer *PageRenderer) *SettingsHandler {
+func NewSettingsHandler(db *sql.DB, uploadDir string, maxUploadBytes int64, renderer *PageRenderer) *SettingsHandler {
 	return &SettingsHandler{
-		users:     repository.NewUserRepository(db),
-		sessions:  repository.NewSessionRepository(db),
-		renderer:  renderer,
-		follows:   repository.NewFollowRepository(db),
-		posts:     repository.NewPostRepository(db),
-		uploadDir: uploadDir,
+		users:          repository.NewUserRepository(db),
+		sessions:       repository.NewSessionRepository(db),
+		renderer:       renderer,
+		follows:        repository.NewFollowRepository(db),
+		posts:          repository.NewPostRepository(db),
+		uploadDir:      uploadDir,
+		maxUploadBytes: maxUploadBytes,
 	}
 }
 
@@ -69,9 +71,9 @@ func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxUploadSize)
-	if err := r.ParseMultipartForm(utils.MaxUploadSize); err != nil {
-		h.renderError(w, user, "profile", "Fichier trop volumineux (max 20 Mo).")
+	r.Body = http.MaxBytesReader(w, r.Body, utils.MaxMultipartBodySize(h.maxUploadBytes))
+	if err := r.ParseMultipartForm(h.maxUploadBytes); err != nil {
+		h.renderError(w, user, "profile", "Fichier trop volumineux (max "+utils.UploadSizeLabel(h.maxUploadBytes)+").")
 		return
 	}
 
@@ -94,8 +96,8 @@ func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 	file, header, err := r.FormFile("profile_picture")
 	if err == nil {
 		defer file.Close()
-		filename, saveErr := utils.SaveUploadedImage(file, header, h.uploadDir)
-		if errors.Is(saveErr, utils.ErrInvalidMIME) || errors.Is(saveErr, utils.ErrFileTooLarge) {
+		filename, saveErr := utils.SaveUploadedImage(file, header, h.uploadDir, h.maxUploadBytes)
+		if errors.Is(saveErr, utils.ErrInvalidMIME) || errors.Is(saveErr, utils.ErrInvalidImage) || errors.Is(saveErr, utils.ErrFileTooLarge) {
 			h.renderError(w, user, "profile", saveErr.Error())
 			return
 		}
