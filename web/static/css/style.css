@@ -80,6 +80,10 @@ textarea {
     pointer-events: none;
 }
 
+.sidebar-backdrop {
+    display: none;
+}
+
 .icon {
     width: 21px;
     height: 21px;
@@ -1467,32 +1471,63 @@ textarea {
         display: block;
     }
 
+    /* backdrop — covers page behind the open drawer */
+    .menu-state:checked ~ .theme-shell .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 24;
+        background: rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+    }
+
+    /* sidebar becomes a slide-in drawer */
     .left-sidebar {
-        display: none;
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
-        padding: 10px 16px;
-        overflow-x: auto;
+        display: block;
+        position: fixed;
+        top: var(--topbar-height);
+        left: 0;
+        bottom: 0;
+        width: 260px;
+        border-right: 1px solid var(--line);
+        border-bottom: 0;
+        padding: 20px 16px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        z-index: 25;
+        visibility: hidden;
+        transform: translateX(-100%);
+        transition: transform 0.22s ease, visibility 0s linear 0.22s;
     }
 
     .menu-state:checked ~ .theme-shell .app-shell .left-sidebar {
-        display: block;
+        visibility: visible;
+        transform: translateX(0);
+        transition: transform 0.22s ease, visibility 0s linear 0s;
     }
 
+    /* vertical nav inside the drawer */
     .side-nav {
         position: static;
-        flex-direction: row;
-        gap: 18px;
-        width: max-content;
+        flex-direction: column;
+        gap: 4px;
+        width: auto;
     }
 
     .side-nav::after {
-        display: none;
+        margin: 10px 0;
     }
 
     .side-nav-item {
         justify-content: flex-start;
-        min-height: 40px;
+        gap: 14px;
+        min-height: 44px;
+        padding: 0 8px;
+        border-radius: 8px;
+    }
+
+    .side-nav-item:hover {
+        background: var(--soft);
     }
 
     .side-nav-item span {
