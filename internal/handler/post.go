@@ -117,22 +117,13 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	imagePath := ""
-	file, header, err := r.FormFile("image")
-	if err == nil {
-		defer file.Close()
-		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir, h.maxUploadBytes)
-		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrInvalidImage) || errors.Is(err, utils.ErrFileTooLarge) {
-			h.renderError(w, r, user, err.Error())
-			return
-		}
-		if err != nil {
-			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-			return
-		}
-		imagePath = filename
-	} else if !errors.Is(err, http.ErrMissingFile) {
-		h.renderError(w, r, user, "L'image envoyée est invalide.")
+	imagePath, err := h.handleImageUpload(r)
+	if errors.Is(err, errImageServer) {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	if err != nil {
+		h.renderError(w, r, user, err.Error())
 		return
 	}
 
@@ -347,24 +338,17 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	previousImagePath := post.ImagePath
-	newImagePath := ""
-	file, header, err := r.FormFile("image")
-	if err == nil {
-		defer file.Close()
-		filename, err := utils.SaveUploadedImage(file, header, h.uploadDir, h.maxUploadBytes)
-		if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrInvalidImage) || errors.Is(err, utils.ErrFileTooLarge) {
-			renderErr(err.Error())
-			return
-		}
-		if err != nil {
-			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-			return
-		}
-		post.ImagePath = filename
-		newImagePath = filename
-	} else if !errors.Is(err, http.ErrMissingFile) {
-		renderErr("L'image envoyée est invalide.")
+	newImagePath, err := h.handleImageUpload(r)
+	if errors.Is(err, errImageServer) {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
+	}
+	if err != nil {
+		renderErr(err.Error())
+		return
+	}
+	if newImagePath != "" {
+		post.ImagePath = newImagePath
 	}
 
 	post.Title = title
@@ -549,6 +533,28 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.renderer.Render(w, "post/post_detail.html", data)
+}
+
+var errImageServer = errors.New("server")
+
+func (h *PostHandler) handleImageUpload(r *http.Request) (string, error) {
+	file, header, err := r.FormFile("image")
+	if errors.Is(err, http.ErrMissingFile) {
+		return "", nil
+	}
+	if err != nil {
+		return "", errors.New("L'image envoyée est invalide.")
+	}
+	defer file.Close()
+
+	filename, err := utils.SaveUploadedImage(file, header, h.uploadDir, h.maxUploadBytes)
+	if errors.Is(err, utils.ErrInvalidMIME) || errors.Is(err, utils.ErrInvalidImage) || errors.Is(err, utils.ErrFileTooLarge) {
+		return "", err
+	}
+	if err != nil {
+		return "", errImageServer
+	}
+	return filename, nil
 }
 
 func (h *PostHandler) removeImage(path string) {
