@@ -88,6 +88,30 @@
             </footer>
         </article>
 
+        <aside class="reading-rail" aria-label="Résumé du post">
+            <div class="reading-rail-card">
+                <p class="reading-rail-kicker">À propos de l'auteur</p>
+                <a href="/user/{{.Author}}" class="reading-rail-author">
+                    {{if .AuthorAvatarURL}}
+                    <img src="{{.AuthorAvatarURL}}" alt="Photo de profil de {{.Author}}">
+                    {{else}}
+                    <span>{{printf "%.1s" .Author}}</span>
+                    {{end}}
+                    <strong>{{.Author}}</strong>
+                </a>
+                <p class="reading-rail-biography">{{if .AuthorBiography}}{{.AuthorBiography}}{{else}}Aucune biographie pour le moment.{{end}}</p>
+                {{if .AuthorTopics}}
+                <div class="reading-rail-topics">
+                    <span>Publie souvent dans</span>
+                    <nav aria-label="Thèmes fréquents de {{.Author}}">
+                        {{range .AuthorTopics}}<a href="/?category={{.ID}}">{{.Name}}</a>{{end}}
+                    </nav>
+                </div>
+                {{end}}
+                <a href="/user/{{.Author}}" class="reading-rail-link">Voir le profil</a>
+            </div>
+        </aside>
+
         {{if .User}}
         <section class="reading-library" aria-labelledby="library-title">
             <div class="reading-library-heading">
@@ -199,29 +223,5 @@
             </div>
         </section>
     </main>
-
-    <aside class="reading-rail" aria-label="Résumé du post">
-        <div class="reading-rail-card">
-            <p class="reading-rail-kicker">À propos de l'auteur</p>
-            <a href="/user/{{.Author}}" class="reading-rail-author">
-                {{if .AuthorAvatarURL}}
-                <img src="{{.AuthorAvatarURL}}" alt="Photo de profil de {{.Author}}">
-                {{else}}
-                <span>{{printf "%.1s" .Author}}</span>
-                {{end}}
-                <strong>{{.Author}}</strong>
-            </a>
-            <p class="reading-rail-biography">{{if .AuthorBiography}}{{.AuthorBiography}}{{else}}Aucune biographie pour le moment.{{end}}</p>
-            {{if .AuthorTopics}}
-            <div class="reading-rail-topics">
-                <span>Publie souvent dans</span>
-                <nav aria-label="Thèmes fréquents de {{.Author}}">
-                    {{range .AuthorTopics}}<a href="/?category={{.ID}}">{{.Name}}</a>{{end}}
-                </nav>
-            </div>
-            {{end}}
-            <a href="/user/{{.Author}}" class="reading-rail-link">Voir le profil</a>
-        </div>
-    </aside>
 </div>
 {{end}}
