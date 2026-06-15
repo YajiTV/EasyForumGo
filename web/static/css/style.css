@@ -1554,8 +1554,14 @@ textarea {
     }
 }
 
-/* Google OAuth button */
-.btn-google {
+/* OAuth provider buttons */
+.oauth-actions {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.btn-oauth {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1573,19 +1579,29 @@ textarea {
     cursor: pointer;
     text-decoration: none;
     transition: background-color 0.15s ease, border-color 0.15s ease;
-    margin-bottom: 16px;
 }
 
-.btn-google:hover {
+.btn-oauth:hover {
     background: var(--soft);
     border-color: var(--text);
 }
 
-.btn-google svg {
+.btn-oauth svg {
     flex-shrink: 0;
 }
 
-/* Séparateur "ou" entre le formulaire et le bouton Google */
+.btn-github {
+    background: #24292f;
+    border-color: #24292f;
+    color: #fff;
+}
+
+.btn-github:hover {
+    background: #000;
+    border-color: #000;
+}
+
+/* Séparateur "ou" entre le formulaire et les boutons OAuth */
 .auth-divider {
     display: flex;
     align-items: center;

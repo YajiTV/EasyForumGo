@@ -160,7 +160,7 @@ func (h *SettingsHandler) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !hasLocalPassword(user) {
-		h.renderError(w, user, "email", "L'adresse e-mail de ce compte est gérée par Google.")
+		h.renderError(w, user, "email", "L'adresse e-mail de ce compte est gérée par son fournisseur OAuth.")
 		return
 	}
 
@@ -196,7 +196,7 @@ func (h *SettingsHandler) UpdatePassword(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if !hasLocalPassword(user) {
-		h.renderError(w, user, "password", "Ce compte utilise Google pour se connecter.")
+		h.renderError(w, user, "password", "Ce compte utilise un fournisseur OAuth pour se connecter.")
 		return
 	}
 

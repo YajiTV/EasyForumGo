@@ -26,6 +26,10 @@ services:
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
       OAUTH_ID: ${OAUTH_ID:-}
       OAUTH_KEY: ${OAUTH_KEY:-}
+      GOOGLE_OAUTH_ID: ${GOOGLE_OAUTH_ID:-}
+      GOOGLE_OAUTH_KEY: ${GOOGLE_OAUTH_KEY:-}
+      GITHUB_OAUTH_ID: ${GITHUB_OAUTH_ID:-}
+      GITHUB_OAUTH_KEY: ${GITHUB_OAUTH_KEY:-}
     restart: unless-stopped
     networks:
       - web

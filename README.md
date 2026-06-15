@@ -32,7 +32,7 @@ Easy is a server-rendered community forum written in Go for the B1 Forum project
 - Public profiles, follows, following feed, discovery, and search
 - Notifications for forum, social, and moderation events
 - CSS-only light, system, and dark themes
-- Google OAuth authentication
+- Google and GitHub OAuth authentication with verified-email account linking
 - Moderation data model, reports, roles, restrictions, and actions
 - Optional base-path deployment behind a trusted reverse proxy
 
@@ -40,7 +40,7 @@ Easy is a server-rendered community forum written in Go for the B1 Forum project
 
 | Subject bonus | Status |
 | --- | --- |
-| Google and GitHub OAuth | Partial: Google is implemented; GitHub is not |
+| Google and GitHub OAuth | Implemented |
 | Advanced image upload | Implemented: JPEG, PNG, GIF, decoded-image validation, configurable limit |
 | Moderation | Partial: roles, reports, actions, mute, and ban exist; pre-publication approval and complete administration are not implemented |
 | HTTPS and rate limiting | Implemented: Docker development HTTPS, HTTP redirect, reverse-proxy support, and in-memory limits |
@@ -127,8 +127,10 @@ Configuration is loaded from environment variables and an optional local `.env` 
 | `UPLOAD_DIR` | `./uploads` | Uploaded image directory |
 | `MAX_UPLOAD_MB` | `20` | Maximum image size in megabytes |
 | `SESSION_DURATION_H` | `24` | Session duration in hours |
-| `OAUTH_ID` | empty | Google OAuth client ID |
-| `OAUTH_KEY` | empty | Google OAuth client secret |
+| `GOOGLE_OAUTH_ID` | empty | Google OAuth client ID |
+| `GOOGLE_OAUTH_KEY` | empty | Google OAuth client secret |
+| `GITHUB_OAUTH_ID` | empty | GitHub OAuth app client ID |
+| `GITHUB_OAUTH_KEY` | empty | GitHub OAuth app client secret |
 | `APP_BASE_PATH` | empty | Optional public path prefix, for example `/easy` |
 | `APP_PUBLIC_URL` | empty locally; `https://localhost:8443` in Docker | Canonical public application URL |
 | `TRUST_PROXY` | `false` | Trust forwarded client-address headers |
@@ -152,11 +154,19 @@ TLS_KEY_FILE=
 
 The reverse proxy can join the automatically created `web` network and forward the unchanged public path to `forum:8080`. Setting both `TLS_CERT_FILE` and `TLS_KEY_FILE` explicitly to empty disables internal TLS so the proxy can own HTTPS. Production mode requires an HTTPS `APP_PUBLIC_URL` and `TRUST_PROXY=true`.
 
-The Google OAuth redirect URI must match:
+OAuth callback URLs must match:
 
 ```text
 https://example.com/easy/auth/google/callback
+https://example.com/easy/auth/github/callback
 ```
+
+For Docker development, create a GitHub OAuth App with homepage URL
+`https://localhost:8443` and callback URL
+`https://localhost:8443/auth/github/callback`, then set `GITHUB_OAUTH_ID` and
+`GITHUB_OAUTH_KEY`. GitHub accounts must expose at least one verified e-mail to
+the application; private primary e-mails are retrieved through the requested
+`user:email` scope.
 
 Run one application instance because Easy uses SQLite and in-memory rate limiting.
 
@@ -180,11 +190,12 @@ docs/                technical and persistence documentation
 
 ## Database
 
-Easy applies 21 migration files on startup and records them in `schema_migrations`.
+Easy applies 22 migration files on startup and records them in `schema_migrations`.
 
 | Table | Purpose |
 | --- | --- |
-| `users` | Accounts, roles, OAuth identity, profile, and social preferences |
+| `users` | Accounts, roles, profile, and social preferences |
+| `oauth_identities`, `oauth_pending_flows` | Multiple OAuth providers per account and short-lived completion flows |
 | `sessions` | Unique expiring user sessions |
 | `posts`, `categories`, `post_categories` | Forum posts and categories |
 | `comments` | Post comments |
@@ -213,7 +224,7 @@ SQLite foreign keys and cascading deletion are enabled. The existing visual diag
 | `POST` | `/comment/{id}/like`, `/comment/{id}/dislike` | Connected | Vote on a comment |
 | `GET` | `/profile/*`, `/settings`, `/library/*`, `/notifications` | Connected | Personal features |
 | `GET` | `/user/{username}`, `/discover`, `/search` | Public or connected | Social features |
-| `GET`, `POST` | `/auth/google/*` | Public | Google OAuth |
+| `GET`, `POST` | `/auth/google/*`, `/auth/github/*` | Public | Google and GitHub OAuth |
 | `POST` | `/{post|comment|user}/{id}/report` | Connected | Report content or a user |
 | `GET`, `POST` | `/moderation/*`, `/admin/*` | Moderator or admin | Moderation actions |
 
@@ -247,7 +258,6 @@ curl -k -I https://localhost:8443/
 
 ## Known Limits
 
-- GitHub OAuth is not implemented.
 - Moderation does not implement pre-publication approval or complete category/user administration.
 - The moderation dashboard template is currently missing.
 - CSRF tokens are not implemented for ordinary state-changing forms.
