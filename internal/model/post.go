@@ -8,6 +8,7 @@ type Post struct {
 	Title     string
 	Content   string
 	ImagePath string
+	Approved  int
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

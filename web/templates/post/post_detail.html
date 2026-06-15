@@ -84,6 +84,11 @@
                         <a href="/post/{{.Post.ID}}/delete" class="danger-link">Supprimer</a>
                     </nav>
                     {{end}}
+                    {{if .User.CanModerate}}
+                    <form action="/post/{{.Post.ID}}/approve" method="POST" class="reading-moderation-action">
+                        <button type="submit">Approuver</button>
+                    </form>
+                    {{end}}
                 {{end}}
             </footer>
         </article>

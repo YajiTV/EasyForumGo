@@ -133,6 +133,11 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	approved := 0
+	if user.IsModerator() {
+		approved = 1
+	}
+
 	now := time.Now()
 	post := &model.Post{
 		ID:        utils.NewUUID(),
@@ -140,6 +145,7 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		Title:     title,
 		Content:   content,
 		ImagePath: imagePath,
+		Approved:  approved,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -407,6 +413,24 @@ func (h *PostHandler) userFromSession(r *http.Request) *model.User {
 		return nil
 	}
 	return user
+}
+
+// ApprovePost approves a pending post (moderators and admins only)
+func (h *PostHandler) ApprovePost(w http.ResponseWriter, r *http.Request) {
+	user := h.userFromSession(r)
+	if user == nil || !user.IsModerator() {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	postID := r.PathValue("id")
+	if err := h.posts.Approve(postID); err != nil {
+		log.Printf("approve post %q: %v", postID, err)
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 }
 
 // renderCreateForm renders the requested page
