@@ -90,7 +90,6 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.Handle("POST /post/{id}/edit", writeLimiter.Wrap(http.HandlerFunc(postHandler.EditPost)))
 	mux.HandleFunc("GET /post/{id}/delete", postHandler.ShowDeleteConfirmation)
 	mux.Handle("POST /post/{id}/delete", writeLimiter.Wrap(http.HandlerFunc(postHandler.DeletePost)))
-	mux.Handle("POST /post/{id}/approve", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(postHandler.ApprovePost))))
 	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
 
 	// comment routes
