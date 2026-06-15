@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"errors"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -460,6 +461,7 @@ type CommentWithAuthor struct {
 type PostDetailData struct {
 	User            *model.User
 	Post            *model.Post
+	RenderedContent template.HTML
 	Author          string
 	AuthorAvatarURL string
 	AuthorBiography string
@@ -536,6 +538,7 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	data := PostDetailData{
 		User:            currentUser,
 		Post:            post,
+		RenderedContent: utils.RenderMarkdown(post.Content),
 		Author:          author.Username,
 		AuthorAvatarURL: author.AvatarURL(),
 		AuthorBiography: author.Biography,
