@@ -154,6 +154,11 @@ TLS_KEY_FILE=
 
 The reverse proxy can join the automatically created `web` network and forward the unchanged public path to `forum:8080`. Setting both `TLS_CERT_FILE` and `TLS_KEY_FILE` explicitly to empty disables internal TLS so the proxy can own HTTPS. Production mode requires an HTTPS `APP_PUBLIC_URL` and `TRUST_PROXY=true`.
 
+The deployment script automatically applies
+`docker/docker-compose.prod.yml`. This production override treats the existing
+shared `web` reverse-proxy network as external and disables internal TLS. The
+base Compose file remains autonomous for local development.
+
 OAuth callback URLs must match:
 
 ```text

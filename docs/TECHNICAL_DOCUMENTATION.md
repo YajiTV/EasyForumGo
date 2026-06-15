@@ -280,6 +280,10 @@ Session duration is configurable and defaults to 24 hours. Image uploads use the
 
 Development and production use the same `.env`, `docker/Dockerfile`, and `docker/docker-compose.yml`. Docker development uses the generated self-signed certificate; production can disable internal TLS and let the reverse proxy own TLS.
 
+`scripts/deploy.ps1` additionally applies `docker/docker-compose.prod.yml` on
+the server. This override joins the pre-existing external `web` reverse-proxy
+network and disables the application's internal TLS listener.
+
 ## 10. Verification Strategy
 
 The repository must pass:
