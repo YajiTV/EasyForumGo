@@ -542,8 +542,13 @@
         grid-template-columns: minmax(0, 780px);
     }
 
+    /* rail moves below article instead of disappearing */
     .reading-rail {
-        display: none;
+        position: static;
+    }
+
+    .reading-rail-card {
+        max-width: 420px;
     }
 }
 

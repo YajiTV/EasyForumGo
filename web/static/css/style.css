@@ -491,14 +491,17 @@ textarea {
 }
 
 .side-nav-item span {
+    max-width: 0;       /* takes no layout space → icon truly centers */
+    overflow: hidden;
     opacity: 0;
     transform: translateX(-6px);
     white-space: nowrap;
     pointer-events: none;
-    transition: opacity 0.16s ease, transform 0.16s ease;
+    transition: max-width 0.18s ease, opacity 0.16s ease, transform 0.16s ease;
 }
 
 .menu-state:checked ~ .theme-shell .app-shell .side-nav-item span {
+    max-width: 200px;   /* reveal label */
     opacity: 1;
     transform: translateX(0);
     pointer-events: auto;
@@ -1462,11 +1465,6 @@ textarea {
         display: none;
     }
 
-    .theme-switcher a {
-        width: 38px;
-        height: 38px;
-    }
-
     .user-menu-panel {
         position: fixed;
         top: var(--topbar-height);
@@ -1604,6 +1602,12 @@ textarea {
 }
 
 @media (max-width: 640px) {
+    /* hide header shortcuts accessible via sidebar drawer */
+    .write-link,
+    .login-link {
+        display: none;
+    }
+
     .home-feed {
         padding: 20px 14px 36px;
     }
