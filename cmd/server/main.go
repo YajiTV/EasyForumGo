@@ -16,7 +16,7 @@ func main() {
 		log.Fatalf("Invalid configuration: %v", err)
 	}
 
-	db, err := repository.InitDB(cfg.DBPath, cfg.MigrationsDir)
+	db, err := repository.InitDB(cfg.DBPath, cfg.MigrationsDir, cfg.DBEncryptionKey)
 	if err != nil {
 		log.Fatalf("DB init failed: %v", err)
 	}

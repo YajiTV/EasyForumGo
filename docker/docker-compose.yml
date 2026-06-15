@@ -30,6 +30,7 @@ services:
       GOOGLE_OAUTH_KEY: ${GOOGLE_OAUTH_KEY:-}
       GITHUB_OAUTH_ID: ${GITHUB_OAUTH_ID:-}
       GITHUB_OAUTH_KEY: ${GITHUB_OAUTH_KEY:-}
+      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY:-}
     restart: unless-stopped
     networks:
       - web
