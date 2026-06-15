@@ -1415,11 +1415,13 @@ textarea {
     .side-nav-item {
         justify-content: center;
         padding: 0;
+        gap: 0; /* span is opacity:0 but still takes space; gap:0 lets icon truly center */
     }
 
     .menu-state:checked ~ .theme-shell .app-shell .side-nav-item {
         justify-content: flex-start;
         padding: 0 4px;
+        gap: 16px; /* restore gap when labels become visible */
     }
 
 }
@@ -1457,11 +1459,6 @@ textarea {
     }
 
     .search-form button {
-        display: none;
-    }
-
-    .nav-links a:not(.register-link):not(.write-link):not(.notif-bell):not(.login-link),
-    .logout-form {
         display: none;
     }
 
