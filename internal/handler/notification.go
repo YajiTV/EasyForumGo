@@ -3,7 +3,6 @@ package handler
 import (
 	"database/sql"
 	"net/http"
-	"time"
 
 	"EasyForumGo/internal/model"
 	"EasyForumGo/internal/repository"
@@ -33,7 +32,7 @@ type notificationPageData struct {
 
 // ShowNotifications renders the notifications page and marks all as read
 func (h *NotificationHandler) ShowNotifications(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -53,19 +52,3 @@ func (h *NotificationHandler) ShowNotifications(w http.ResponseWriter, r *http.R
 	})
 }
 
-// userFromSession gets the user from the current session
-func (h *NotificationHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}

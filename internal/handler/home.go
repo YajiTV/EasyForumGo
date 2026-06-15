@@ -68,7 +68,7 @@ func NewHomeHandler(db *sql.DB, errors *ErrorRenderer, renderer *PageRenderer) *
 
 // Home handles the request
 func (h *HomeHandler) Home(w http.ResponseWriter, r *http.Request) {
-	currentUser := h.userFromSession(r)
+	currentUser := userFromSession(r, h.sessions, h.users)
 
 	if r.URL.Path != "/" {
 		h.errors.RenderWithRequest(w, r, http.StatusNotFound, "La page demandée est introuvable.")
@@ -164,19 +164,3 @@ func (h *HomeHandler) postsWithMeta(posts []model.Post, currentUser *model.User)
 	return postsWithMeta
 }
 
-// userFromSession gets the user from the current session
-func (h *HomeHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}

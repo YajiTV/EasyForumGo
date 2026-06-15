@@ -101,7 +101,7 @@ func (h *SocialHandler) PublicProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
-	currentUser := h.userFromSession(r)
+	currentUser := userFromSession(r, h.sessions, h.users)
 	page := pageNumber(r)
 	posts, err := h.posts.GetByUserIDPaginated(profileUser.ID, socialPageSize+1, (page-1)*socialPageSize)
 	if err != nil {
@@ -151,7 +151,7 @@ func (h *SocialHandler) Unfollow(w http.ResponseWriter, r *http.Request) {
 
 // Discover renders user discovery suggestions
 func (h *SocialHandler) Discover(w http.ResponseWriter, r *http.Request) {
-	currentUser := h.userFromSession(r)
+	currentUser := userFromSession(r, h.sessions, h.users)
 	if currentUser == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -163,7 +163,7 @@ func (h *SocialHandler) Discover(w http.ResponseWriter, r *http.Request) {
 
 // Search renders post and profile search results
 func (h *SocialHandler) Search(w http.ResponseWriter, r *http.Request) {
-	currentUser := h.userFromSession(r)
+	currentUser := userFromSession(r, h.sessions, h.users)
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	resultType := r.URL.Query().Get("type")
 	if resultType != "posts" && resultType != "users" {
@@ -210,7 +210,7 @@ func (h *SocialHandler) renderUserList(w http.ResponseWriter, r *http.Request, l
 		http.NotFound(w, r)
 		return
 	}
-	currentUser := h.userFromSession(r)
+	currentUser := userFromSession(r, h.sessions, h.users)
 	isOwner := currentUser != nil && currentUser.ID == profileUser.ID
 	hidden := !profileUser.FollowsVisible && !isOwner
 	page := pageNumber(r)
@@ -242,7 +242,7 @@ func (h *SocialHandler) renderUserList(w http.ResponseWriter, r *http.Request, l
 
 // changeFollow changes a following relation
 func (h *SocialHandler) changeFollow(w http.ResponseWriter, r *http.Request, follow bool) {
-	currentUser := h.userFromSession(r)
+	currentUser := userFromSession(r, h.sessions, h.users)
 	if currentUser == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -296,19 +296,6 @@ func (h *SocialHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
 	return result
 }
 
-// userFromSession gets the user from the current session
-func (h *SocialHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie(sessionCookieName)
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, _ := h.users.GetByID(session.UserID)
-	return user
-}
 
 // pageNumber returns a validated pagination page
 func pageNumber(r *http.Request) int {

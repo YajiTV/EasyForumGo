@@ -3,7 +3,6 @@ package handler
 import (
 	"database/sql"
 	"net/http"
-	"time"
 
 	"EasyForumGo/internal/model"
 	"EasyForumGo/internal/repository"
@@ -33,24 +32,8 @@ func NewPageHandler(db *sql.DB, errors *ErrorRenderer, renderer *PageRenderer) *
 // Page returns a handler for an informational page
 func (h *PageHandler) Page(filename string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		data := PageData{User: h.userFromSession(r)}
+		data := PageData{User: userFromSession(r, h.sessions, h.users)}
 		h.renderer.Render(w, filename, data)
 	}
 }
 
-// userFromSession gets the user from the current session
-func (h *PageHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}

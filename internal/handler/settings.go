@@ -50,7 +50,7 @@ func NewSettingsHandler(db *sql.DB, uploadDir string, maxUploadBytes int64, rend
 
 // Show renders the settings page
 func (h *SettingsHandler) Show(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -65,7 +65,7 @@ func (h *SettingsHandler) Show(w http.ResponseWriter, r *http.Request) {
 
 // UpdateProfile updates the current user's public name and picture
 func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -134,7 +134,7 @@ func (h *SettingsHandler) removeLocalProfilePicture(filename string) {
 
 // UpdateSocial updates the current user's social preferences
 func (h *SettingsHandler) UpdateSocial(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -154,7 +154,7 @@ func (h *SettingsHandler) UpdateSocial(w http.ResponseWriter, r *http.Request) {
 
 // UpdateEmail updates the current user's email address
 func (h *SettingsHandler) UpdateEmail(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -190,7 +190,7 @@ func (h *SettingsHandler) UpdateEmail(w http.ResponseWriter, r *http.Request) {
 
 // UpdatePassword updates the current user's password
 func (h *SettingsHandler) UpdatePassword(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -234,7 +234,7 @@ func (h *SettingsHandler) UpdatePassword(w http.ResponseWriter, r *http.Request)
 
 // DeleteAccount deletes the current user's account
 func (h *SettingsHandler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -271,22 +271,6 @@ func (h *SettingsHandler) render(w http.ResponseWriter, data SettingsPageData) {
 	h.renderer.Render(w, "settings/settings.html", data)
 }
 
-// userFromSession gets the user from the current session
-func (h *SettingsHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie(sessionCookieName)
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}
 
 // hasLocalPassword reports whether a user can authenticate with a password
 func hasLocalPassword(user *model.User) bool {

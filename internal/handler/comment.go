@@ -39,7 +39,7 @@ func NewCommentHandler(db *sql.DB, renderer *PageRenderer) *CommentHandler {
 
 // CreateComment creates a new record
 func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -104,7 +104,7 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 
 // DeleteComment deletes an existing record
 func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -143,7 +143,7 @@ type deleteCommentData struct {
 
 // ShowDeleteConfirmation renders the requested page
 func (h *CommentHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -169,7 +169,7 @@ func (h *CommentHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.R
 
 // ShowEditForm renders the requested page
 func (h *CommentHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -195,7 +195,7 @@ func (h *CommentHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 
 // EditComment updates a comment from the author
 func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -245,22 +245,6 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/post/"+comment.PostID, http.StatusSeeOther)
 }
 
-// userFromSession gets the user from the current session
-func (h *CommentHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}
 
 // renderTemplate renders the requested page
 func (h *CommentHandler) renderTemplate(w http.ResponseWriter, name string, data any) {

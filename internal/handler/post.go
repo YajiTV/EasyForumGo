@@ -70,7 +70,7 @@ type deletePostData struct {
 
 // ShowCreateForm renders the requested page
 func (h *PostHandler) ShowCreateForm(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -86,7 +86,7 @@ func (h *PostHandler) ShowCreateForm(w http.ResponseWriter, r *http.Request) {
 
 // CreatePost creates a new record
 func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -177,7 +177,7 @@ func (h *PostHandler) notifyFollowers(post *model.Post) {
 
 // DeletePost deletes an existing record
 func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -207,7 +207,7 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 // ShowDeleteConfirmation renders the requested page
 func (h *PostHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -241,7 +241,7 @@ type editPostData struct {
 
 // ShowEditForm renders the requested page
 func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -277,7 +277,7 @@ func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 
 // EditPost updates a post from the author
 func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -373,22 +373,6 @@ func (h *PostHandler) renderEditForm(w http.ResponseWriter, data editPostData) {
 	h.renderer.Render(w, "post/edit_post.html", data)
 }
 
-// userFromSession gets the user from the current session
-func (h *PostHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}
 
 // renderCreateForm renders the requested page
 func (h *PostHandler) renderCreateForm(w http.ResponseWriter, data createPostData) {
@@ -491,7 +475,7 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 
 	comments := h.buildComments(postID)
 
-	currentUser := h.userFromSession(r)
+	currentUser := userFromSession(r, h.sessions, h.users)
 	libraries := []model.Library{}
 	if currentUser != nil {
 		libraries, _ = h.libraries.GetByUserID(currentUser.ID)

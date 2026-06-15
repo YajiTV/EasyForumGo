@@ -42,7 +42,7 @@ func NewLibraryHandler(db *sql.DB, renderer *PageRenderer) *LibraryHandler {
 
 // Index renders the current user's libraries
 func (h *LibraryHandler) Index(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -52,7 +52,7 @@ func (h *LibraryHandler) Index(w http.ResponseWriter, r *http.Request) {
 
 // Show renders one library and its posts
 func (h *LibraryHandler) Show(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -77,7 +77,7 @@ func (h *LibraryHandler) Show(w http.ResponseWriter, r *http.Request) {
 
 // Create creates a library for the current user
 func (h *LibraryHandler) Create(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -109,7 +109,7 @@ func (h *LibraryHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Rename renames a library owned by the current user
 func (h *LibraryHandler) Rename(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -133,7 +133,7 @@ func (h *LibraryHandler) Rename(w http.ResponseWriter, r *http.Request) {
 
 // Delete deletes a library owned by the current user
 func (h *LibraryHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -152,7 +152,7 @@ func (h *LibraryHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 // AddPost adds a post to the selected library
 func (h *LibraryHandler) AddPost(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -177,7 +177,7 @@ func (h *LibraryHandler) AddPost(w http.ResponseWriter, r *http.Request) {
 
 // RemovePost removes a post from a library page
 func (h *LibraryHandler) RemovePost(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -230,22 +230,6 @@ func (h *LibraryHandler) postsWithMeta(posts []model.Post) []PostWithMeta {
 	return postsWithMeta
 }
 
-// userFromSession gets the user from the current session
-func (h *LibraryHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}
 
 // validLibraryName validates a library name
 func validLibraryName(name string) bool {

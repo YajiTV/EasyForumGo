@@ -66,7 +66,7 @@ type ProfileActivityPageData struct {
 
 // LikedPosts renders posts liked by the current user
 func (h *ProfileHandler) LikedPosts(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -92,7 +92,7 @@ func (h *ProfileHandler) LikedPosts(w http.ResponseWriter, r *http.Request) {
 
 // MyPosts handles the request
 func (h *ProfileHandler) MyPosts(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -116,7 +116,7 @@ func (h *ProfileHandler) MyPosts(w http.ResponseWriter, r *http.Request) {
 
 // MyComments handles the request
 func (h *ProfileHandler) MyComments(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -140,7 +140,7 @@ func (h *ProfileHandler) MyComments(w http.ResponseWriter, r *http.Request) {
 
 // Activity renders the current user's activity summary
 func (h *ProfileHandler) Activity(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -182,22 +182,6 @@ func (h *ProfileHandler) Activity(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// userFromSession gets the user from the current session
-func (h *ProfileHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}
 
 // renderProfile renders the requested page
 func (h *ProfileHandler) renderProfile(w http.ResponseWriter, data ProfilePageData) {

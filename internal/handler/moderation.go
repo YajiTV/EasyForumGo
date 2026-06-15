@@ -87,7 +87,7 @@ func (h *ModerationHandler) ReportUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ModerationHandler) createReport(w http.ResponseWriter, r *http.Request, targetType model.TargetType) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -142,7 +142,7 @@ func (h *ModerationHandler) createReport(w http.ResponseWriter, r *http.Request,
 }
 
 func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil || !user.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -231,7 +231,7 @@ func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
-	moderator := h.userFromSession(r)
+	moderator := userFromSession(r, h.sessions, h.users)
 	if moderator == nil || !moderator.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -341,7 +341,7 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 }
 
 func (h *ModerationHandler) DismissReport(w http.ResponseWriter, r *http.Request) {
-	moderator := h.userFromSession(r)
+	moderator := userFromSession(r, h.sessions, h.users)
 	if moderator == nil || !moderator.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -357,7 +357,7 @@ func (h *ModerationHandler) DismissReport(w http.ResponseWriter, r *http.Request
 }
 
 func (h *ModerationHandler) PendingQueue(w http.ResponseWriter, r *http.Request) {
-	moderator := h.userFromSession(r)
+	moderator := userFromSession(r, h.sessions, h.users)
 	if moderator == nil || !moderator.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -389,7 +389,7 @@ func (h *ModerationHandler) PendingQueue(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *ModerationHandler) ApproveContent(w http.ResponseWriter, r *http.Request) {
-	moderator := h.userFromSession(r)
+	moderator := userFromSession(r, h.sessions, h.users)
 	if moderator == nil || !moderator.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -427,7 +427,7 @@ func (h *ModerationHandler) ApproveContent(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request) {
-	moderator := h.userFromSession(r)
+	moderator := userFromSession(r, h.sessions, h.users)
 	if moderator == nil || !moderator.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -481,7 +481,7 @@ func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request
 }
 
 func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Request) {
-	admin := h.userFromSession(r)
+	admin := userFromSession(r, h.sessions, h.users)
 	if admin == nil || !admin.IsAdmin() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -518,7 +518,7 @@ func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *ModerationHandler) UnbanUser(w http.ResponseWriter, r *http.Request) {
-	admin := h.userFromSession(r)
+	admin := userFromSession(r, h.sessions, h.users)
 	if admin == nil || !admin.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -532,7 +532,7 @@ func (h *ModerationHandler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ModerationHandler) KickUser(w http.ResponseWriter, r *http.Request) {
-	admin := h.userFromSession(r)
+	admin := userFromSession(r, h.sessions, h.users)
 	if admin == nil || !admin.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -592,24 +592,8 @@ func encodeJSON(w http.ResponseWriter, v any) {
 	}
 }
 
-func (h *ModerationHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}
-
 func (h *ModerationHandler) BanUser(w http.ResponseWriter, r *http.Request) {
-	admin := h.userFromSession(r)
+	admin := userFromSession(r, h.sessions, h.users)
 	if admin == nil || !admin.IsAdmin() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
@@ -627,7 +611,7 @@ func (h *ModerationHandler) BanUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ModerationHandler) MuteUser(w http.ResponseWriter, r *http.Request) {
-	admin := h.userFromSession(r)
+	admin := userFromSession(r, h.sessions, h.users)
 	if admin == nil || !admin.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return

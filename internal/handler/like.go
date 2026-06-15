@@ -33,7 +33,7 @@ func NewLikeHandler(db *sql.DB) *LikeHandler {
 
 // LikePost handles a like request
 func (h *LikeHandler) LikePost(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -50,7 +50,7 @@ func (h *LikeHandler) LikePost(w http.ResponseWriter, r *http.Request) {
 
 // DislikePost handles a dislike request
 func (h *LikeHandler) DislikePost(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -119,7 +119,7 @@ func (h *LikeHandler) togglePostVote(w http.ResponseWriter, r *http.Request, use
 
 // LikeComment handles a like request
 func (h *LikeHandler) LikeComment(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -137,7 +137,7 @@ func (h *LikeHandler) LikeComment(w http.ResponseWriter, r *http.Request) {
 
 // DislikeComment handles a dislike request
 func (h *LikeHandler) DislikeComment(w http.ResponseWriter, r *http.Request) {
-	user := h.userFromSession(r)
+	user := userFromSession(r, h.sessions, h.users)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -206,19 +206,3 @@ func (h *LikeHandler) toggleCommentVote(w http.ResponseWriter, r *http.Request, 
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 }
 
-// userFromSession gets the user from the current session
-func (h *LikeHandler) userFromSession(r *http.Request) *model.User {
-	cookie, err := r.Cookie("session_token")
-	if err != nil {
-		return nil
-	}
-	session, err := h.sessions.GetByToken(cookie.Value)
-	if err != nil || session.ExpiresAt.Before(time.Now()) {
-		return nil
-	}
-	user, err := h.users.GetByID(session.UserID)
-	if err != nil {
-		return nil
-	}
-	return user
-}
