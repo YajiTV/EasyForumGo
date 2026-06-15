@@ -1,0 +1,97 @@
+{{define "title"}}Modération — Easy{{end}}
+
+
+{{define "content"}}
+<div class="moderation-page">
+    <h1>Tableau de bord modération</h1>
+
+    <section class="moderation-section">
+        <h2>Signalements en attente ({{len .Pending}})</h2>
+
+        {{if .Pending}}
+            <ul class="report-list">
+            {{range .Pending}}
+                <li class="report-item">
+                    <div class="report-meta">
+                        <span class="report-category">{{.Category}}</span>
+                        <span class="report-type">{{.TargetType}}</span>
+                        <span class="report-date">{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
+                    </div>
+                    <p class="report-reason">{{.Reason}}</p>
+                    <p class="report-reporter">Signalé par : <strong>{{.ReporterName}}</strong></p>
+
+                    <details class="report-actions">
+                        <summary>Agir sur ce signalement</summary>
+                        <div class="report-actions-panel">
+
+                            {{if eq .TargetType "post"}}
+                            <form action="/moderation/report/{{.ID}}/resolve" method="POST" class="action-form">
+                                <input type="hidden" name="action_type" value="delete_post">
+                                <input type="hidden" name="reason" value="Signalement traité">
+                                <button type="submit" class="btn btn-danger">Supprimer le post</button>
+                            </form>
+                            {{end}}
+
+                            {{if eq .TargetType "comment"}}
+                            <form action="/moderation/report/{{.ID}}/resolve" method="POST" class="action-form">
+                                <input type="hidden" name="action_type" value="delete_comment">
+                                <input type="hidden" name="reason" value="Signalement traité">
+                                <button type="submit" class="btn btn-danger">Supprimer le commentaire</button>
+                            </form>
+                            {{end}}
+
+                            <form action="/moderation/report/{{.ID}}/resolve" method="POST" class="action-form">
+                                <input type="hidden" name="action_type" value="warn_user">
+                                <input type="hidden" name="reason" value="Avertissement suite à signalement">
+                                <button type="submit" class="btn btn-warning">Avertir l'utilisateur</button>
+                            </form>
+
+                            <form action="/moderation/report/{{.ID}}/resolve" method="POST" class="action-form">
+                                <input type="hidden" name="action_type" value="mute_user">
+                                <input type="number" name="duration_hours" value="24" min="1" max="720">
+                                <label>heures de mute</label>
+                                <input type="hidden" name="reason" value="Mute suite à signalement">
+                                <button type="submit" class="btn btn-warning">Muter</button>
+                            </form>
+
+                            {{if $.User.IsAdmin}}
+                            <form action="/moderation/report/{{.ID}}/resolve" method="POST" class="action-form">
+                                <input type="hidden" name="action_type" value="ban_user">
+                                <input type="hidden" name="reason" value="Bannissement suite à signalement">
+                                <button type="submit" class="btn btn-danger">Bannir l'utilisateur</button>
+                            </form>
+                            {{end}}
+
+                            <form action="/moderation/report/{{.ID}}/dismiss" method="POST" class="action-form">
+                                <button type="submit" class="btn btn-secondary">Ignorer le signalement</button>
+                            </form>
+                        </div>
+                    </details>
+                </li>
+            {{end}}
+            </ul>
+        {{else}}
+            <p class="empty-state">Aucun signalement en attente.</p>
+        {{end}}
+    </section>
+
+    <section class="moderation-section">
+        <h2>Historique des actions</h2>
+
+        {{if .History}}
+            <ul class="history-list">
+            {{range .History}}
+                <li class="history-item">
+                    <span class="history-action">{{.ActionType}}</span>
+                    <span class="history-moderator">par <strong>{{.ModeratorName}}</strong></span>
+                    <span class="history-date">{{.CreatedAt.Format "02/01/2006 à 15:04"}}</span>
+                    {{if .Reason}}<p class="history-reason">{{.Reason}}</p>{{end}}
+                </li>
+            {{end}}
+            </ul>
+        {{else}}
+            <p class="empty-state">Aucune action enregistrée.</p>
+        {{end}}
+    </section>
+</div>
+{{end}}

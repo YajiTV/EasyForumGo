@@ -120,7 +120,19 @@ func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpl, err := template.ParseFiles(
+	funcMap := template.FuncMap{
+		"notifCount": func(u *model.User) int {
+			if u == nil {
+				return 0
+			}
+			count, err := h.notifications.CountUnread(u.ID)
+			if err != nil {
+				return 0
+			}
+			return count
+		},
+	}
+	tmpl, err := template.New("base").Funcs(funcMap).ParseFiles(
 		filepath.Join("web", "templates", "layout", "base.html"),
 		filepath.Join("web", "templates", "moderation", "dashboard.html"),
 	)
@@ -130,9 +142,9 @@ func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := tmpl.ExecuteTemplate(w, "base", map[string]any{
-		"CurrentUser": user,
-		"Pending":     pending,
-		"History":     history,
+		"User":    user,
+		"Pending": pending,
+		"History": history,
 	}); err != nil {
 		log.Printf("execute moderation dashboard template: %v", err)
 	}
