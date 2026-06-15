@@ -3,23 +3,30 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
-	_ "github.com/mattn/go-sqlite3"
+	// go-sqlcipher is a drop-in replacement for go-sqlite3 that adds AES-256 encryption.
+	// It registers itself under the "sqlite3" driver name.
+	// IMPORTANT: a database created without encryption cannot be opened with a key and vice-versa.
+	// To encrypt an existing plaintext database, use sqlcipher-tools or:
+	//   sqlite3 plain.db .dump | sqlcipher encrypted.db "PRAGMA key='...'; .read /dev/stdin"
+	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
 
-// InitDB opens the database and runs migrations
-func InitDB(dbPath, migrationsDir string) (*sql.DB, error) {
+// InitDB opens the database and runs migrations.
+// encryptionKey is passed as PRAGMA key; an empty key disables encryption.
+func InitDB(dbPath, migrationsDir, encryptionKey string) (*sql.DB, error) {
 	if dir := filepath.Dir(dbPath); dir != "." {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return nil, fmt.Errorf("create db dir: %w", err)
 		}
 	}
 
-	db, err := sql.Open("sqlite3", sqliteDSN(dbPath))
+	db, err := sql.Open("sqlite3", sqliteDSN(dbPath, encryptionKey))
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
@@ -37,13 +44,17 @@ func InitDB(dbPath, migrationsDir string) (*sql.DB, error) {
 	return db, nil
 }
 
-// sqliteDSN enables foreign keys on every database connection
-func sqliteDSN(dbPath string) string {
+// sqliteDSN builds the SQLite DSN with foreign-key enforcement and optional encryption.
+func sqliteDSN(dbPath, encryptionKey string) string {
 	separator := "?"
 	if strings.Contains(dbPath, "?") {
 		separator = "&"
 	}
-	return dbPath + separator + "_foreign_keys=on"
+	dsn := dbPath + separator + "_foreign_keys=on"
+	if encryptionKey != "" {
+		dsn += "&_pragma_key=" + url.QueryEscape(encryptionKey) + "&_pragma_cipher_page_size=4096"
+	}
+	return dsn
 }
 
 // runMigrations runs pending database migrations

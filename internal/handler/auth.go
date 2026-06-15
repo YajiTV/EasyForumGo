@@ -31,9 +31,10 @@ type userCredentials struct {
 }
 
 type loginFormData struct {
-	User  any
-	Email string
-	Error string
+	User       any
+	Email      string
+	Error      string
+	Registered bool
 }
 
 type registerFormData struct {
@@ -64,7 +65,9 @@ func NewAuthHandler(db *sql.DB, sessionDuration time.Duration, errors *ErrorRend
 
 // ShowLoginForm renders the requested page
 func (h *AuthHandler) ShowLoginForm(w http.ResponseWriter, r *http.Request) {
-	renderAuthTemplate(h.renderer, w, "login.html", nil)
+	renderAuthTemplate(h.renderer, w, "login.html", loginFormData{
+		Registered: r.URL.Query().Get("registered") == "1",
+	})
 }
 
 // ShowRegisterForm renders the requested page
@@ -155,7 +158,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
+	http.Redirect(w, r, "/login?registered=1", http.StatusSeeOther)
 }
 
 // Login handles the request

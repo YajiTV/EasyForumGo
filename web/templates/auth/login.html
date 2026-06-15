@@ -10,6 +10,11 @@
         <p class="form-subtitle">Connectez-vous pour participer aux discussions.</p>
     </div>
 
+    <!-- registration success message -->
+    {{if .Registered}}
+    <p class="form-success">Compte créé avec succès. Vous pouvez maintenant vous connecter.</p>
+    {{end}}
+
     <!-- authentication error returned by the server -->
     {{if .Error}}
     <p class="form-error">{{.Error}}</p>

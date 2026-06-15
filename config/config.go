@@ -21,6 +21,7 @@ const (
 	defaultUploadDir            = "./uploads"
 	defaultMaxUploadMegabytes   = int64(20)
 	defaultSessionDurationHours = 24
+	defaultDBEncryptionKeyDev   = "Kx7!qP2$mR9#vN4@eL6w"
 )
 
 type Config struct {
@@ -30,6 +31,7 @@ type Config struct {
 	TLSCertFile       string
 	TLSKeyFile        string
 	DBPath            string
+	DBEncryptionKey   string
 	MigrationsDir     string
 	StaticDir         string
 	TemplatesDir      string
@@ -70,13 +72,19 @@ func loadEnv() {
 // Load loads .env into the environment (if present), then reads configuration
 func Load() Config {
 	loadEnv()
+	appEnv := strings.ToLower(strings.TrimSpace(stringEnv("APP_ENV", defaultAppEnv)))
+	dbKeyDefault := ""
+	if appEnv == "dev" {
+		dbKeyDefault = defaultDBEncryptionKeyDev
+	}
 	return Config{
-		AppEnv:            strings.ToLower(strings.TrimSpace(stringEnv("APP_ENV", defaultAppEnv))),
+		AppEnv:            appEnv,
 		Port:              stringEnv("PORT", defaultPort),
 		HTTPSPort:         stringEnv("HTTPS_PORT", defaultHTTPSPort),
 		TLSCertFile:       stringEnv("TLS_CERT_FILE", ""),
 		TLSKeyFile:        stringEnv("TLS_KEY_FILE", ""),
 		DBPath:            stringEnv("DB_PATH", defaultDBPath),
+		DBEncryptionKey:   stringEnv("DB_ENCRYPTION_KEY", dbKeyDefault),
 		MigrationsDir:     stringEnv("MIGRATIONS_DIR", defaultMigrationsDir),
 		StaticDir:         stringEnv("STATIC_DIR", defaultStaticDir),
 		TemplatesDir:      stringEnv("TEMPLATES_DIR", defaultTemplatesDir),
@@ -104,6 +112,9 @@ func (c Config) Validate() error {
 		}
 		if !c.TrustProxy {
 			return fmt.Errorf("TRUST_PROXY must be true in production")
+		}
+		if c.DBEncryptionKey == "" {
+			return fmt.Errorf("DB_ENCRYPTION_KEY must be set in production")
 		}
 	}
 	return nil
