@@ -489,26 +489,7 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	likes, _ := h.likes.CountPostLikes(postID)
 	dislikes, _ := h.likes.CountPostDislikes(postID)
 
-	rawComments, _ := h.comments.GetByPostID(postID)
-	var comments []CommentWithAuthor
-	for _, c := range rawComments {
-		u, err := h.users.GetByID(c.UserID)
-		username := "Inconnu"
-		avatarURL := ""
-		if err == nil {
-			username = u.Username
-			avatarURL = u.AvatarURL()
-		}
-		cLikes, _ := h.likes.CountCommentLikes(c.ID)
-		cDislikes, _ := h.likes.CountCommentDislikes(c.ID)
-		comments = append(comments, CommentWithAuthor{
-			Comment:      c,
-			Username:     username,
-			AvatarURL:    avatarURL,
-			LikeCount:    cLikes,
-			DislikeCount: cDislikes,
-		})
-	}
+	comments := h.buildComments(postID)
 
 	currentUser := h.userFromSession(r)
 	libraries := []model.Library{}
@@ -533,6 +514,29 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.renderer.Render(w, "post/post_detail.html", data)
+}
+
+func (h *PostHandler) buildComments(postID string) []CommentWithAuthor {
+	rawComments, _ := h.comments.GetByPostID(postID)
+	var comments []CommentWithAuthor
+	for _, c := range rawComments {
+		u, err := h.users.GetByID(c.UserID)
+		username, avatarURL := "Inconnu", ""
+		if err == nil {
+			username = u.Username
+			avatarURL = u.AvatarURL()
+		}
+		cLikes, _ := h.likes.CountCommentLikes(c.ID)
+		cDislikes, _ := h.likes.CountCommentDislikes(c.ID)
+		comments = append(comments, CommentWithAuthor{
+			Comment:      c,
+			Username:     username,
+			AvatarURL:    avatarURL,
+			LikeCount:    cLikes,
+			DislikeCount: cDislikes,
+		})
+	}
+	return comments
 }
 
 var errImageServer = errors.New("server")
