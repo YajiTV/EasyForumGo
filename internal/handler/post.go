@@ -155,9 +155,7 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.posts.CreateWithCategories(post, categoryIDs); err != nil {
 		if imagePath != "" {
-			if removeErr := os.Remove(filepath.Join(h.uploadDir, imagePath)); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-				log.Printf("remove orphaned post image %q: %v", imagePath, removeErr)
-			}
+			h.removeImage(imagePath)
 		}
 		log.Printf("create post transaction failed: %v", err)
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
@@ -211,11 +209,7 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
-	if post.ImagePath != "" {
-		if err := os.Remove(filepath.Join(h.uploadDir, post.ImagePath)); err != nil && !errors.Is(err, os.ErrNotExist) {
-			log.Printf("remove deleted post image %q: %v", post.ImagePath, err)
-		}
-	}
+	h.removeImage(post.ImagePath)
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
@@ -378,19 +372,13 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 	post.UpdatedAt = time.Now()
 
 	if err := h.posts.UpdateWithCategories(post, categoryIDs); err != nil {
-		if newImagePath != "" {
-			if removeErr := os.Remove(filepath.Join(h.uploadDir, newImagePath)); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
-				log.Printf("remove orphaned replacement image %q: %v", newImagePath, removeErr)
-			}
-		}
+		h.removeImage(newImagePath)
 		log.Printf("update post transaction failed for %q: %v", postID, err)
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
 	if newImagePath != "" && previousImagePath != "" {
-		if err := os.Remove(filepath.Join(h.uploadDir, previousImagePath)); err != nil && !errors.Is(err, os.ErrNotExist) {
-			log.Printf("remove replaced post image %q: %v", previousImagePath, err)
-		}
+		h.removeImage(previousImagePath)
 	}
 
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
@@ -486,13 +474,13 @@ type PostDetailData struct {
 // PostDetail handles the request
 func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	postID := r.PathValue("id")
-	if strings.HasSuffix(postID, "/edit") {
-		r.SetPathValue("id", strings.TrimSuffix(postID, "/edit"))
+	if id, ok := strings.CutSuffix(postID, "/edit"); ok {
+		r.SetPathValue("id", id)
 		h.ShowEditForm(w, r)
 		return
 	}
-	if strings.HasSuffix(postID, "/delete") {
-		r.SetPathValue("id", strings.TrimSuffix(postID, "/delete"))
+	if id, ok := strings.CutSuffix(postID, "/delete"); ok {
+		r.SetPathValue("id", id)
 		h.ShowDeleteConfirmation(w, r)
 		return
 	}
@@ -561,4 +549,13 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.renderer.Render(w, "post/post_detail.html", data)
+}
+
+func (h *PostHandler) removeImage(path string) {
+	if path == "" {
+		return
+	}
+	if err := os.Remove(filepath.Join(h.uploadDir, path)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Printf("remove image %q: %v", path, err)
+	}
 }
