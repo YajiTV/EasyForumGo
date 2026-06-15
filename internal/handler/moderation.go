@@ -439,3 +439,43 @@ func (h *ModerationHandler) userFromSession(r *http.Request) *model.User {
 	}
 	return user
 }
+
+func (h *ModerationHandler) BanUser(w http.ResponseWriter, r *http.Request) {
+	admin := h.userFromSession(r)
+	if admin == nil || !admin.IsAdmin() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+	targetID := r.PathValue("id")
+	reason := r.FormValue("reason")
+	if reason == "" {
+		reason = "Banni par un administrateur"
+	}
+	if err := h.moderation.BanUser(targetID, admin.ID, reason); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
+
+func (h *ModerationHandler) MuteUser(w http.ResponseWriter, r *http.Request) {
+	admin := h.userFromSession(r)
+	if admin == nil || !admin.IsAdmin() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+	targetID := r.PathValue("id")
+	reason := r.FormValue("reason")
+	if reason == "" {
+		reason = "Muté par un administrateur"
+	}
+	durationHours, _ := strconv.Atoi(r.FormValue("duration_hours"))
+	if durationHours <= 0 {
+		durationHours = 24
+	}
+	if err := h.moderation.MuteUser(targetID, admin.ID, reason, durationHours); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
