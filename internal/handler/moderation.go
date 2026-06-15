@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"html/template"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -124,14 +125,17 @@ func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		filepath.Join("web", "templates", "moderation", "dashboard.html"),
 	)
 	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		log.Printf("parse moderation dashboard template: %v", err)
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
-	tmpl.ExecuteTemplate(w, "base", map[string]any{
+	if err := tmpl.ExecuteTemplate(w, "base", map[string]any{
 		"CurrentUser": user,
 		"Pending":     pending,
 		"History":     history,
-	})
+	}); err != nil {
+		log.Printf("execute moderation dashboard template: %v", err)
+	}
 }
 
 func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
@@ -230,8 +234,16 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 		Reason:      reason,
 		CreatedAt:   time.Now(),
 	}
-	h.reports.CreateAction(action)
-	h.reports.UpdateStatus(reportID, model.ReportResolved)
+	if err := h.reports.CreateAction(action); err != nil {
+		log.Printf("record moderation action for report %q: %v", reportID, err)
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	if err := h.reports.UpdateStatus(reportID, model.ReportResolved); err != nil {
+		log.Printf("resolve moderation report %q: %v", reportID, err)
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
 
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
@@ -280,7 +292,11 @@ func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Reques
 		Reason:      string(newRole),
 		CreatedAt:   time.Now(),
 	}
-	h.reports.CreateAction(action)
+	if err := h.reports.CreateAction(action); err != nil {
+		log.Printf("record role change for user %q: %v", targetUserID, err)
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
 
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
@@ -321,7 +337,9 @@ func (h *ModerationHandler) notify(userID, actorID, notifType, postID, commentID
 		CommentID: commentID,
 		CreatedAt: time.Now(),
 	}
-	_ = h.notifications.Create(n)
+	if err := h.notifications.Create(n); err != nil {
+		log.Printf("create moderation notification for user %q: %v", userID, err)
+	}
 }
 
 func (h *ModerationHandler) userFromSession(r *http.Request) *model.User {

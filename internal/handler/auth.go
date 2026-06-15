@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"html/template"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -105,12 +106,12 @@ func (h *AuthHandler) PasswordStrength(w http.ResponseWriter, r *http.Request) {
 
 	tmpl, err := template.ParseFiles(filepath.Join("web", "templates", "auth", "password_strength.html"))
 	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		log.Printf("parse password strength template: %v", err)
+		h.errors.InternalServerError(w)
 		return
 	}
 	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
+		log.Printf("execute password strength template: %v", err)
 	}
 }
 

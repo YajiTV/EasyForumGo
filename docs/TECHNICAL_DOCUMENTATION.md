@@ -15,7 +15,7 @@ The mandatory scope includes:
 - Docker delivery
 - HTTP and technical error handling
 
-Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, customizable post libraries, public social profiles, follows, discovery, complete account settings, HTTPS, and rate limiting.
+Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, customizable post libraries, notifications, public social profiles, follows, discovery, complete account settings, moderation foundations, HTTPS, and rate limiting.
 
 ## 2. Architecture
 The internal Go module is named `EasyForumGo`.
@@ -61,7 +61,7 @@ Handlers do not concatenate user input into SQL queries.
 
 `internal/middleware/auth.go` resolves valid sessions for protected handlers.
 
-`internal/middleware/rate_limiter.go` provides an in-memory fixed-window limiter keyed by client IP. The application configures:
+`internal/middleware/rate_limiter.go` provides an in-memory fixed-window limiter keyed by a valid session user ID when possible, then by client IP. Forwarded client-address headers are only read when `TRUST_PROXY=true`. The application configures:
 
 - 200 global requests per minute
 - 10 login attempts per 15 minutes
@@ -118,8 +118,8 @@ Creating a new session replaces the previous session, satisfying the subject's s
 
 1. A connected user submits a title, content, category IDs, and optional image.
 2. The server validates text lengths and verifies that selected category IDs exist.
-3. The image MIME type and size are validated when an image is present.
-4. The post and its category relations are stored.
+3. The image size, signature, and complete JPEG/PNG/GIF decoding are validated when an image is present.
+4. The post and its category relations are stored atomically.
 5. The user is redirected to the post detail page.
 
 Only the author may edit or delete a post.
@@ -186,6 +186,10 @@ SQLite is used through `database/sql` and `github.com/mattn/go-sqlite3`. Applica
 | `library_posts` | composite primary key linking libraries and posts |
 | `schema_migrations` | records executed migration filenames |
 | `user_follows` | unique directed following relation with self-follow prevention |
+| `notifications` | forum, social, and moderation events |
+| `reports` | user-submitted moderation reports |
+| `moderation_actions` | moderation action history |
+| `user_restrictions` | active mute and ban records |
 
 Foreign key cascades remove dependent records when their parent is deleted. The visual entity-relationship diagram is stored in `docs/ERD.svg`.
 
@@ -219,14 +223,16 @@ Handlers compare the current user ID with the resource owner before editing or d
 
 ### HTTPS and rate limiting
 
-Docker serves HTTP and leaves HTTPS termination to a trusted reverse proxy in production. The in-memory rate limiter protects general traffic, login attempts, and selected write actions.
+Docker development mode serves HTTPS with an automatically generated self-signed certificate and redirects HTTP to HTTPS. A trusted reverse proxy terminates HTTPS with a real certificate in production. The in-memory rate limiter protects general traffic, authentication, and all registered write actions.
 
 ### Known security limits
 
 - CSRF tokens are not implemented.
 - The rate limiter is local to one process and resets on restart.
-- Follow and unfollow use POST routes protected by the write-action limiter.
+- `TRUST_PROXY=true` is safe only when direct access is blocked and a trusted proxy replaces forwarded client-address headers.
 - Production depends on the reverse proxy for HTTPS termination.
+- Database encryption is not implemented.
+- GitHub OAuth and complete subject-level moderation are not implemented.
 
 ## 7. Error Handling
 
@@ -247,7 +253,7 @@ The Dockerfile uses a multi-stage build:
 1. Alpine Go builder with GCC and musl development packages for CGO SQLite
 2. Alpine runtime containing the application, templates, migrations, and SQLite tools
 
-Compose binds HTTP `8080` to localhost and connects the application to the external `web` network.
+Compose binds HTTP `8080` and HTTPS `8443` to localhost and creates the stable `web` network. A reverse proxy can join this network when needed.
 
 Named volumes persist:
 
@@ -260,11 +266,11 @@ Container recreation does not remove named volumes. `docker compose down --volum
 
 Configuration is read from environment variables in `config/config.go`. Invalid or missing numeric values fall back to safe defaults.
 
-Session duration is configurable and defaults to 24 hours. Image uploads use the 20 MB limit required by the subject.
+Session duration is configurable and defaults to 24 hours. Image uploads use the `MAX_UPLOAD_MB` limit, with the subject's 20 MB limit as the default.
 
 `APP_ENV` accepts `dev` or `prod`. Production mode requires an HTTPS `APP_PUBLIC_URL` and `TRUST_PROXY=true`. `APP_BASE_PATH` mounts the application below an optional path prefix, `APP_PUBLIC_URL` defines the canonical OAuth callback base and enables secure cookies for HTTPS URLs, and `TRUST_PROXY` allows trusted forwarded client IP headers.
 
-Development and production use the same `.env`, `docker/Dockerfile`, and `docker/docker-compose.yml`. Environment variables select the runtime configuration while the reverse proxy always owns production TLS.
+Development and production use the same `.env`, `docker/Dockerfile`, and `docker/docker-compose.yml`. Docker development uses the generated self-signed certificate; production can disable internal TLS and let the reverse proxy own TLS.
 
 ## 10. Verification Strategy
 
@@ -278,7 +284,7 @@ docker compose -f docker/docker-compose.yml config
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-`go test ./...` validates compilation and checks fresh migrations, foreign key activation, and cascade deletion. Manual validation must cover:
+`go test ./...` compiles every package. Manual validation must cover:
 
 - guest read-only access
 - registration, login, session replacement, and logout
@@ -291,6 +297,8 @@ docker compose -f docker/docker-compose.yml up --build
 - account settings, password confirmation, session invalidation, and deletion cascade
 - custom error pages
 - database and upload persistence across container recreation
+
+No automated tests are included. `go test ./...` compiles all packages.
 
 ## 11. Subject Requirement Mapping
 
