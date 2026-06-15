@@ -80,6 +80,10 @@ textarea {
     pointer-events: none;
 }
 
+.sidebar-backdrop {
+    display: none;
+}
+
 .icon {
     width: 21px;
     height: 21px;
@@ -487,14 +491,17 @@ textarea {
 }
 
 .side-nav-item span {
+    max-width: 0;       /* takes no layout space → icon truly centers */
+    overflow: hidden;
     opacity: 0;
     transform: translateX(-6px);
     white-space: nowrap;
     pointer-events: none;
-    transition: opacity 0.16s ease, transform 0.16s ease;
+    transition: max-width 0.18s ease, opacity 0.16s ease, transform 0.16s ease;
 }
 
 .menu-state:checked ~ .theme-shell .app-shell .side-nav-item span {
+    max-width: 200px;   /* reveal label */
     opacity: 1;
     transform: translateX(0);
     pointer-events: auto;
@@ -1411,13 +1418,25 @@ textarea {
     .side-nav-item {
         justify-content: center;
         padding: 0;
+        gap: 0; /* span is opacity:0 but still takes space; gap:0 lets icon truly center */
     }
 
     .menu-state:checked ~ .theme-shell .app-shell .side-nav-item {
         justify-content: flex-start;
         padding: 0 4px;
+        gap: 16px; /* restore gap when labels become visible */
     }
 
+}
+
+@media (max-width: 1024px) {
+    .home-feed {
+        padding: 38px 40px 58px;
+    }
+
+    .search-form {
+        width: min(36vw, 340px);
+    }
 }
 
 @media (max-width: 820px) {
@@ -1446,11 +1465,6 @@ textarea {
         display: none;
     }
 
-    .nav-links a:not(.register-link):not(.write-link),
-    .logout-form {
-        display: none;
-    }
-
     .user-menu-panel {
         position: fixed;
         top: var(--topbar-height);
@@ -1462,32 +1476,63 @@ textarea {
         display: block;
     }
 
+    /* backdrop — covers page behind the open drawer */
+    .menu-state:checked ~ .theme-shell .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 24;
+        background: rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+    }
+
+    /* sidebar becomes a slide-in drawer */
     .left-sidebar {
-        display: none;
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
-        padding: 10px 16px;
-        overflow-x: auto;
+        display: block;
+        position: fixed;
+        top: var(--topbar-height);
+        left: 0;
+        bottom: 0;
+        width: 260px;
+        border-right: 1px solid var(--line);
+        border-bottom: 0;
+        padding: 20px 16px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        z-index: 25;
+        visibility: hidden;
+        transform: translateX(-100%);
+        transition: transform 0.22s ease, visibility 0s linear 0.22s;
     }
 
     .menu-state:checked ~ .theme-shell .app-shell .left-sidebar {
-        display: block;
+        visibility: visible;
+        transform: translateX(0);
+        transition: transform 0.22s ease, visibility 0s linear 0s;
     }
 
+    /* vertical nav inside the drawer */
     .side-nav {
         position: static;
-        flex-direction: row;
-        gap: 18px;
-        width: max-content;
+        flex-direction: column;
+        gap: 4px;
+        width: auto;
     }
 
     .side-nav::after {
-        display: none;
+        margin: 10px 0;
     }
 
     .side-nav-item {
         justify-content: flex-start;
-        min-height: 40px;
+        gap: 14px;
+        min-height: 44px;
+        padding: 0 8px;
+        border-radius: 8px;
+    }
+
+    .side-nav-item:hover {
+        background: var(--soft);
     }
 
     .side-nav-item span {
@@ -1556,6 +1601,30 @@ textarea {
     }
 }
 
+@media (max-width: 640px) {
+    /* hide header shortcuts accessible via sidebar drawer */
+    .write-link,
+    .login-link {
+        display: none;
+    }
+
+    .home-feed {
+        padding: 20px 14px 36px;
+    }
+
+    .home-header h1 {
+        font-size: 30px;
+    }
+
+    .post-card-title {
+        font-size: 18px;
+    }
+
+    .form-page {
+        padding: 32px 16px 48px;
+    }
+}
+
 @media (max-width: 520px) {
     .search-form {
         display: none;
@@ -1581,6 +1650,16 @@ textarea {
     .post-full-actions {
         flex-wrap: wrap;
         justify-content: flex-start;
+    }
+}
+
+@media (max-width: 480px) {
+    .theme-switcher {
+        display: none;
+    }
+
+    .nav-links {
+        gap: 12px;
     }
 }
 
