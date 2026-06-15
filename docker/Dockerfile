@@ -24,7 +24,7 @@ COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/certs ./certs
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates sqlite3 \
+    ca-certificates sqlite3 wget \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /app/data /app/uploads
 
