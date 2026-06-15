@@ -8,6 +8,76 @@
         <h1>Page Modération</h1>
     </header>
 <details>
+  <summary>File d'attente — Posts en attente ({{len .PendingPosts}})</summary>
+  {{if .PendingPosts}}
+  <table>
+    <tr>
+      <th>Auteur</th>
+      <th>Titre</th>
+      <th>Contenu</th>
+      <th>Date</th>
+      <th>Actions</th>
+    </tr>
+    {{range .PendingPosts}}
+    <tr>
+      <td>{{.AuthorName}}</td>
+      <td>{{.Title}}</td>
+      <td>{{.Content}}</td>
+      <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+      <td>
+        <form method="POST" action="/moderation/content/{{.ID}}/approve" style="display:inline">
+          <input type="hidden" name="content_type" value="post">
+          <button type="submit" class="btn-primary">Approuver</button>
+        </form>
+        <form method="POST" action="/moderation/content/{{.ID}}/reject" style="display:inline">
+          <input type="hidden" name="content_type" value="post">
+          <input type="text" name="reason" placeholder="Raison" required>
+          <button class="btn-delete" type="submit">Rejeter</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p>Aucun post en attente.</p>
+  {{end}}
+</details>
+
+<details>
+  <summary>File d'attente — Commentaires en attente ({{len .PendingComments}})</summary>
+  {{if .PendingComments}}
+  <table>
+    <tr>
+      <th>Auteur</th>
+      <th>Contenu</th>
+      <th>Date</th>
+      <th>Actions</th>
+    </tr>
+    {{range .PendingComments}}
+    <tr>
+      <td>{{.AuthorName}}</td>
+      <td>{{.Content}}</td>
+      <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+      <td>
+        <form method="POST" action="/moderation/content/{{.ID}}/approve" style="display:inline">
+          <input type="hidden" name="content_type" value="comment">
+          <button type="submit" class="btn-primary">Approuver</button>
+        </form>
+        <form method="POST" action="/moderation/content/{{.ID}}/reject" style="display:inline">
+          <input type="hidden" name="content_type" value="comment">
+          <input type="text" name="reason" placeholder="Raison" required>
+          <button class="btn-delete" type="submit">Rejeter</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p>Aucun commentaire en attente.</p>
+  {{end}}
+</details>
+
+<details>
   <summary>Utilisateurs</summary>
   <table>
   <tr>

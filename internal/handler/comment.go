@@ -8,6 +8,7 @@ import (
 
 	"EasyForumGo/internal/model"
 	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/moderation"
 	"EasyForumGo/pkg/utils"
 	"EasyForumGo/pkg/validator"
 )
@@ -21,9 +22,9 @@ type CommentHandler struct {
 	users         *repository.UserRepository
 	notifications *repository.NotificationRepository
 	renderer      *PageRenderer
+	reviews       *repository.ContentReviewRepository
 }
 
-// NewCommentHandler creates a new instance
 func NewCommentHandler(db *sql.DB, renderer *PageRenderer) *CommentHandler {
 	return &CommentHandler{
 		comments:      repository.NewCommentRepository(db),
@@ -32,6 +33,7 @@ func NewCommentHandler(db *sql.DB, renderer *PageRenderer) *CommentHandler {
 		users:         repository.NewUserRepository(db),
 		notifications: repository.NewNotificationRepository(db),
 		renderer:      renderer,
+		reviews:       repository.NewContentReviewRepository(db),
 	}
 }
 
@@ -67,8 +69,14 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		PostID:    postID,
 		UserID:    user.ID,
 		Content:   content,
+		Status:    "approved",
 		CreatedAt: now,
 		UpdatedAt: now,
+	}
+
+	keywords, err := h.reviews.GetKeywords()
+	if err == nil && moderation.ContainsFlag(content, keywords) {
+		c.Status = "pending"
 	}
 
 	if err := h.comments.Create(c); err != nil {

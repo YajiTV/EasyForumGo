@@ -2,6 +2,7 @@ package handler
 
 import (
 	"database/sql"
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
@@ -22,6 +23,7 @@ type ModerationHandler struct {
 	sessions      *repository.SessionRepository
 	moderation    *repository.ModerationRepository
 	notifications *repository.NotificationRepository
+	reviewRepo    *repository.ContentReviewRepository
 }
 
 func NewModerationHandler(db *sql.DB) *ModerationHandler {
@@ -33,6 +35,7 @@ func NewModerationHandler(db *sql.DB) *ModerationHandler {
 		sessions:      repository.NewSessionRepository(db),
 		moderation:    repository.NewModerationRepository(db),
 		notifications: repository.NewNotificationRepository(db),
+		reviewRepo:    repository.NewContentReviewRepository(db),
 	}
 }
 
@@ -63,10 +66,12 @@ type ModerationReportRow struct {
 
 // ModerationPageData holds all data passed to pagemoderation.html.
 type ModerationPageData struct {
-	User    *model.User
-	Users   []ModerationUserRow
-	Posts   []ModerationPostRow
-	Reports []ModerationReportRow
+	User           *model.User
+	Users          []ModerationUserRow
+	Posts          []ModerationPostRow
+	Reports        []ModerationReportRow
+	PendingPosts   []model.PendingContent
+	PendingComments []model.PendingContent
 }
 
 func (h *ModerationHandler) ReportPost(w http.ResponseWriter, r *http.Request) {
@@ -188,11 +193,16 @@ func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := ModerationPageData{
-		User:    user,
-		Users:   userRows,
-		Posts:   postRows,
-		Reports: reportRows,
+		User:            user,
+		Users:           userRows,
+		Posts:           postRows,
+		Reports:         reportRows,
 	}
+
+	pendingPosts, _ := h.reviewRepo.GetPendingPosts("asc")
+	pendingComments, _ := h.reviewRepo.GetPendingComments("asc")
+	data.PendingPosts = pendingPosts
+	data.PendingComments = pendingComments
 
 	funcMap := template.FuncMap{
 		"notifCount": func(u *model.User) int {
@@ -346,6 +356,130 @@ func (h *ModerationHandler) DismissReport(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
 
+func (h *ModerationHandler) PendingQueue(w http.ResponseWriter, r *http.Request) {
+	moderator := h.userFromSession(r)
+	if moderator == nil || !moderator.CanModerate() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+
+	sort := r.URL.Query().Get("sort")
+	if sort != "desc" {
+		sort = "asc"
+	}
+
+	posts, err := h.reviewRepo.GetPendingPosts(sort)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	comments, err := h.reviewRepo.GetPendingComments(sort)
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	all := append(posts, comments...)
+
+	w.Header().Set("Content-Type", "application/json")
+	encodeJSON(w, map[string]any{
+		"sort":  sort,
+		"items": all,
+	})
+}
+
+func (h *ModerationHandler) ApproveContent(w http.ResponseWriter, r *http.Request) {
+	moderator := h.userFromSession(r)
+	if moderator == nil || !moderator.CanModerate() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+
+	contentID := r.PathValue("id")
+	contentType := r.FormValue("content_type")
+
+	var err error
+	switch contentType {
+	case "post":
+		err = h.reviewRepo.ApprovePost(contentID)
+	case "comment":
+		err = h.reviewRepo.ApproveComment(contentID)
+	default:
+		http.Error(w, "Type invalide", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	review := &model.ContentReview{
+		ID:          utils.NewUUID(),
+		ContentType: contentType,
+		ContentID:   contentID,
+		ReviewerID:  moderator.ID,
+		Decision:    "approved",
+		CreatedAt:   time.Now(),
+	}
+	h.reviewRepo.CreateReview(review)
+
+	http.Redirect(w, r, "/moderation/queue", http.StatusSeeOther)
+}
+
+func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request) {
+	moderator := h.userFromSession(r)
+	if moderator == nil || !moderator.CanModerate() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+
+	contentID := r.PathValue("id")
+	contentType := r.FormValue("content_type")
+	reason := r.FormValue("reason")
+
+	var authorID string
+	var err error
+
+	switch contentType {
+	case "post":
+		authorID, err = h.reviewRepo.GetPostAuthor(contentID)
+		if err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+		err = h.reviewRepo.RejectPost(contentID)
+	case "comment":
+		authorID, err = h.reviewRepo.GetCommentAuthor(contentID)
+		if err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+		err = h.reviewRepo.RejectComment(contentID)
+	default:
+		http.Error(w, "Type invalide", http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	review := &model.ContentReview{
+		ID:          utils.NewUUID(),
+		ContentType: contentType,
+		ContentID:   contentID,
+		ReviewerID:  moderator.ID,
+		Decision:    "rejected",
+		Reason:      reason,
+		CreatedAt:   time.Now(),
+	}
+	h.reviewRepo.CreateReview(review)
+
+	h.notify(authorID, moderator.ID, "moderation_content_rejected", "", "")
+
+	http.Redirect(w, r, "/moderation/queue", http.StatusSeeOther)
+}
+
 func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Request) {
 	admin := h.userFromSession(r)
 	if admin == nil || !admin.IsAdmin() {
@@ -449,6 +583,12 @@ func (h *ModerationHandler) notify(userID, actorID, notifType, postID, commentID
 	}
 	if err := h.notifications.Create(n); err != nil {
 		log.Printf("create moderation notification for user %q: %v", userID, err)
+	}
+}
+
+func encodeJSON(w http.ResponseWriter, v any) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("encode json: %v", err)
 	}
 }
 
