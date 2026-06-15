@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"html/template"
 	"log"
 	"net/http"
@@ -39,7 +40,11 @@ func NewModerationHandler(db *sql.DB) *ModerationHandler {
 	}
 }
 
-// ModerationUserRow is the view data for one user row in the moderation page.
+// errActionHandled signals that the HTTP response is already written.
+var errActionHandled = errors.New("handled")
+
+// --- View data types ---
+
 type ModerationUserRow struct {
 	ID       string
 	Username string
@@ -48,7 +53,6 @@ type ModerationUserRow struct {
 	Status   string
 }
 
-// ModerationPostRow is the view data for one reported post row.
 type ModerationPostRow struct {
 	ID       string
 	Username string
@@ -57,22 +61,42 @@ type ModerationPostRow struct {
 	Report   string
 }
 
-// ModerationReportRow is the view data for one pending report row.
 type ModerationReportRow struct {
 	ID       string
 	Username string
 	Reason   string
 }
 
-// ModerationPageData holds all data passed to pagemoderation.html.
 type ModerationPageData struct {
-	User           *model.User
-	Users          []ModerationUserRow
-	Posts          []ModerationPostRow
-	Reports        []ModerationReportRow
-	PendingPosts   []model.PendingContent
+	User            *model.User
+	Users           []ModerationUserRow
+	Posts           []ModerationPostRow
+	Reports         []ModerationReportRow
+	PendingPosts    []model.PendingContent
 	PendingComments []model.PendingContent
 }
+
+// --- Permission guards ---
+
+func (h *ModerationHandler) requireModerator(w http.ResponseWriter, r *http.Request) *model.User {
+	user := userFromSession(r, h.sessions, h.users)
+	if user == nil || !user.CanModerate() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return nil
+	}
+	return user
+}
+
+func (h *ModerationHandler) requireAdmin(w http.ResponseWriter, r *http.Request) *model.User {
+	user := userFromSession(r, h.sessions, h.users)
+	if user == nil || !user.IsAdmin() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return nil
+	}
+	return user
+}
+
+// --- Report handlers ---
 
 func (h *ModerationHandler) ReportPost(w http.ResponseWriter, r *http.Request) {
 	h.createReport(w, r, model.TargetPost)
@@ -141,68 +165,25 @@ func (h *ModerationHandler) createReport(w http.ResponseWriter, r *http.Request,
 	http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 }
 
+// --- Dashboard ---
+
 func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
-	user := userFromSession(r, h.sessions, h.users)
-	if user == nil || !user.CanModerate() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
+	user := h.requireModerator(w, r)
+	if user == nil {
 		return
-	}
-
-	allUsers, _ := h.moderation.GetAllUsers()
-	var userRows []ModerationUserRow
-	for _, u := range allUsers {
-		status, _ := h.moderation.GetUserStatus(u.ID)
-		userRows = append(userRows, ModerationUserRow{
-			ID:       u.ID,
-			Username: u.Username,
-			Mail:     u.Email,
-			Role:     string(u.Role),
-			Status:   status,
-		})
-	}
-
-	reportedPosts, _ := h.moderation.GetReportedPosts()
-	var postRows []ModerationPostRow
-	for _, p := range reportedPosts {
-		author, _ := h.users.GetByID(p.UserID)
-		username := "Inconnu"
-		if author != nil {
-			username = author.Username
-		}
-		count, _ := h.moderation.GetReportCountForPost(p.ID)
-		postRows = append(postRows, ModerationPostRow{
-			ID:       p.ID,
-			Username: username,
-			Post:     p.Content,
-			Date:     p.CreatedAt.Format("02/01/2006"),
-			Report:   strconv.Itoa(count),
-		})
-	}
-
-	pending, _ := h.reports.GetPending()
-	var reportRows []ModerationReportRow
-	for _, rep := range pending {
-		if rep.TargetType != model.TargetUser {
-			continue
-		}
-		reportRows = append(reportRows, ModerationReportRow{
-			ID:       rep.ID,
-			Username: rep.ReporterName,
-			Reason:   rep.Reason,
-		})
-	}
-
-	data := ModerationPageData{
-		User:            user,
-		Users:           userRows,
-		Posts:           postRows,
-		Reports:         reportRows,
 	}
 
 	pendingPosts, _ := h.reviewRepo.GetPendingPosts("asc")
 	pendingComments, _ := h.reviewRepo.GetPendingComments("asc")
-	data.PendingPosts = pendingPosts
-	data.PendingComments = pendingComments
+
+	data := ModerationPageData{
+		User:            user,
+		Users:           h.buildUserRows(),
+		Posts:           h.buildPostRows(),
+		Reports:         h.buildReportRows(),
+		PendingPosts:    pendingPosts,
+		PendingComments: pendingComments,
+	}
 
 	funcMap := template.FuncMap{
 		"notifCount": func(u *model.User) int {
@@ -230,10 +211,64 @@ func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *ModerationHandler) buildUserRows() []ModerationUserRow {
+	allUsers, _ := h.moderation.GetAllUsers()
+	var rows []ModerationUserRow
+	for _, u := range allUsers {
+		status, _ := h.moderation.GetUserStatus(u.ID)
+		rows = append(rows, ModerationUserRow{
+			ID:       u.ID,
+			Username: u.Username,
+			Mail:     u.Email,
+			Role:     string(u.Role),
+			Status:   status,
+		})
+	}
+	return rows
+}
+
+func (h *ModerationHandler) buildPostRows() []ModerationPostRow {
+	reportedPosts, _ := h.moderation.GetReportedPosts()
+	var rows []ModerationPostRow
+	for _, p := range reportedPosts {
+		author, _ := h.users.GetByID(p.UserID)
+		username := "Inconnu"
+		if author != nil {
+			username = author.Username
+		}
+		count, _ := h.moderation.GetReportCountForPost(p.ID)
+		rows = append(rows, ModerationPostRow{
+			ID:       p.ID,
+			Username: username,
+			Post:     p.Content,
+			Date:     p.CreatedAt.Format("02/01/2006"),
+			Report:   strconv.Itoa(count),
+		})
+	}
+	return rows
+}
+
+func (h *ModerationHandler) buildReportRows() []ModerationReportRow {
+	pending, _ := h.reports.GetPending()
+	var rows []ModerationReportRow
+	for _, rep := range pending {
+		if rep.TargetType != model.TargetUser {
+			continue
+		}
+		rows = append(rows, ModerationReportRow{
+			ID:       rep.ID,
+			Username: rep.ReporterName,
+			Reason:   rep.Reason,
+		})
+	}
+	return rows
+}
+
+// --- ResolveReport ---
+
 func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
-	moderator := userFromSession(r, h.sessions, h.users)
-	if moderator == nil || !moderator.CanModerate() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
+	moderator := h.requireModerator(w, r)
+	if moderator == nil {
 		return
 	}
 
@@ -253,67 +288,7 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	switch actionType {
-	case model.ActionDeletePost:
-		if err := h.posts.Delete(report.TargetID); err != nil && err != sql.ErrNoRows {
-			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-			return
-		}
-		h.notify(targetUserID, moderator.ID, "moderation_delete_post", "", "")
-
-	case model.ActionDeleteComment:
-		if err := h.comments.Delete(report.TargetID); err != nil && err != sql.ErrNoRows {
-			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-			return
-		}
-		h.notify(targetUserID, moderator.ID, "moderation_delete_comment", "", "")
-
-	case model.ActionWarnUser:
-		h.notify(targetUserID, moderator.ID, "moderation_warn", targetPostID, targetCommentID)
-
-	case model.ActionMuteUser:
-		durationHours, _ := strconv.Atoi(r.FormValue("duration_hours"))
-		if durationHours <= 0 {
-			durationHours = 24
-		}
-		expiresAt := time.Now().Add(time.Duration(durationHours) * time.Hour)
-		restriction := &model.UserRestriction{
-			ID:        utils.NewUUID(),
-			UserID:    targetUserID,
-			Type:      model.RestrictionMute,
-			Reason:    reason,
-			ExpiresAt: &expiresAt,
-			CreatedBy: moderator.ID,
-			CreatedAt: time.Now(),
-		}
-		if err := h.reports.CreateRestriction(restriction); err != nil {
-			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-			return
-		}
-		h.notify(targetUserID, moderator.ID, "moderation_mute", "", "")
-
-	case model.ActionBanUser:
-		if !moderator.IsAdmin() {
-			http.Error(w, "Seul un admin peut bannir un utilisateur", http.StatusForbidden)
-			return
-		}
-		restriction := &model.UserRestriction{
-			ID:        utils.NewUUID(),
-			UserID:    targetUserID,
-			Type:      model.RestrictionBan,
-			Reason:    reason,
-			ExpiresAt: nil,
-			CreatedBy: moderator.ID,
-			CreatedAt: time.Now(),
-		}
-		if err := h.reports.CreateRestriction(restriction); err != nil {
-			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-			return
-		}
-		h.notify(targetUserID, moderator.ID, "moderation_ban", "", "")
-
-	default:
-		http.Error(w, "Action invalide", http.StatusBadRequest)
+	if err := h.applyReportAction(w, r, actionType, reason, report, moderator, targetUserID, targetPostID, targetCommentID); err != nil {
 		return
 	}
 
@@ -340,10 +315,83 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
 
+// applyReportAction exécute l'action de modération. Retourne errActionHandled si la réponse HTTP
+// a déjà été écrite (erreur ou action invalide) — le caller doit alors faire return.
+func (h *ModerationHandler) applyReportAction(
+	w http.ResponseWriter, r *http.Request,
+	actionType model.ActionType, reason string,
+	report *model.Report, moderator *model.User,
+	targetUserID, targetPostID, targetCommentID string,
+) error {
+	switch actionType {
+	case model.ActionDeletePost:
+		if err := h.posts.Delete(report.TargetID); err != nil && err != sql.ErrNoRows {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return errActionHandled
+		}
+		h.notify(targetUserID, moderator.ID, "moderation_delete_post", "", "")
+
+	case model.ActionDeleteComment:
+		if err := h.comments.Delete(report.TargetID); err != nil && err != sql.ErrNoRows {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return errActionHandled
+		}
+		h.notify(targetUserID, moderator.ID, "moderation_delete_comment", "", "")
+
+	case model.ActionWarnUser:
+		h.notify(targetUserID, moderator.ID, "moderation_warn", targetPostID, targetCommentID)
+
+	case model.ActionMuteUser:
+		durationHours, _ := strconv.Atoi(r.FormValue("duration_hours"))
+		if durationHours <= 0 {
+			durationHours = 24
+		}
+		expiresAt := time.Now().Add(time.Duration(durationHours) * time.Hour)
+		restriction := &model.UserRestriction{
+			ID:        utils.NewUUID(),
+			UserID:    targetUserID,
+			Type:      model.RestrictionMute,
+			Reason:    reason,
+			ExpiresAt: &expiresAt,
+			CreatedBy: moderator.ID,
+			CreatedAt: time.Now(),
+		}
+		if err := h.reports.CreateRestriction(restriction); err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return errActionHandled
+		}
+		h.notify(targetUserID, moderator.ID, "moderation_mute", "", "")
+
+	case model.ActionBanUser:
+		if !moderator.IsAdmin() {
+			http.Error(w, "Seul un admin peut bannir un utilisateur", http.StatusForbidden)
+			return errActionHandled
+		}
+		restriction := &model.UserRestriction{
+			ID:        utils.NewUUID(),
+			UserID:    targetUserID,
+			Type:      model.RestrictionBan,
+			Reason:    reason,
+			ExpiresAt: nil,
+			CreatedBy: moderator.ID,
+			CreatedAt: time.Now(),
+		}
+		if err := h.reports.CreateRestriction(restriction); err != nil {
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return errActionHandled
+		}
+		h.notify(targetUserID, moderator.ID, "moderation_ban", "", "")
+
+	default:
+		http.Error(w, "Action invalide", http.StatusBadRequest)
+		return errActionHandled
+	}
+	return nil
+}
+
 func (h *ModerationHandler) DismissReport(w http.ResponseWriter, r *http.Request) {
-	moderator := userFromSession(r, h.sessions, h.users)
-	if moderator == nil || !moderator.CanModerate() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
+	moderator := h.requireModerator(w, r)
+	if moderator == nil {
 		return
 	}
 
@@ -356,10 +404,11 @@ func (h *ModerationHandler) DismissReport(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
 
+// --- Content moderation queue ---
+
 func (h *ModerationHandler) PendingQueue(w http.ResponseWriter, r *http.Request) {
-	moderator := userFromSession(r, h.sessions, h.users)
-	if moderator == nil || !moderator.CanModerate() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
+	moderator := h.requireModerator(w, r)
+	if moderator == nil {
 		return
 	}
 
@@ -379,19 +428,16 @@ func (h *ModerationHandler) PendingQueue(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	all := append(posts, comments...)
-
 	w.Header().Set("Content-Type", "application/json")
 	encodeJSON(w, map[string]any{
 		"sort":  sort,
-		"items": all,
+		"items": append(posts, comments...),
 	})
 }
 
 func (h *ModerationHandler) ApproveContent(w http.ResponseWriter, r *http.Request) {
-	moderator := userFromSession(r, h.sessions, h.users)
-	if moderator == nil || !moderator.CanModerate() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
+	moderator := h.requireModerator(w, r)
+	if moderator == nil {
 		return
 	}
 
@@ -413,23 +459,21 @@ func (h *ModerationHandler) ApproveContent(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	review := &model.ContentReview{
+	h.reviewRepo.CreateReview(&model.ContentReview{
 		ID:          utils.NewUUID(),
 		ContentType: contentType,
 		ContentID:   contentID,
 		ReviewerID:  moderator.ID,
 		Decision:    "approved",
 		CreatedAt:   time.Now(),
-	}
-	h.reviewRepo.CreateReview(review)
+	})
 
 	http.Redirect(w, r, "/moderation/queue", http.StatusSeeOther)
 }
 
 func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request) {
-	moderator := userFromSession(r, h.sessions, h.users)
-	if moderator == nil || !moderator.CanModerate() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
+	moderator := h.requireModerator(w, r)
+	if moderator == nil {
 		return
 	}
 
@@ -464,7 +508,7 @@ func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	review := &model.ContentReview{
+	h.reviewRepo.CreateReview(&model.ContentReview{
 		ID:          utils.NewUUID(),
 		ContentType: contentType,
 		ContentID:   contentID,
@@ -472,18 +516,18 @@ func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request
 		Decision:    "rejected",
 		Reason:      reason,
 		CreatedAt:   time.Now(),
-	}
-	h.reviewRepo.CreateReview(review)
+	})
 
 	h.notify(authorID, moderator.ID, "moderation_content_rejected", "", "")
 
 	http.Redirect(w, r, "/moderation/queue", http.StatusSeeOther)
 }
 
+// --- User management ---
+
 func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Request) {
-	admin := userFromSession(r, h.sessions, h.users)
-	if admin == nil || !admin.IsAdmin() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
+	admin := h.requireAdmin(w, r)
+	if admin == nil {
 		return
 	}
 
@@ -518,9 +562,8 @@ func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *ModerationHandler) UnbanUser(w http.ResponseWriter, r *http.Request) {
-	admin := userFromSession(r, h.sessions, h.users)
-	if admin == nil || !admin.CanModerate() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
+	moderator := h.requireModerator(w, r)
+	if moderator == nil {
 		return
 	}
 	targetID := r.PathValue("id")
@@ -532,9 +575,8 @@ func (h *ModerationHandler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ModerationHandler) KickUser(w http.ResponseWriter, r *http.Request) {
-	admin := userFromSession(r, h.sessions, h.users)
-	if admin == nil || !admin.CanModerate() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
+	moderator := h.requireModerator(w, r)
+	if moderator == nil {
 		return
 	}
 	targetID := r.PathValue("id")
@@ -544,6 +586,46 @@ func (h *ModerationHandler) KickUser(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
+
+func (h *ModerationHandler) BanUser(w http.ResponseWriter, r *http.Request) {
+	admin := h.requireAdmin(w, r)
+	if admin == nil {
+		return
+	}
+	targetID := r.PathValue("id")
+	reason := r.FormValue("reason")
+	if reason == "" {
+		reason = "Banni par un administrateur"
+	}
+	if err := h.moderation.BanUser(targetID, admin.ID, reason); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
+
+func (h *ModerationHandler) MuteUser(w http.ResponseWriter, r *http.Request) {
+	moderator := h.requireModerator(w, r)
+	if moderator == nil {
+		return
+	}
+	targetID := r.PathValue("id")
+	reason := r.FormValue("reason")
+	if reason == "" {
+		reason = "Muté par un administrateur"
+	}
+	durationHours, _ := strconv.Atoi(r.FormValue("duration_hours"))
+	if durationHours <= 0 {
+		durationHours = 24
+	}
+	if err := h.moderation.MuteUser(targetID, moderator.ID, reason, durationHours); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
+
+// --- Helpers ---
 
 func (h *ModerationHandler) resolveTargetIDs(report *model.Report) (userID, postID, commentID string, err error) {
 	switch report.TargetType {
@@ -572,7 +654,7 @@ func (h *ModerationHandler) notify(userID, actorID, notifType, postID, commentID
 	if userID == "" || userID == actorID {
 		return
 	}
-	n := &model.Notification{
+	if err := h.notifications.Create(&model.Notification{
 		ID:        utils.NewUUID(),
 		UserID:    userID,
 		ActorID:   actorID,
@@ -580,8 +662,7 @@ func (h *ModerationHandler) notify(userID, actorID, notifType, postID, commentID
 		PostID:    postID,
 		CommentID: commentID,
 		CreatedAt: time.Now(),
-	}
-	if err := h.notifications.Create(n); err != nil {
+	}); err != nil {
 		log.Printf("create moderation notification for user %q: %v", userID, err)
 	}
 }
@@ -590,44 +671,4 @@ func encodeJSON(w http.ResponseWriter, v any) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		log.Printf("encode json: %v", err)
 	}
-}
-
-func (h *ModerationHandler) BanUser(w http.ResponseWriter, r *http.Request) {
-	admin := userFromSession(r, h.sessions, h.users)
-	if admin == nil || !admin.IsAdmin() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
-		return
-	}
-	targetID := r.PathValue("id")
-	reason := r.FormValue("reason")
-	if reason == "" {
-		reason = "Banni par un administrateur"
-	}
-	if err := h.moderation.BanUser(targetID, admin.ID, reason); err != nil {
-		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-		return
-	}
-	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
-}
-
-func (h *ModerationHandler) MuteUser(w http.ResponseWriter, r *http.Request) {
-	admin := userFromSession(r, h.sessions, h.users)
-	if admin == nil || !admin.CanModerate() {
-		http.Error(w, "Accès interdit", http.StatusForbidden)
-		return
-	}
-	targetID := r.PathValue("id")
-	reason := r.FormValue("reason")
-	if reason == "" {
-		reason = "Muté par un administrateur"
-	}
-	durationHours, _ := strconv.Atoi(r.FormValue("duration_hours"))
-	if durationHours <= 0 {
-		durationHours = 24
-	}
-	if err := h.moderation.MuteUser(targetID, admin.ID, reason, durationHours); err != nil {
-		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-		return
-	}
-	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
