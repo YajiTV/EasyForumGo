@@ -1,6 +1,8 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.22-bookworm AS builder
 
-RUN apk add --no-cache gcc musl-dev openssl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc openssl libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -12,7 +14,7 @@ COPY . .
 RUN ./scripts/gen_certs.sh
 RUN CGO_ENABLED=1 GOOS=linux go build -a -o forum ./cmd/server
 
-FROM alpine:3.19
+FROM debian:bookworm-slim
 
 WORKDIR /app
 
@@ -21,7 +23,9 @@ COPY --from=builder /app/web ./web
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/certs ./certs
 
-RUN apk add --no-cache ca-certificates sqlite \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates sqlite3 \
+    && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /app/data /app/uploads
 
 EXPOSE 8080 8443
