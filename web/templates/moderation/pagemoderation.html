@@ -24,14 +24,16 @@
     <td>{{.Role}}</td>
     <td>{{.Status}}</td>
     <td>
-      {{if eq .Status "banned"}}
-        <form method="POST" action="/admin/user/{{.ID}}/unban" style="display:inline">
-          <button class="btn-delete" type="submit">unban</button>
-        </form>
-      {{else}}
-        <form method="POST" action="/admin/user/{{.ID}}/ban" style="display:inline">
-          <button class="btn-delete" type="submit">ban</button>
-        </form>
+      {{if $.User.IsAdmin}}
+        {{if eq .Status "banned"}}
+          <form method="POST" action="/admin/user/{{.ID}}/unban" style="display:inline">
+            <button class="btn-delete" type="submit">unban</button>
+          </form>
+        {{else}}
+          <form method="POST" action="/admin/user/{{.ID}}/ban" style="display:inline">
+            <button class="btn-delete" type="submit">ban</button>
+          </form>
+        {{end}}
       {{end}}
       {{if eq .Status "muted"}}
         <form method="POST" action="/admin/user/{{.ID}}/unban" style="display:inline">
