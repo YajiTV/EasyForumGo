@@ -16,6 +16,8 @@
 .reading-article {
     padding-bottom: 38px;
     border-bottom: 1px solid var(--line);
+    min-width: 0;
+    overflow: hidden;
 }
 
 .reading-header {
@@ -124,13 +126,19 @@
     object-fit: cover;
 }
 
+.reading-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 4px;
+}
+
 .reading-content {
     color: var(--text);
     font-family: Georgia, serif;
     font-size: 20px;
     line-height: 1.85;
     overflow-wrap: anywhere;
-    white-space: pre-wrap;
 }
 
 .reading-actions {
