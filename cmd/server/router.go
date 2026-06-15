@@ -151,9 +151,9 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.Handle("POST /moderation/report/{id}/dismiss", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.DismissReport))))
 	mux.Handle("POST /admin/user/{id}/role", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleAdmin, http.HandlerFunc(moderationHandler.ChangeUserRole))))
 	mux.Handle("POST /admin/user/{id}/ban", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleAdmin, http.HandlerFunc(moderationHandler.BanUser))))
-	mux.Handle("POST /admin/user/{id}/mute", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleAdmin, http.HandlerFunc(moderationHandler.MuteUser))))
-	mux.Handle("POST /admin/user/{id}/unban", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleAdmin, http.HandlerFunc(moderationHandler.UnbanUser))))
-	mux.Handle("POST /admin/user/{id}/kick", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleAdmin, http.HandlerFunc(moderationHandler.KickUser))))
+	mux.Handle("POST /admin/user/{id}/mute", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.MuteUser))))
+	mux.Handle("POST /admin/user/{id}/unban", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.UnbanUser))))
+	mux.Handle("POST /admin/user/{id}/kick", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.KickUser))))
 
 	return mux
 }

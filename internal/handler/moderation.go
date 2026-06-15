@@ -385,7 +385,7 @@ func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Reques
 
 func (h *ModerationHandler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 	admin := h.userFromSession(r)
-	if admin == nil || !admin.IsAdmin() {
+	if admin == nil || !admin.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
 	}
@@ -399,7 +399,7 @@ func (h *ModerationHandler) UnbanUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *ModerationHandler) KickUser(w http.ResponseWriter, r *http.Request) {
 	admin := h.userFromSession(r)
-	if admin == nil || !admin.IsAdmin() {
+	if admin == nil || !admin.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
 	}
@@ -488,7 +488,7 @@ func (h *ModerationHandler) BanUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *ModerationHandler) MuteUser(w http.ResponseWriter, r *http.Request) {
 	admin := h.userFromSession(r)
-	if admin == nil || !admin.IsAdmin() {
+	if admin == nil || !admin.CanModerate() {
 		http.Error(w, "Accès interdit", http.StatusForbidden)
 		return
 	}
