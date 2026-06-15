@@ -30,7 +30,7 @@ func (r *PostRepository) GetByID(id string) (*model.Post, error) {
 
 // GetAll gets stored data
 func (r *PostRepository) GetAll() ([]model.Post, error) {
-	rows, err := r.db.Query(`SELECT id, user_id, title, content, image_path, created_at, updated_at FROM posts ORDER BY created_at DESC`)
+	rows, err := r.db.Query(`SELECT id, user_id, title, content, image_path, created_at, updated_at FROM posts WHERE status = 'approved' ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func (r *PostRepository) GetAll() ([]model.Post, error) {
 // GetAllPaginated gets a page of posts
 func (r *PostRepository) GetAllPaginated(limit, offset int) ([]model.Post, error) {
 	return r.queryPosts(`SELECT id, user_id, title, content, image_path, created_at, updated_at
-		FROM posts ORDER BY created_at DESC LIMIT ? OFFSET ?`, limit, max(offset, 0))
+		FROM posts WHERE status = 'approved' ORDER BY created_at DESC LIMIT ? OFFSET ?`, limit, max(offset, 0))
 }
 
 // GetByUserID gets stored data
@@ -101,7 +101,7 @@ func (r *PostRepository) CountByUserID(userID string) (int, error) {
 
 // GetByCategory gets stored data
 func (r *PostRepository) GetByCategory(categoryID string) ([]model.Post, error) {
-	rows, err := r.db.Query(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at FROM posts p JOIN post_categories pc ON p.id = pc.post_id WHERE pc.category_id = ? ORDER BY p.created_at DESC`, categoryID)
+	rows, err := r.db.Query(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at FROM posts p JOIN post_categories pc ON p.id = pc.post_id WHERE pc.category_id = ? AND p.status = 'approved' ORDER BY p.created_at DESC`, categoryID)
 	if err != nil {
 		return nil, err
 	}
@@ -187,8 +187,8 @@ func (r *PostRepository) CreateWithCategories(p *model.Post, categoryIDs []strin
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Exec(`INSERT INTO posts (id, user_id, title, content, image_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		p.ID, p.UserID, p.Title, p.Content, p.ImagePath, p.CreatedAt, p.UpdatedAt); err != nil {
+	if _, err := tx.Exec(`INSERT INTO posts (id, user_id, title, content, image_path, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		p.ID, p.UserID, p.Title, p.Content, p.ImagePath, p.Status, p.CreatedAt, p.UpdatedAt); err != nil {
 		return fmt.Errorf("insert post: %w", err)
 	}
 	for _, categoryID := range categoryIDs {

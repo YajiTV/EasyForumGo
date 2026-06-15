@@ -17,7 +17,7 @@ func NewCommentRepository(db *sql.DB) *CommentRepository {
 
 // GetByPostID gets stored data
 func (r *CommentRepository) GetByPostID(postID string) ([]model.Comment, error) {
-	rows, err := r.db.Query(`SELECT id, post_id, user_id, content, created_at, updated_at FROM comments WHERE post_id = ? ORDER BY created_at ASC`, postID)
+	rows, err := r.db.Query(`SELECT id, post_id, user_id, content, created_at, updated_at FROM comments WHERE post_id = ? AND status = 'approved' ORDER BY created_at ASC`, postID)
 	if err != nil {
 		return nil, err
 	}
@@ -62,8 +62,8 @@ func (r *CommentRepository) CountByUserID(userID string) (int, error) {
 
 // Create creates a new record
 func (r *CommentRepository) Create(c *model.Comment) error {
-	_, err := r.db.Exec(`INSERT INTO comments (id, post_id, user_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		c.ID, c.PostID, c.UserID, c.Content, c.CreatedAt, c.UpdatedAt)
+	_, err := r.db.Exec(`INSERT INTO comments (id, post_id, user_id, content, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.PostID, c.UserID, c.Content, c.Status, c.CreatedAt, c.UpdatedAt)
 	return err
 }
 

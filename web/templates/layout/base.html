@@ -106,6 +106,14 @@
                                 </svg>
                                 <span>Mon activité</span>
                             </a>
+                            {{if .User.CanModerate}}
+                            <a href="/moderation" class="user-menu-row">
+                                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                                <span>Page de modération</span>
+                            </a>
+                            {{end}}
                             <a href="/settings" class="user-menu-row">
                                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.72l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path>
@@ -113,6 +121,14 @@
                                 </svg>
                                 <span>Paramètres</span>
                             </a>
+                            {{if .User.CanModerate}}
+                            <a href="/moderation" class="user-menu-row">
+                                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path>
+                                </svg>
+                                <span>Modération</span>
+                            </a>
+                            {{end}}
                             <a href="/help" class="user-menu-row">
                                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -180,6 +196,14 @@
                         </svg>
                         <span>Bibliothèque</span>
                     </a>
+                    {{if .User.CanModerate}}
+                    <a href="/moderation" class="side-nav-item">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"></path>
+                        </svg>
+                        <span>Modération</span>
+                    </a>
+                    {{end}}
                     <a href="/discover" class="side-nav-item">
                         <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                             <circle cx="12" cy="12" r="10"></circle>

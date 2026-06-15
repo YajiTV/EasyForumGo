@@ -7,6 +7,7 @@ type Comment struct {
 	PostID    string
 	UserID    string
 	Content   string
+	Status    string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

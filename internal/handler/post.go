@@ -13,6 +13,7 @@ import (
 
 	"EasyForumGo/internal/model"
 	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/moderation"
 	"EasyForumGo/pkg/utils"
 	"EasyForumGo/pkg/validator"
 )
@@ -31,6 +32,7 @@ type PostHandler struct {
 	renderer       *PageRenderer
 	follows        *repository.FollowRepository
 	notifications  *repository.NotificationRepository
+	reviews        *repository.ContentReviewRepository
 }
 
 // NewPostHandler creates a new instance
@@ -49,6 +51,7 @@ func NewPostHandler(db *sql.DB, uploadDir string, maxUploadBytes int64, renderer
 		renderer:       renderer,
 		follows:        repository.NewFollowRepository(db),
 		notifications:  repository.NewNotificationRepository(db),
+		reviews:        repository.NewContentReviewRepository(db),
 	}
 }
 
@@ -140,8 +143,14 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		Title:     title,
 		Content:   content,
 		ImagePath: imagePath,
+		Status:    "approved",
 		CreatedAt: now,
 		UpdatedAt: now,
+	}
+
+	keywords, err := h.reviews.GetKeywords()
+	if err == nil && moderation.ContainsFlag(title+" "+content, keywords) {
+		post.Status = "pending"
 	}
 
 	if err := h.posts.CreateWithCategories(post, categoryIDs); err != nil {
