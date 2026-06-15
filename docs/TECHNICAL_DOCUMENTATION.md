@@ -247,7 +247,7 @@ The Dockerfile uses a multi-stage build:
 1. Alpine Go builder with GCC and musl development packages for CGO SQLite
 2. Alpine runtime containing the application, templates, migrations, and SQLite tools
 
-Compose binds HTTP `8080` to localhost and connects the application to the external `web` network.
+Compose binds HTTP `8080` to localhost and creates the stable `web` network. A reverse proxy can join this network when needed.
 
 Named volumes persist:
 

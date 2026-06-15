@@ -64,7 +64,6 @@ Clone and start the application:
 ```bash
 git clone https://github.com/YajiTV/EasyForumGo.git
 cd EasyForumGo
-docker network create web
 docker compose -f docker/docker-compose.yml up --build
 ```
 
@@ -130,14 +129,8 @@ The default configuration remains intended for local development and Docker eval
 For production behind Caddy or another trusted reverse proxy, Easy can be mounted below a path such as `https://palawi.fr/easy`. The single Compose file:
 
 - serves HTTP inside Docker and binds the host port to `127.0.0.1`;
-- joins the external `web` network;
+- creates and joins the stable `web` network, which a reverse proxy can also join;
 - keeps SQLite and uploads in named volumes.
-
-Create the external network once if it does not already exist:
-
-```bash
-docker network create web
-```
 
 Copy `.env.example` to `.env`, then set:
 
