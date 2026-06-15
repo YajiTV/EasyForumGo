@@ -15,7 +15,7 @@ The mandatory scope includes:
 - Docker delivery
 - HTTP and technical error handling
 
-Implemented optional scope includes Google OAuth, advanced image validation, personal activity pages, customizable post libraries, notifications, public social profiles, follows, discovery, complete account settings, moderation foundations, HTTPS, and rate limiting.
+Implemented optional scope includes Google and GitHub OAuth, advanced image validation, personal activity pages, customizable post libraries, notifications, public social profiles, follows, discovery, complete account settings, moderation foundations, HTTPS, and rate limiting.
 
 ## 2. Architecture
 The internal Go module is named `EasyForumGo`.
@@ -156,7 +156,11 @@ Every library read and write query includes the current user ID. This prevents u
 
 `/settings` centralizes account information, email changes, password changes, session logout, and permanent account deletion.
 
-Local accounts must confirm their current password before changing their email, changing their password, or deleting the account. Password changes delete the active session and require a new login. Google-only accounts display provider-specific information and do not expose unusable email or password forms. Account deletion requires an explicit confirmation and relies on foreign key cascades to remove related forum data.
+Local accounts must confirm their current password before changing their email, changing their password, or deleting the account. Password changes delete the active session and require a new login. OAuth-only accounts display provider-specific information and do not expose unusable email or password forms. Account deletion requires an explicit confirmation and relies on foreign key cascades to remove related forum data.
+
+### OAuth authentication
+
+Google and GitHub authorization-code flows use provider-specific anti-CSRF state cookies. GitHub requests `user:email` and selects a verified primary e-mail, falling back to another verified address. OAuth identities are stored separately from users so one account can be linked to both providers. A verified e-mail links to an existing account; otherwise a short-lived opaque completion token lets the user choose a public username.
 
 ### Social profiles and following feed
 
@@ -190,6 +194,8 @@ SQLite is used through `database/sql` and `github.com/mattn/go-sqlite3`. Applica
 | `reports` | user-submitted moderation reports |
 | `moderation_actions` | moderation action history |
 | `user_restrictions` | active mute and ban records |
+| `oauth_identities` | unique Google and GitHub identities linked to users |
+| `oauth_pending_flows` | short-lived server-side OAuth profile completion data |
 
 Foreign key cascades remove dependent records when their parent is deleted. The visual entity-relationship diagram is stored in `docs/ERD.svg`.
 
@@ -232,7 +238,7 @@ Docker development mode serves HTTPS with an automatically generated self-signed
 - `TRUST_PROXY=true` is safe only when direct access is blocked and a trusted proxy replaces forwarded client-address headers.
 - Production depends on the reverse proxy for HTTPS termination.
 - Database encryption is not implemented.
-- GitHub OAuth and complete subject-level moderation are not implemented.
+- Complete subject-level moderation is not implemented.
 
 ## 7. Error Handling
 
@@ -243,6 +249,8 @@ Docker development mode serves HTTPS with an automatically generated self-signed
 - `403 Forbidden`
 - `404 Not Found`
 - `500 Internal Server Error`
+- `502 Bad Gateway`
+- `503 Service Unavailable`
 
 Error pages can preserve the current user's navigation state. Some feature handlers still use direct `http.Error` fallbacks for technical failures; these return the correct HTTP status without exposing internal database details.
 

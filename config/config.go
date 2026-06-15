@@ -38,6 +38,8 @@ type Config struct {
 	SessionDuration   time.Duration
 	OAuthClientID     string
 	OAuthClientSecret string
+	GitHubOAuthID     string
+	GitHubOAuthSecret string
 	AppBasePath       string
 	AppPublicURL      string
 	TrustProxy        bool
@@ -81,8 +83,10 @@ func Load() Config {
 		UploadDir:         stringEnv("UPLOAD_DIR", defaultUploadDir),
 		MaxUploadBytes:    int64Env("MAX_UPLOAD_MB", defaultMaxUploadMegabytes) * 1024 * 1024,
 		SessionDuration:   time.Duration(intEnv("SESSION_DURATION_H", defaultSessionDurationHours)) * time.Hour,
-		OAuthClientID:     stringEnv("OAUTH_ID", ""),
-		OAuthClientSecret: stringEnv("OAUTH_KEY", ""),
+		OAuthClientID:     stringEnv("GOOGLE_OAUTH_ID", stringEnv("OAUTH_ID", "")),
+		OAuthClientSecret: stringEnv("GOOGLE_OAUTH_KEY", stringEnv("OAUTH_KEY", "")),
+		GitHubOAuthID:     stringEnv("GITHUB_OAUTH_ID", ""),
+		GitHubOAuthSecret: stringEnv("GITHUB_OAUTH_KEY", ""),
 		AppBasePath:       normalizeBasePath(stringEnv("APP_BASE_PATH", "")),
 		AppPublicURL:      strings.TrimRight(strings.TrimSpace(stringEnv("APP_PUBLIC_URL", "")), "/"),
 		TrustProxy:        boolEnv("TRUST_PROXY", false),
@@ -115,12 +119,12 @@ func (c Config) SecureCookies() bool {
 	return c.TLSEnabled() || strings.HasPrefix(strings.ToLower(c.AppPublicURL), "https://")
 }
 
-// OAuthRedirectURL builds the public google oauth callback url
-func (c Config) OAuthRedirectURL() string {
+// OAuthRedirectURL builds a public oauth callback url
+func (c Config) OAuthRedirectURL(provider string) string {
 	if c.AppPublicURL != "" {
-		return c.AppPublicURL + "/auth/google/callback"
+		return c.AppPublicURL + "/auth/" + provider + "/callback"
 	}
-	return "http://localhost:" + c.Port + path.Join(c.AppBasePath, "/auth/google/callback")
+	return "http://localhost:" + c.Port + path.Join(c.AppBasePath, "/auth/"+provider+"/callback")
 }
 
 // stringEnv gets a string environment value

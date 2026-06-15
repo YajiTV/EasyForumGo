@@ -119,10 +119,18 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /contact", pageHandler.Page("pages/contact.html"))
 
 	// OAuth routes
-	redirectURL := cfg.OAuthRedirectURL()
-	oauthHandler := handler.NewOAuthHandler(db, cfg.OAuthClientID, cfg.OAuthClientSecret, redirectURL, cfg.SessionDuration, errorRenderer, renderer)
+	oauthHandler := handler.NewOAuthHandler(db, handler.OAuthConfig{
+		GoogleClientID:     cfg.OAuthClientID,
+		GoogleClientSecret: cfg.OAuthClientSecret,
+		GoogleRedirectURL:  cfg.OAuthRedirectURL("google"),
+		GitHubClientID:     cfg.GitHubOAuthID,
+		GitHubClientSecret: cfg.GitHubOAuthSecret,
+		GitHubRedirectURL:  cfg.OAuthRedirectURL("github"),
+	}, cfg.SessionDuration, errorRenderer, renderer)
 	mux.HandleFunc("GET /auth/google", oauthHandler.GoogleLogin)
 	mux.HandleFunc("GET /auth/google/callback", oauthHandler.GoogleCallback)
+	mux.HandleFunc("GET /auth/github", oauthHandler.GitHubLogin)
+	mux.HandleFunc("GET /auth/github/callback", oauthHandler.GitHubCallback)
 	mux.HandleFunc("GET /auth/complete-profile", oauthHandler.ShowCompleteProfile)
 	mux.Handle("POST /auth/complete-profile", writeLimiter.Wrap(http.HandlerFunc(oauthHandler.CompleteProfile)))
 
