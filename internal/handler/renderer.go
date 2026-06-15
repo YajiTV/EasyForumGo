@@ -8,6 +8,7 @@ import (
 
 	"EasyForumGo/internal/model"
 	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/utils"
 )
 
 type PageRenderer struct {
@@ -33,6 +34,7 @@ func (r *PageRenderer) Render(w http.ResponseWriter, name string, data any) {
 			}
 			return count
 		},
+		"stripMD": utils.StripMarkdown,
 	}
 
 	tmpl, err := template.New("base").Funcs(funcMap).ParseFiles(
