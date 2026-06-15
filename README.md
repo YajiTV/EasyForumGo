@@ -1,6 +1,6 @@
 # Easy
 
-Easy is a server-rendered community forum built in Go. It provides the complete mandatory feature set from the B1 Forum project: authentication, one active session per user, posts with categories and images, comments, votes, personal filters, SQLite persistence, HTTP error handling, and Docker delivery.
+Easy is a server-rendered community forum written in Go for the B1 Forum project. The product name is Easy, the repository slug is `EasyForumGo`, and the internal Go module is `EasyForumGo`.
 
 ## Team
 
@@ -9,46 +9,55 @@ Easy is a server-rendered community forum built in Go. It provides the complete 
 - Baptiste: front-end and back-end development
 - Nine: front-end development
 
-## Features
+## Subject Coverage
 
-### Mandatory features
+### Mandatory Scope
 
-- Public post feed, category filters, post details, comments, likes, and dislikes
-- Registration with a unique email and username
-- Login, logout, expiring cookie sessions, and one active session per user
-- Post creation with one or more categories and an optional image
-- Post and comment editing or deletion restricted to their authors
-- Like, dislike, vote change, and vote removal on posts and comments
-- Personal pages for posts created and posts liked by the connected user
-- Custom `400`, `401`, `403`, `404`, and `500` error pages
-- Server-side input validation and prepared SQL statements
-- SQLite data and uploaded image persistence through Docker volumes
+- SQLite persistence with versioned migrations
+- Registration, login, logout, expiring cookie sessions, and one active session per user
+- Public post and comment reading for guests
+- Posts with one or more categories and an optional image
+- Comments
+- Post and comment likes and dislikes
+- Author-only post and comment editing and deletion
+- Category, created-post, and liked-post filters
+- Custom HTTP error pages and server-side validation
+- Autonomous Docker delivery with persistent database and upload volumes
+- Clear installation and launch instructions
 
-### Additional features
+### Additional Features
 
-- Personal comments page and editable user profile
-- Consolidated personal activity page with contributions, reactions, and statistics
-- Customizable libraries for saving and organizing posts
-- Complete account settings for email, password, session, and account deletion
-- Public profiles, followers, following feed, user discovery, and social notifications
-- CSS-only light, system, and dark theme switcher
-- Profile picture upload
-- Password strength feedback
+- Personal activity page and customizable post libraries
+- Complete account settings and profile picture upload
+- Public profiles, follows, following feed, discovery, and search
+- Notifications for forum, social, and moderation events
+- CSS-only light, system, and dark themes
 - Google OAuth authentication
-- JPEG, PNG, and GIF validation with a 20 MB limit
-- Reverse-proxy production deployment with secure cookies
-- Global, login, and write-action rate limiting
-- Informational, help, legal, privacy, terms, cookies, and contact pages
+- Moderation data model, reports, roles, restrictions, and actions
+- Optional base-path deployment behind a trusted reverse proxy
+
+## Bonus Status
+
+| Subject bonus | Status |
+| --- | --- |
+| Google and GitHub OAuth | Partial: Google is implemented; GitHub is not |
+| Advanced image upload | Implemented: JPEG, PNG, GIF, decoded-image validation, configurable limit |
+| Moderation | Partial: roles, reports, actions, mute, and ban exist; pre-publication approval and complete administration are not implemented |
+| HTTPS and rate limiting | Implemented: Docker development HTTPS, HTTP redirect, reverse-proxy support, and in-memory limits |
+| Notifications and personal activity | Implemented |
+| Database encryption | Not implemented |
 
 ## Technology
-- Internal Go module: `EasyForumGo`
 
-- Go `1.22.2` and the standard library: `net/http`, `html/template`, `database/sql`
+- Go `1.22.2`
+- Go standard library: `net/http`, `html/template`, `database/sql`, image decoders, and related packages
 - SQLite through `github.com/mattn/go-sqlite3`
 - bcrypt through `golang.org/x/crypto`
 - UUIDs through `github.com/google/uuid`
 - Server-rendered HTML and plain CSS without a front-end framework
 - Docker and Docker Compose
+
+No automated test suite is included. `go test ./...` is still used to compile every package.
 
 ## Run With Docker
 
@@ -57,35 +66,34 @@ Easy is a server-rendered community forum built in Go. It provides the complete 
 - Docker
 - Docker Compose
 
-The GitHub repository slug is `EasyForumGo`, while the product name is Easy and the Go module is `EasyForumGo`.
-
-Clone and start the application:
+Start the complete stack without any preparatory command:
 
 ```bash
-git clone https://github.com/YajiTV/EasyForumGo.git
-cd EasyForumGo
 docker compose -f docker/docker-compose.yml up --build
 ```
 
 Open:
 
 ```text
-http://localhost:8080
+http://localhost:8080   -> redirects to HTTPS
+https://localhost:8443  -> application with a self-signed development certificate
 ```
 
-The container serves HTTP. In production, Caddy or another reverse proxy terminates HTTPS.
+The browser warning for the self-signed localhost certificate is expected.
 
-Stop the application:
+Stop the application without deleting persisted data:
 
 ```bash
 docker compose -f docker/docker-compose.yml down
 ```
 
-The database and uploaded images remain available after a normal stop or container recreation. To deliberately remove all persisted Docker data:
+Delete the database and uploaded files deliberately:
 
 ```bash
 docker compose -f docker/docker-compose.yml down --volumes
 ```
+
+Compose automatically creates the stable `web` network. Database and uploaded images persist in the `db_data` and `uploads` named volumes.
 
 ## Run Locally
 
@@ -96,192 +104,158 @@ go mod download
 go run ./cmd/server
 ```
 
-Open `http://localhost:8080`.
+Without TLS environment variables, the local process serves HTTP on `http://localhost:8080`.
 
 ## Configuration
 
-Configuration is read from environment variables. The application uses defaults when variables are absent.
+Configuration is loaded from environment variables and an optional local `.env` file.
 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `APP_ENV` | `dev` | Runtime mode: `dev` or `prod` |
-| `PORT` | `8080` | HTTP server port |
-| `HOST_BIND` | `127.0.0.1` | Host address used by Docker Compose |
-| `HOST_PORT` | `8080` | Host port used by Docker Compose |
-| `DB_PATH` | `./data/forum.db` | SQLite database file |
-| `MIGRATIONS_DIR` | `./migrations` | SQL migration directory |
+| `PORT` | `8080` | HTTP port |
+| `HTTPS_PORT` | `8443` | HTTPS port when internal TLS is enabled |
+| `TLS_CERT_FILE` | empty locally | TLS certificate path |
+| `TLS_KEY_FILE` | empty locally | TLS private key path |
+| `HOST_BIND` | `127.0.0.1` | Docker host bind address |
+| `HOST_PORT` | `8080` | Docker HTTP host port |
+| `HOST_HTTPS_PORT` | `8443` | Docker HTTPS host port |
+| `DB_PATH` | `./data/forum.db` | SQLite database path |
+| `MIGRATIONS_DIR` | `./migrations` | Migration directory |
 | `STATIC_DIR` | `web/static` | Static asset directory |
 | `TEMPLATES_DIR` | `web/templates` | HTML template directory |
 | `UPLOAD_DIR` | `./uploads` | Uploaded image directory |
+| `MAX_UPLOAD_MB` | `20` | Maximum image size in megabytes |
 | `SESSION_DURATION_H` | `24` | Session duration in hours |
 | `OAUTH_ID` | empty | Google OAuth client ID |
 | `OAUTH_KEY` | empty | Google OAuth client secret |
 | `APP_BASE_PATH` | empty | Optional public path prefix, for example `/easy` |
-| `APP_PUBLIC_URL` | empty | Canonical public application URL, including the path prefix |
-| `TRUST_PROXY` | `false` | Trust reverse-proxy client IP headers |
+| `APP_PUBLIC_URL` | empty | Canonical public application URL |
+| `TRUST_PROXY` | `false` | Trust forwarded client-address headers |
 
-See [`.env.example`](.env.example) for a complete example.
+See [`.env.example`](.env.example).
 
 ## Production Behind a Reverse Proxy
 
-The default configuration remains intended for local development and Docker evaluation at `/`.
+Docker development mode provides a self-signed certificate so HTTPS can be evaluated without manual setup. In production, a trusted reverse proxy should terminate HTTPS with a real certificate.
 
-For production behind Caddy or another trusted reverse proxy, Easy can be mounted below a path such as `https://palawi.fr/easy`. The single Compose file:
-
-- serves HTTP inside Docker and binds the host port to `127.0.0.1`;
-- creates and joins the stable `web` network, which a reverse proxy can also join;
-- keeps SQLite and uploads in named volumes.
-
-Copy `.env.example` to `.env`, then set:
+Set:
 
 ```env
 APP_ENV=prod
 APP_BASE_PATH=/easy
-APP_PUBLIC_URL=https://palawi.fr/easy
+APP_PUBLIC_URL=https://example.com/easy
 TRUST_PROXY=true
+TLS_CERT_FILE=
+TLS_KEY_FILE=
 ```
 
-Start the same Compose stack:
+The reverse proxy can join the automatically created `web` network and forward the unchanged public path to `forum:8080`. Production mode requires an HTTPS `APP_PUBLIC_URL` and `TRUST_PROXY=true`.
 
-```bash
-docker compose -f docker/docker-compose.yml up --build -d
-```
-
-`APP_ENV=prod` refuses startup unless `APP_PUBLIC_URL` uses HTTPS and `TRUST_PROXY` is enabled. The reverse proxy must forward the public prefixed path unchanged to `forum:8080`; the application strips the prefix internally.
-
-The Google OAuth authorized redirect URI must match:
+The Google OAuth redirect URI must match:
 
 ```text
-https://palawi.fr/easy/auth/google/callback
+https://example.com/easy/auth/google/callback
 ```
 
-Back up both the `db_data` and `uploads` volumes. Run only one application instance because the application uses SQLite.
+Run one application instance because Easy uses SQLite and in-memory rate limiting.
 
 ## Project Structure
 
 ```text
-cmd/server/          application entry point and route registration
+cmd/server/          application startup and route registration
 config/              environment configuration
-internal/handler/    HTTP request handling and template rendering
-internal/middleware/ authentication and rate limiting
+internal/handler/    HTTP handlers and rendering
+internal/middleware/ authentication, restrictions, proxy, base path, and rate limiting
 internal/model/      application data structures
-internal/repository/ SQLite access and prepared SQL queries
-migrations/          versioned schema and category seed
+internal/repository/ SQLite access and migrations
+migrations/          versioned SQL schema and seed data
 pkg/utils/           password, UUID, and upload helpers
 pkg/validator/       server-side input validation
 web/templates/       server-rendered HTML templates
 web/static/          CSS and static images
-uploads/             user-uploaded images
 docker/              Dockerfile and Compose configuration
-docs/                ERD and technical documentation
+docs/                technical and persistence documentation
 ```
 
 ## Database
 
-Easy uses SQLite with foreign keys enabled. Migrations run automatically at startup and are recorded in `schema_migrations`.
+Easy applies 21 migration files on startup and records them in `schema_migrations`.
 
 | Table | Purpose |
 | --- | --- |
-| `users` | Accounts, bcrypt password hashes, and profile pictures |
+| `users` | Accounts, roles, OAuth identity, profile, and social preferences |
 | `sessions` | Unique expiring user sessions |
-| `posts` | Forum posts and optional image paths |
-| `categories` | Available post categories |
-| `post_categories` | Many-to-many relation between posts and categories |
-| `comments` | Comments associated with posts and users |
-| `post_likes` | One like or dislike per user and post |
-| `comment_likes` | One like or dislike per user and comment |
-| `libraries` | Named post collections owned by users |
-| `library_posts` | Posts saved in user libraries |
-| `user_follows` | Unique following relationships between users |
+| `posts`, `categories`, `post_categories` | Forum posts and categories |
+| `comments` | Post comments |
+| `post_likes`, `comment_likes` | Likes and dislikes |
+| `libraries`, `library_posts` | Personal saved-post collections |
+| `notifications` | Forum, social, and moderation notifications |
+| `reports`, `moderation_actions`, `user_restrictions` | Moderation reports, history, mute, and ban |
+| `user_follows` | Social following relationships |
+| `schema_migrations` | Applied migration filenames |
 
-The entity-relationship diagram is available at [`docs/ERD.svg`](docs/ERD.svg).
+SQLite foreign keys and cascading deletion are enabled. The existing visual diagram is available at [`docs/ERD.svg`](docs/ERD.svg), but it does not yet include every later social and moderation table.
 
 ## Main Routes
 
 | Method | Route | Access | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/` | Public | Post feed |
-| `GET` | `/?category={id}` | Public | Posts filtered by category |
-| `GET` | `/post/{id}` | Public | Post details and comments |
-| `GET`, `POST` | `/register` | Public | Registration form and account creation |
-| `GET`, `POST` | `/login` | Public | Login form and authentication |
-| `POST` | `/logout` | Connected | End the current session |
+| `GET` | `/`, `/?category={id}`, `/?feed=following` | Public or connected | Post feeds |
+| `GET` | `/post/{id}` | Public | Post detail and comments |
+| `GET`, `POST` | `/register`, `/login` | Public | Authentication |
+| `POST` | `/logout` | Connected | End the session |
 | `GET`, `POST` | `/post/new` | Connected | Create a post |
-| `GET`, `POST` | `/post/{id}/edit` | Author | Edit a post |
-| `GET`, `POST` | `/post/{id}/delete` | Author | Delete a post |
-| `POST` | `/post/{id}/comment` | Connected | Create a comment |
-| `GET`, `POST` | `/comment/{id}/edit` | Author | Edit a comment |
-| `GET`, `POST` | `/comment/{id}/delete` | Author | Delete a comment |
+| `GET`, `POST` | `/post/{id}/edit`, `/post/{id}/delete` | Author | Manage a post |
+| `POST` | `/post/{id}/comment` | Connected | Comment |
+| `GET`, `POST` | `/comment/{id}/edit`, `/comment/{id}/delete` | Author | Manage a comment |
 | `POST` | `/post/{id}/like`, `/post/{id}/dislike` | Connected | Vote on a post |
 | `POST` | `/comment/{id}/like`, `/comment/{id}/dislike` | Connected | Vote on a comment |
-| `GET` | `/profile/my-posts` | Connected | Current user's posts |
-| `GET` | `/profile/liked-posts` | Connected | Posts liked by the current user |
-| `GET` | `/profile/my-comments` | Connected | Current user's comments |
-| `GET` | `/profile/activity` | Connected | Current user's activity and statistics |
-| `POST` | `/settings/profile` | Connected | Edit the current user's public name and picture |
-| `GET` | `/user/{username}` | Public | Display a public profile and its posts |
-| `GET` | `/user/{username}/followers`, `/user/{username}/following` | Public or owner | Paginated social relations |
-| `POST` | `/user/{username}/follow`, `/user/{username}/unfollow` | Connected | Manage a following relationship |
-| `GET` | `/?feed=following` | Connected | Display posts from followed users |
-| `GET` | `/discover` | Connected | Discover suggested profiles |
-| `GET` | `/search?q=...&type=...&category=...&sort=...` | Public | Search and filter posts or profiles |
-| `GET` | `/settings` | Connected | Display account and security settings |
-| `POST` | `/settings/email` | Connected | Update the account email |
-| `POST` | `/settings/password` | Connected | Change the password and end the current session |
-| `POST` | `/settings/delete` | Connected | Permanently delete the account |
-| `GET`, `POST` | `/library` | Connected | List and create personal libraries |
-| `GET` | `/library/{id}` | Owner | Display a library and its saved posts |
-| `POST` | `/library/{id}/rename`, `/library/{id}/delete` | Owner | Manage a personal library |
-| `POST` | `/post/{postID}/library` | Owner | Add a post to the selected library |
+| `GET` | `/profile/*`, `/settings`, `/library/*`, `/notifications` | Connected | Personal features |
+| `GET` | `/user/{username}`, `/discover`, `/search` | Public or connected | Social features |
+| `GET`, `POST` | `/auth/google/*` | Public | Google OAuth |
+| `POST` | `/{post|comment|user}/{id}/report` | Connected | Report content or a user |
+| `GET`, `POST` | `/moderation/*`, `/admin/*` | Moderator or admin | Moderation actions |
 
 ## Security
 
-- Passwords are hashed with bcrypt and never stored in plain text.
-- SQL inputs use placeholders.
-- Registration, login, posts, comments, categories, and uploads are validated server-side.
-- Cookies are `HttpOnly`, use `SameSite=Lax`, and have an expiration date.
-- Creating a new session removes the user's previous session.
-- Author ownership is checked before post or comment modification.
-- Sensitive account settings require the current password for local accounts.
-- Password changes invalidate the active session, and account deletion cascades through related data.
-- SQLite foreign keys enforce relation integrity and cascading deletion.
-- Image content is checked with `http.DetectContentType`.
-- Rate limiting protects global traffic, login attempts, and write actions.
-- Follow and unfollow actions use POST routes protected by the write limiter.
+- bcrypt password hashes
+- UUID session tokens, expiration, and one active session per user
+- `HttpOnly`, `SameSite=Lax`, and HTTPS `Secure` cookies
+- server-side input validation and SQL placeholders
+- author ownership checks
+- SQLite foreign keys and cascades
+- decoded-image validation and request-size limits
+- global, authentication, and write-action rate limiting
+- role checks, mute enforcement, and login-time ban enforcement
+- forwarded client headers trusted only when `TRUST_PROXY=true`
 
 ## Verification
 
-Run the Go checks:
-
 ```bash
-gofmt -w $(find . -name '*.go' -type f)
+gofmt -w .
 go test ./...
 go vet ./...
-```
-
-Validate the Compose configuration:
-
-```bash
+go build ./cmd/server
 docker compose -f docker/docker-compose.yml config
+docker compose -f docker/docker-compose.yml up --build -d
+curl -I http://localhost:8080/
+curl -k -I https://localhost:8443/
 ```
 
-`go test ./...` compiles every package. The main HTTP workflows must be checked manually: guest access, authentication, posts, comments, votes, personal filters, uploads, errors, and Docker persistence.
-
-## Demo Accounts
-
-No demo account is seeded. Create an account from `/register`.
+`go test ./...` compiles every package; no automated tests are included. Important workflows and persistence must be verified manually.
 
 ## Known Limits
 
-- Production requires a trusted reverse proxy to terminate HTTPS.
-- CSRF tokens are not implemented; state-changing actions use `POST` and session cookies use `SameSite=Lax`.
-- The in-memory rate limiter resets when the application restarts and is designed for a single application instance.
+- GitHub OAuth is not implemented.
+- Moderation does not implement pre-publication approval or complete category/user administration.
+- The moderation dashboard template is currently missing.
+- CSRF tokens are not implemented for ordinary state-changing forms.
+- The in-memory rate limiter resets on restart and is intended for one application instance.
+- Database encryption is not implemented.
+- The ERD does not include every table added after the mandatory MVP.
+- Some direct technical-error fallbacks remain while error handling is progressively centralized.
 
-## Implemented Bonuses
+## Demo Accounts
 
-- Google OAuth authentication
-- Advanced image upload validation
-- Reverse-proxy HTTPS support and rate limiting
-- Personal activity pages
-
-GitHub OAuth, moderation roles, notifications, and database encryption are not implemented.
+No demo or administrator account is seeded. Create an account from `/register`. Testing administration currently requires assigning the `admin` role directly in SQLite.
