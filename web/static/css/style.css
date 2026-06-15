@@ -1446,9 +1446,14 @@ textarea {
         display: none;
     }
 
-    .nav-links a:not(.register-link):not(.write-link),
+    .nav-links a:not(.register-link):not(.write-link):not(.notif-bell):not(.login-link),
     .logout-form {
         display: none;
+    }
+
+    .theme-switcher a {
+        width: 38px;
+        height: 38px;
     }
 
     .user-menu-panel {
@@ -1553,6 +1558,16 @@ textarea {
 
     .error-message {
         font-size: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .theme-switcher {
+        display: none;
+    }
+
+    .nav-links {
+        gap: 12px;
     }
 }
 
