@@ -179,11 +179,60 @@ func (r *PostRepository) Create(p *model.Post) error {
 	return err
 }
 
+// CreateWithCategories creates a post and its category associations atomically
+func (r *PostRepository) CreateWithCategories(p *model.Post, categoryIDs []string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin create post: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`INSERT INTO posts (id, user_id, title, content, image_path, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		p.ID, p.UserID, p.Title, p.Content, p.ImagePath, p.CreatedAt, p.UpdatedAt); err != nil {
+		return fmt.Errorf("insert post: %w", err)
+	}
+	for _, categoryID := range categoryIDs {
+		if _, err := tx.Exec(`INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)`, p.ID, categoryID); err != nil {
+			return fmt.Errorf("insert post category: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit create post: %w", err)
+	}
+	return nil
+}
+
 // Update updates an existing record
 func (r *PostRepository) Update(p *model.Post) error {
 	_, err := r.db.Exec(`UPDATE posts SET title = ?, content = ?, image_path = ?, updated_at = ? WHERE id = ?`,
 		p.Title, p.Content, p.ImagePath, p.UpdatedAt, p.ID)
 	return err
+}
+
+// UpdateWithCategories updates a post and its category associations atomically
+func (r *PostRepository) UpdateWithCategories(p *model.Post, categoryIDs []string) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return fmt.Errorf("begin update post: %w", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec(`UPDATE posts SET title = ?, content = ?, image_path = ?, updated_at = ? WHERE id = ?`,
+		p.Title, p.Content, p.ImagePath, p.UpdatedAt, p.ID); err != nil {
+		return fmt.Errorf("update post: %w", err)
+	}
+	if _, err := tx.Exec(`DELETE FROM post_categories WHERE post_id = ?`, p.ID); err != nil {
+		return fmt.Errorf("delete post categories: %w", err)
+	}
+	for _, categoryID := range categoryIDs {
+		if _, err := tx.Exec(`INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)`, p.ID, categoryID); err != nil {
+			return fmt.Errorf("insert post category: %w", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit update post: %w", err)
+	}
+	return nil
 }
 
 // Delete deletes an existing record

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"html/template"
+	"log"
 	"net/http"
 	"path/filepath"
 
@@ -25,7 +26,11 @@ func (r *PageRenderer) Render(w http.ResponseWriter, name string, data any) {
 			if user == nil {
 				return 0
 			}
-			count, _ := r.notifications.CountUnread(user.ID)
+			count, err := r.notifications.CountUnread(user.ID)
+			if err != nil {
+				log.Printf("count unread notifications for user %q: %v", user.ID, err)
+				return 0
+			}
 			return count
 		},
 	}
@@ -35,8 +40,11 @@ func (r *PageRenderer) Render(w http.ResponseWriter, name string, data any) {
 		filepath.Join("web", "templates", name),
 	)
 	if err != nil {
+		log.Printf("parse page template %q: %v", name, err)
 		http.Error(w, "Erreur template", http.StatusInternalServerError)
 		return
 	}
-	tmpl.ExecuteTemplate(w, "base", data)
+	if err := tmpl.ExecuteTemplate(w, "base", data); err != nil {
+		log.Printf("execute page template %q: %v", name, err)
+	}
 }

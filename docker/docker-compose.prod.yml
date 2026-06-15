@@ -1,0 +1,9 @@
+services:
+  forum:
+    environment:
+      TLS_CERT_FILE: ""
+      TLS_KEY_FILE: ""
+
+networks:
+  web:
+    external: true

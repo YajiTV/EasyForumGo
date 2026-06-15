@@ -19,9 +19,16 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
 
+	// theme routes
+	themeHandler := handler.NewThemeHandler()
+	mux.HandleFunc("GET /theme.css", themeHandler.CSS)
+	mux.HandleFunc("GET /theme/{theme}", themeHandler.Set)
+
 	// shared renderer : injecte notifCount dans tous les templates via FuncMap
 	notifRepo := repository.NewNotificationRepository(db)
 	renderer := handler.NewPageRenderer(notifRepo)
+
+	authMiddleware := middleware.NewAuthMiddleware(db)
 
 	// error renderer
 	errorRenderer := handler.NewErrorRenderer(cfg.TemplatesDir)
@@ -33,20 +40,18 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /login", authHandler.ShowLoginForm)
 	mux.Handle("POST /login", loginLimiter.Wrap(http.HandlerFunc(authHandler.Login)))
 	mux.HandleFunc("GET /register", authHandler.ShowRegisterForm)
-	mux.HandleFunc("POST /register", authHandler.Signup)
+	mux.Handle("POST /register", loginLimiter.Wrap(http.HandlerFunc(authHandler.Signup)))
 	mux.HandleFunc("GET /register/password-strength", authHandler.PasswordStrength)
-	mux.HandleFunc("POST /register/password-strength", authHandler.PasswordStrength)
-	mux.HandleFunc("POST /logout", authHandler.Logout)
+	mux.Handle("POST /register/password-strength", loginLimiter.Wrap(http.HandlerFunc(authHandler.PasswordStrength)))
+	mux.Handle("POST /logout", writeLimiter.Wrap(http.HandlerFunc(authHandler.Logout)))
 
 	// profile routes
-	profileHandler := handler.NewProfileHandler(db, cfg.UploadDir, renderer)
+	profileHandler := handler.NewProfileHandler(db, renderer)
 	mux.HandleFunc("GET /profile", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/my-posts", profileHandler.MyPosts)
 	mux.HandleFunc("GET /profile/liked-posts", profileHandler.LikedPosts)
 	mux.HandleFunc("GET /profile/my-comments", profileHandler.MyComments)
 	mux.HandleFunc("GET /profile/activity", profileHandler.Activity)
-	mux.HandleFunc("GET /profile/edit", profileHandler.ShowEditForm)
-	mux.HandleFunc("POST /profile/edit", profileHandler.UpdateProfile)
 
 	// social profile routes
 	socialHandler := handler.NewSocialHandler(db, renderer)
@@ -59,8 +64,9 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /search", socialHandler.Search)
 
 	// settings routes
-	settingsHandler := handler.NewSettingsHandler(db, renderer)
+	settingsHandler := handler.NewSettingsHandler(db, cfg.UploadDir, cfg.MaxUploadBytes, renderer)
 	mux.HandleFunc("GET /settings", settingsHandler.Show)
+	mux.Handle("POST /settings/profile", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateProfile)))
 	mux.Handle("POST /settings/email", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateEmail)))
 	mux.Handle("POST /settings/password", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdatePassword)))
 	mux.Handle("POST /settings/social", writeLimiter.Wrap(http.HandlerFunc(settingsHandler.UpdateSocial)))
@@ -69,37 +75,37 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	// library routes
 	libraryHandler := handler.NewLibraryHandler(db, renderer)
 	mux.HandleFunc("GET /library", libraryHandler.Index)
-	mux.HandleFunc("POST /library", libraryHandler.Create)
+	mux.Handle("POST /library", writeLimiter.Wrap(http.HandlerFunc(libraryHandler.Create)))
 	mux.HandleFunc("GET /library/{id}", libraryHandler.Show)
-	mux.HandleFunc("POST /library/{id}/rename", libraryHandler.Rename)
-	mux.HandleFunc("POST /library/{id}/delete", libraryHandler.Delete)
-	mux.HandleFunc("POST /library/{libraryID}/post/{postID}/remove", libraryHandler.RemovePost)
-	mux.HandleFunc("POST /post/{postID}/library", libraryHandler.AddPost)
+	mux.Handle("POST /library/{id}/rename", writeLimiter.Wrap(http.HandlerFunc(libraryHandler.Rename)))
+	mux.Handle("POST /library/{id}/delete", writeLimiter.Wrap(http.HandlerFunc(libraryHandler.Delete)))
+	mux.Handle("POST /library/{libraryID}/post/{postID}/remove", writeLimiter.Wrap(http.HandlerFunc(libraryHandler.RemovePost)))
+	mux.Handle("POST /post/{postID}/library", writeLimiter.Wrap(http.HandlerFunc(libraryHandler.AddPost)))
 
 	// post routes
-	postHandler := handler.NewPostHandler(db, cfg.UploadDir, renderer)
+	postHandler := handler.NewPostHandler(db, cfg.UploadDir, cfg.MaxUploadBytes, renderer)
 	mux.HandleFunc("GET /post/new", postHandler.ShowCreateForm)
-	mux.Handle("POST /post/new", writeLimiter.Wrap(http.HandlerFunc(postHandler.CreatePost)))
+	mux.Handle("POST /post/new", writeLimiter.Wrap(authMiddleware.RequireNotMuted(http.HandlerFunc(postHandler.CreatePost))))
 	mux.HandleFunc("GET /post/{id}/edit", postHandler.ShowEditForm)
-	mux.HandleFunc("POST /post/{id}/edit", postHandler.EditPost)
+	mux.Handle("POST /post/{id}/edit", writeLimiter.Wrap(http.HandlerFunc(postHandler.EditPost)))
 	mux.HandleFunc("GET /post/{id}/delete", postHandler.ShowDeleteConfirmation)
-	mux.HandleFunc("POST /post/{id}/delete", postHandler.DeletePost)
+	mux.Handle("POST /post/{id}/delete", writeLimiter.Wrap(http.HandlerFunc(postHandler.DeletePost)))
 	mux.HandleFunc("GET /post/{id}", postHandler.PostDetail)
 
 	// comment routes
 	commentHandler := handler.NewCommentHandler(db, renderer)
-	mux.Handle("POST /post/{id}/comment", writeLimiter.Wrap(http.HandlerFunc(commentHandler.CreateComment)))
+	mux.Handle("POST /post/{id}/comment", writeLimiter.Wrap(authMiddleware.RequireNotMuted(http.HandlerFunc(commentHandler.CreateComment))))
 	mux.HandleFunc("GET /comment/{id}/delete", commentHandler.ShowDeleteConfirmation)
-	mux.HandleFunc("POST /comment/{id}/delete", commentHandler.DeleteComment)
+	mux.Handle("POST /comment/{id}/delete", writeLimiter.Wrap(http.HandlerFunc(commentHandler.DeleteComment)))
 	mux.HandleFunc("GET /comment/{id}/edit", commentHandler.ShowEditForm)
-	mux.HandleFunc("POST /comment/{id}/edit", commentHandler.EditComment)
+	mux.Handle("POST /comment/{id}/edit", writeLimiter.Wrap(http.HandlerFunc(commentHandler.EditComment)))
 
 	// vote routes
 	likeHandler := handler.NewLikeHandler(db)
-	mux.HandleFunc("POST /post/{id}/like", likeHandler.LikePost)
-	mux.HandleFunc("POST /post/{id}/dislike", likeHandler.DislikePost)
-	mux.HandleFunc("POST /comment/{id}/like", likeHandler.LikeComment)
-	mux.HandleFunc("POST /comment/{id}/dislike", likeHandler.DislikeComment)
+	mux.Handle("POST /post/{id}/like", writeLimiter.Wrap(http.HandlerFunc(likeHandler.LikePost)))
+	mux.Handle("POST /post/{id}/dislike", writeLimiter.Wrap(http.HandlerFunc(likeHandler.DislikePost)))
+	mux.Handle("POST /comment/{id}/like", writeLimiter.Wrap(http.HandlerFunc(likeHandler.LikeComment)))
+	mux.Handle("POST /comment/{id}/dislike", writeLimiter.Wrap(http.HandlerFunc(likeHandler.DislikeComment)))
 
 	// static page routes
 	pageHandler := handler.NewPageHandler(db, errorRenderer, renderer)
@@ -113,12 +119,20 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	mux.HandleFunc("GET /contact", pageHandler.Page("pages/contact.html"))
 
 	// OAuth routes
-	redirectURL := cfg.OAuthRedirectURL()
-	oauthHandler := handler.NewOAuthHandler(db, cfg.OAuthClientID, cfg.OAuthClientSecret, redirectURL, cfg.SessionDuration, errorRenderer, renderer)
+	oauthHandler := handler.NewOAuthHandler(db, handler.OAuthConfig{
+		GoogleClientID:     cfg.OAuthClientID,
+		GoogleClientSecret: cfg.OAuthClientSecret,
+		GoogleRedirectURL:  cfg.OAuthRedirectURL("google"),
+		GitHubClientID:     cfg.GitHubOAuthID,
+		GitHubClientSecret: cfg.GitHubOAuthSecret,
+		GitHubRedirectURL:  cfg.OAuthRedirectURL("github"),
+	}, cfg.SessionDuration, errorRenderer, renderer)
 	mux.HandleFunc("GET /auth/google", oauthHandler.GoogleLogin)
 	mux.HandleFunc("GET /auth/google/callback", oauthHandler.GoogleCallback)
+	mux.HandleFunc("GET /auth/github", oauthHandler.GitHubLogin)
+	mux.HandleFunc("GET /auth/github/callback", oauthHandler.GitHubCallback)
 	mux.HandleFunc("GET /auth/complete-profile", oauthHandler.ShowCompleteProfile)
-	mux.HandleFunc("POST /auth/complete-profile", oauthHandler.CompleteProfile)
+	mux.Handle("POST /auth/complete-profile", writeLimiter.Wrap(http.HandlerFunc(oauthHandler.CompleteProfile)))
 
 	// notification routes
 	notifHandler := handler.NewNotificationHandler(db, notifRepo, renderer)
@@ -128,15 +142,14 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	homeHandler := handler.NewHomeHandler(db, errorRenderer, renderer)
 	mux.HandleFunc("/", homeHandler.Home)
 
-	authMiddleware := middleware.NewAuthMiddleware(db)
 	moderationHandler := handler.NewModerationHandler(db)
-	mux.Handle("POST /post/{id}/report", authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportPost)))
-	mux.Handle("POST /comment/{id}/report", authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportComment)))
-	mux.Handle("POST /user/{id}/report", authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportUser)))
+	mux.Handle("POST /post/{id}/report", writeLimiter.Wrap(authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportPost))))
+	mux.Handle("POST /comment/{id}/report", writeLimiter.Wrap(authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportComment))))
+	mux.Handle("POST /user/{id}/report", writeLimiter.Wrap(authMiddleware.RequireAuth(http.HandlerFunc(moderationHandler.ReportUser))))
 	mux.Handle("GET /moderation", authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.Dashboard)))
-	mux.Handle("POST /moderation/report/{id}/resolve", authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.ResolveReport)))
-	mux.Handle("POST /moderation/report/{id}/dismiss", authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.DismissReport)))
-	mux.Handle("POST /admin/user/{id}/role", authMiddleware.RequireRole(model.RoleAdmin, http.HandlerFunc(moderationHandler.ChangeUserRole)))
+	mux.Handle("POST /moderation/report/{id}/resolve", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.ResolveReport))))
+	mux.Handle("POST /moderation/report/{id}/dismiss", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleModerator, http.HandlerFunc(moderationHandler.DismissReport))))
+	mux.Handle("POST /admin/user/{id}/role", writeLimiter.Wrap(authMiddleware.RequireRole(model.RoleAdmin, http.HandlerFunc(moderationHandler.ChangeUserRole))))
 
 	return mux
 }

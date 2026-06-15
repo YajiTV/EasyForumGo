@@ -26,6 +26,41 @@ func NewAuthMiddleware(db *sql.DB) *AuthMiddleware {
 	return &AuthMiddleware{db: db}
 }
 
+func (m *AuthMiddleware) RequireNotMuted(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookie, err := r.Cookie(sessionCookieName)
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		var userID string
+		err = m.db.QueryRow(
+			`SELECT s.user_id FROM sessions s WHERE s.session_token = ? AND s.expires_at > datetime('now')`,
+			cookie.Value,
+		).Scan(&userID)
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		var count int
+		m.db.QueryRow(
+			`SELECT COUNT(*) FROM user_restrictions
+			 WHERE user_id = ? AND type = 'mute'
+			 AND (expires_at IS NULL OR expires_at > datetime('now'))`,
+			userID,
+		).Scan(&count)
+
+		if count > 0 {
+			http.Error(w, "Votre compte est temporairement muté et ne peut pas publier de contenu.", http.StatusForbidden)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(sessionCookieName)

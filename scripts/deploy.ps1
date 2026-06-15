@@ -178,12 +178,13 @@ sudo install -o root -g root -m 600 "$SOURCE_ENV" "$STACK/.env.prod"
 
 echo "==> Validating and deploying application"
 cd "$STACK"
-sudo docker compose --env-file .env.prod -f docker/docker-compose.yml config >/tmp/easyforumgo-compose-rendered.yml
-sudo docker compose --env-file .env.prod -f docker/docker-compose.yml up -d --build
-sudo docker compose --env-file .env.prod -f docker/docker-compose.yml ps
+COMPOSE_ARGS=(--env-file .env.prod -f docker/docker-compose.yml -f docker/docker-compose.prod.yml)
+sudo docker compose "${COMPOSE_ARGS[@]}" config >/tmp/easyforumgo-compose-rendered.yml
+sudo docker compose "${COMPOSE_ARGS[@]}" up -d --build
+sudo docker compose "${COMPOSE_ARGS[@]}" ps
 
 echo "==> Checking application from inside its container"
-sudo docker compose --env-file .env.prod -f docker/docker-compose.yml exec -T forum \
+sudo docker compose "${COMPOSE_ARGS[@]}" exec -T forum \
   wget -qO- "http://127.0.0.1:8080${BASE_PATH%/}/" >/dev/null
 
 echo "==> Deployment completed"

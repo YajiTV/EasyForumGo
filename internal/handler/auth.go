@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"html/template"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -105,12 +106,12 @@ func (h *AuthHandler) PasswordStrength(w http.ResponseWriter, r *http.Request) {
 
 	tmpl, err := template.ParseFiles(filepath.Join("web", "templates", "auth", "password_strength.html"))
 	if err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
+		log.Printf("parse password strength template: %v", err)
+		h.errors.InternalServerError(w)
 		return
 	}
 	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, "Erreur template", http.StatusInternalServerError)
-		return
+		log.Printf("execute password strength template: %v", err)
 	}
 }
 
@@ -186,6 +187,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.CheckPasswordHash(input.Password, user.hashedPassword) {
 		h.renderLoginError(w, input.Email, "Identifiants invalides.")
+		return
+	}
+
+	if banned, err := h.isUserBanned(user.id); err != nil {
+		h.errors.InternalServerError(w)
+		return
+	} else if banned {
+		h.renderLoginError(w, input.Email, "Votre compte a été banni de la plateforme.")
 		return
 	}
 
@@ -290,6 +299,18 @@ func (h *AuthHandler) createSession(userID string) (string, time.Time, error) {
 	}
 
 	return sessionToken, expiresAt, nil
+}
+
+// isUserBanned checks whether an active ban exists for the given user
+func (h *AuthHandler) isUserBanned(userID string) (bool, error) {
+	var count int
+	err := h.db.QueryRow(
+		`SELECT COUNT(*) FROM user_restrictions
+		 WHERE user_id = ? AND type = 'ban'
+		 AND (expires_at IS NULL OR expires_at > datetime('now'))`,
+		userID,
+	).Scan(&count)
+	return count > 0, err
 }
 
 // createUser stores a new user account

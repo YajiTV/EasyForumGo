@@ -47,7 +47,7 @@ func (h *NotificationHandler) ShowNotifications(w http.ResponseWriter, r *http.R
 
 	_ = h.notifications.MarkAllRead(user.ID)
 
-	h.renderer.Render(w, "notifications.html", notificationPageData{
+	h.renderer.Render(w, "social/notifications.html", notificationPageData{
 		User:          user,
 		Notifications: notifs,
 	})

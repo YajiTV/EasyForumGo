@@ -153,6 +153,10 @@ func defaultErrorMessage(statusCode int) string {
 		return "Cette action n'est pas disponible avec cette méthode."
 	case http.StatusInternalServerError:
 		return "Une erreur est survenue."
+	case http.StatusBadGateway:
+		return "Le fournisseur externe n'a pas pu répondre correctement."
+	case http.StatusServiceUnavailable:
+		return "Le service demandé est temporairement indisponible."
 	default:
 		return "Une erreur est survenue."
 	}
@@ -173,6 +177,10 @@ func errorHeading(statusCode int) string {
 		return "Méthode non autorisée"
 	case http.StatusInternalServerError:
 		return "Erreur serveur"
+	case http.StatusBadGateway:
+		return "Service externe indisponible"
+	case http.StatusServiceUnavailable:
+		return "Service indisponible"
 	default:
 		return "Erreur"
 	}

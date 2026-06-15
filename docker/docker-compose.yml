@@ -5,22 +5,31 @@ services:
       dockerfile: docker/Dockerfile
     ports:
       - "${HOST_BIND:-127.0.0.1}:${HOST_PORT:-8080}:8080"
+      - "${HOST_BIND:-127.0.0.1}:${HOST_HTTPS_PORT:-8443}:8443"
     expose:
       - "8080"
+      - "8443"
     volumes:
       - db_data:/app/data
       - uploads:/app/uploads
     environment:
       APP_ENV: ${APP_ENV:-dev}
       APP_BASE_PATH: ${APP_BASE_PATH:-}
-      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-http://localhost:8080}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-https://localhost:8443}
       TRUST_PROXY: ${TRUST_PROXY:-false}
       DB_PATH: /app/data/forum.db
       PORT: "8080"
+      HTTPS_PORT: "8443"
+      TLS_CERT_FILE: ${TLS_CERT_FILE-/app/certs/cert.pem}
+      TLS_KEY_FILE: ${TLS_KEY_FILE-/app/certs/key.pem}
       SESSION_DURATION_H: ${SESSION_DURATION_H:-24}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
       OAUTH_ID: ${OAUTH_ID:-}
       OAUTH_KEY: ${OAUTH_KEY:-}
+      GOOGLE_OAUTH_ID: ${GOOGLE_OAUTH_ID:-}
+      GOOGLE_OAUTH_KEY: ${GOOGLE_OAUTH_KEY:-}
+      GITHUB_OAUTH_ID: ${GITHUB_OAUTH_ID:-}
+      GITHUB_OAUTH_KEY: ${GITHUB_OAUTH_KEY:-}
     restart: unless-stopped
     networks:
       - web
@@ -31,4 +40,4 @@ volumes:
 
 networks:
   web:
-    external: true
+    name: web
