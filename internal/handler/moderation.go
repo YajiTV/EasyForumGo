@@ -383,6 +383,34 @@ func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Reques
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
 
+func (h *ModerationHandler) UnbanUser(w http.ResponseWriter, r *http.Request) {
+	admin := h.userFromSession(r)
+	if admin == nil || !admin.IsAdmin() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+	targetID := r.PathValue("id")
+	if err := h.moderation.LiftRestriction(targetID); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
+
+func (h *ModerationHandler) KickUser(w http.ResponseWriter, r *http.Request) {
+	admin := h.userFromSession(r)
+	if admin == nil || !admin.IsAdmin() {
+		http.Error(w, "Accès interdit", http.StatusForbidden)
+		return
+	}
+	targetID := r.PathValue("id")
+	if err := h.sessions.DeleteByUserID(targetID); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+}
+
 func (h *ModerationHandler) resolveTargetIDs(report *model.Report) (userID, postID, commentID string, err error) {
 	switch report.TargetType {
 	case model.TargetUser:

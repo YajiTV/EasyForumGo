@@ -24,11 +24,26 @@
     <td>{{.Role}}</td>
     <td>{{.Status}}</td>
     <td>
-      <form method="POST" action="/admin/user/{{.ID}}/ban" style="display:inline">
-        <button class="btn-delete" type="submit">ban</button>
-      </form>
-      <form method="POST" action="/admin/user/{{.ID}}/mute" style="display:inline">
-        <button class="btn-delete" type="submit">mute</button>
+      {{if eq .Status "banned"}}
+        <form method="POST" action="/admin/user/{{.ID}}/unban" style="display:inline">
+          <button class="btn-delete" type="submit">unban</button>
+        </form>
+      {{else}}
+        <form method="POST" action="/admin/user/{{.ID}}/ban" style="display:inline">
+          <button class="btn-delete" type="submit">ban</button>
+        </form>
+      {{end}}
+      {{if eq .Status "muted"}}
+        <form method="POST" action="/admin/user/{{.ID}}/unban" style="display:inline">
+          <button class="btn-delete" type="submit">unmute</button>
+        </form>
+      {{else if ne .Status "banned"}}
+        <form method="POST" action="/admin/user/{{.ID}}/mute" style="display:inline">
+          <button class="btn-delete" type="submit">mute</button>
+        </form>
+      {{end}}
+      <form method="POST" action="/admin/user/{{.ID}}/kick" style="display:inline">
+        <button class="btn-delete" type="submit">kick</button>
       </form>
     </td>
   </tr>
