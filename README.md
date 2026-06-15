@@ -265,7 +265,7 @@ Validate the Compose configuration:
 docker compose -f docker/docker-compose.yml config
 ```
 
-`go test ./...` validates compilation and includes a repository test covering fresh migrations, foreign key activation, and cascade deletion. The main HTTP workflows must also be checked manually: guest access, authentication, posts, comments, votes, personal filters, uploads, errors, and Docker persistence.
+`go test ./...` compiles every package. The main HTTP workflows must be checked manually: guest access, authentication, posts, comments, votes, personal filters, uploads, errors, and Docker persistence.
 
 ## Demo Accounts
 

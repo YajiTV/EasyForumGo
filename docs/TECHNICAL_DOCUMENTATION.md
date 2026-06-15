@@ -278,7 +278,7 @@ docker compose -f docker/docker-compose.yml config
 docker compose -f docker/docker-compose.yml up --build
 ```
 
-`go test ./...` validates compilation and checks fresh migrations, foreign key activation, and cascade deletion. Manual validation must cover:
+`go test ./...` compiles every package. Manual validation must cover:
 
 - guest read-only access
 - registration, login, session replacement, and logout
