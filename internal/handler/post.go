@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -140,16 +141,15 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: now,
 	}
 
-	if err := h.posts.Create(post); err != nil {
+	if err := h.posts.CreateWithCategories(post, categoryIDs); err != nil {
+		if imagePath != "" {
+			if removeErr := os.Remove(filepath.Join(h.uploadDir, imagePath)); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+				log.Printf("remove orphaned post image %q: %v", imagePath, removeErr)
+			}
+		}
+		log.Printf("create post transaction failed: %v", err)
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
-	}
-
-	for _, catID := range categoryIDs {
-		if err := h.postCategories.AddCategory(post.ID, catID); err != nil {
-			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-			return
-		}
 	}
 
 	h.notifyFollowers(post)
@@ -161,13 +161,16 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 func (h *PostHandler) notifyFollowers(post *model.Post) {
 	followerIDs, err := h.follows.FollowerIDs(post.UserID)
 	if err != nil {
+		log.Printf("load followers for post notification: %v", err)
 		return
 	}
 	for _, followerID := range followerIDs {
-		_ = h.notifications.Create(&model.Notification{
+		if err := h.notifications.Create(&model.Notification{
 			ID: utils.NewUUID(), UserID: followerID, ActorID: post.UserID,
 			Type: "new_post", PostID: post.ID, CreatedAt: time.Now(),
-		})
+		}); err != nil {
+			log.Printf("create new-post notification for user %q: %v", followerID, err)
+		}
 	}
 }
 
@@ -191,13 +194,15 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if post.ImagePath != "" {
-		os.Remove(filepath.Join(h.uploadDir, post.ImagePath))
-	}
-
 	if err := h.posts.Delete(postID); err != nil {
+		log.Printf("delete post %q: %v", postID, err)
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
+	}
+	if post.ImagePath != "" {
+		if err := os.Remove(filepath.Join(h.uploadDir, post.ImagePath)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Printf("remove deleted post image %q: %v", post.ImagePath, err)
+		}
 	}
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -335,6 +340,8 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	previousImagePath := post.ImagePath
+	newImagePath := ""
 	file, header, err := r.FormFile("image")
 	if err == nil {
 		defer file.Close()
@@ -347,10 +354,8 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
-		if post.ImagePath != "" {
-			os.Remove(filepath.Join(h.uploadDir, post.ImagePath))
-		}
 		post.ImagePath = filename
+		newImagePath = filename
 	} else if !errors.Is(err, http.ErrMissingFile) {
 		renderErr("L'image envoyée est invalide.")
 		return
@@ -360,19 +365,19 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 	post.Content = content
 	post.UpdatedAt = time.Now()
 
-	if err := h.posts.Update(post); err != nil {
+	if err := h.posts.UpdateWithCategories(post, categoryIDs); err != nil {
+		if newImagePath != "" {
+			if removeErr := os.Remove(filepath.Join(h.uploadDir, newImagePath)); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+				log.Printf("remove orphaned replacement image %q: %v", newImagePath, removeErr)
+			}
+		}
+		log.Printf("update post transaction failed for %q: %v", postID, err)
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
-
-	if err := h.postCategories.DeleteByPostID(postID); err != nil {
-		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-		return
-	}
-	for _, catID := range categoryIDs {
-		if err := h.postCategories.AddCategory(postID, catID); err != nil {
-			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
-			return
+	if newImagePath != "" && previousImagePath != "" {
+		if err := os.Remove(filepath.Join(h.uploadDir, previousImagePath)); err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Printf("remove replaced post image %q: %v", previousImagePath, err)
 		}
 	}
 

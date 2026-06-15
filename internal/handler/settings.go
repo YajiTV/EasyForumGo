@@ -3,7 +3,10 @@ package handler
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -81,11 +84,13 @@ func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 		h.renderError(w, user, "profile", "Ce nom d'utilisateur est déjà utilisé.")
 		return
 	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.Printf("check profile username availability: %v", err)
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
 
 	profilePicture := user.ProfilePicture
+	newProfilePicture := ""
 	file, header, err := r.FormFile("profile_picture")
 	if err == nil {
 		defer file.Close()
@@ -99,16 +104,30 @@ func (h *SettingsHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		profilePicture = filename
+		newProfilePicture = filename
 	} else if !errors.Is(err, http.ErrMissingFile) {
 		h.renderError(w, user, "profile", "La photo de profil n'a pas pu être lue.")
 		return
 	}
 
 	if err := h.users.UpdateProfile(user.ID, username, profilePicture); err != nil {
+		if newProfilePicture != "" {
+			h.removeLocalProfilePicture(newProfilePicture)
+		}
+		log.Printf("update profile for user %q: %v", user.ID, err)
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
 	}
+	if newProfilePicture != "" && user.ProfilePicture != "" && !strings.HasPrefix(user.ProfilePicture, "http") {
+		h.removeLocalProfilePicture(user.ProfilePicture)
+	}
 	http.Redirect(w, r, "/settings?status=profile-updated#profile", http.StatusSeeOther)
+}
+
+func (h *SettingsHandler) removeLocalProfilePicture(filename string) {
+	if err := os.Remove(filepath.Join(h.uploadDir, filepath.Base(filename))); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Printf("remove profile picture %q: %v", filename, err)
+	}
 }
 
 // UpdateSocial updates the current user's social preferences
