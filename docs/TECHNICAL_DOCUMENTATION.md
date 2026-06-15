@@ -61,7 +61,7 @@ Handlers do not concatenate user input into SQL queries.
 
 `internal/middleware/auth.go` resolves valid sessions for protected handlers.
 
-`internal/middleware/rate_limiter.go` provides an in-memory fixed-window limiter keyed by client IP. The application configures:
+`internal/middleware/rate_limiter.go` provides an in-memory fixed-window limiter keyed by a valid session user ID when possible, then by client IP. Forwarded client-address headers are only read when `TRUST_PROXY=true`. The application configures:
 
 - 200 global requests per minute
 - 10 login attempts per 15 minutes
@@ -223,12 +223,13 @@ Handlers compare the current user ID with the resource owner before editing or d
 
 ### HTTPS and rate limiting
 
-Docker development mode serves HTTPS with an automatically generated self-signed certificate and redirects HTTP to HTTPS. A trusted reverse proxy terminates HTTPS with a real certificate in production. The in-memory rate limiter protects general traffic, authentication, and write actions.
+Docker development mode serves HTTPS with an automatically generated self-signed certificate and redirects HTTP to HTTPS. A trusted reverse proxy terminates HTTPS with a real certificate in production. The in-memory rate limiter protects general traffic, authentication, and all registered write actions.
 
 ### Known security limits
 
 - CSRF tokens are not implemented.
 - The rate limiter is local to one process and resets on restart.
+- `TRUST_PROXY=true` is safe only when direct access is blocked and a trusted proxy replaces forwarded client-address headers.
 - Production depends on the reverse proxy for HTTPS termination.
 - Database encryption is not implemented.
 - GitHub OAuth and complete subject-level moderation are not implemented.

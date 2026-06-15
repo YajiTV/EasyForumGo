@@ -22,9 +22,9 @@ func main() {
 	}
 	defer db.Close()
 
-	globalLimiter := middleware.NewRateLimiter(200, time.Minute)
-	loginLimiter := middleware.NewRateLimiter(10, 15*time.Minute)
-	writeLimiter := middleware.NewRateLimiter(20, time.Hour)
+	globalLimiter := middleware.NewSessionRateLimiter(db, cfg.TrustProxy, 200, time.Minute)
+	loginLimiter := middleware.NewSessionRateLimiter(db, cfg.TrustProxy, 10, 15*time.Minute)
+	writeLimiter := middleware.NewSessionRateLimiter(db, cfg.TrustProxy, 20, time.Hour)
 
 	mux := setupRouter(cfg, db, loginLimiter, writeLimiter)
 	var root http.Handler = mux

@@ -130,7 +130,7 @@ Configuration is loaded from environment variables and an optional local `.env` 
 | `OAUTH_ID` | empty | Google OAuth client ID |
 | `OAUTH_KEY` | empty | Google OAuth client secret |
 | `APP_BASE_PATH` | empty | Optional public path prefix, for example `/easy` |
-| `APP_PUBLIC_URL` | empty | Canonical public application URL |
+| `APP_PUBLIC_URL` | empty locally; `https://localhost:8443` in Docker | Canonical public application URL |
 | `TRUST_PROXY` | `false` | Trust forwarded client-address headers |
 
 See [`.env.example`](.env.example).
@@ -150,7 +150,7 @@ TLS_CERT_FILE=
 TLS_KEY_FILE=
 ```
 
-The reverse proxy can join the automatically created `web` network and forward the unchanged public path to `forum:8080`. Production mode requires an HTTPS `APP_PUBLIC_URL` and `TRUST_PROXY=true`.
+The reverse proxy can join the automatically created `web` network and forward the unchanged public path to `forum:8080`. Setting both `TLS_CERT_FILE` and `TLS_KEY_FILE` explicitly to empty disables internal TLS so the proxy can own HTTPS. Production mode requires an HTTPS `APP_PUBLIC_URL` and `TRUST_PROXY=true`.
 
 The Google OAuth redirect URI must match:
 
@@ -226,7 +226,7 @@ SQLite foreign keys and cascading deletion are enabled. The existing visual diag
 - author ownership checks
 - SQLite foreign keys and cascades
 - decoded-image validation and request-size limits
-- global, authentication, and write-action rate limiting
+- global, authentication, and write-action rate limiting, keyed by valid session user then client IP
 - role checks, mute enforcement, and login-time ban enforcement
 - forwarded client headers trusted only when `TRUST_PROXY=true`
 
@@ -252,6 +252,7 @@ curl -k -I https://localhost:8443/
 - The moderation dashboard template is currently missing.
 - CSRF tokens are not implemented for ordinary state-changing forms.
 - The in-memory rate limiter resets on restart and is intended for one application instance.
+- `TRUST_PROXY=true` must only be used when direct access is blocked and a trusted proxy replaces forwarded client-address headers.
 - Database encryption is not implemented.
 - The ERD does not include every table added after the mandatory MVP.
 - Some direct technical-error fallbacks remain while error handling is progressively centralized.

@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"database/sql"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -14,10 +16,12 @@ type counter struct {
 }
 
 type RateLimiter struct {
-	mu       sync.Mutex
-	counters map[string]*counter
-	rate     int
-	window   time.Duration
+	mu         sync.Mutex
+	counters   map[string]*counter
+	rate       int
+	window     time.Duration
+	db         *sql.DB
+	trustProxy bool
 }
 
 // NewRateLimiter creates a rate limiter
@@ -28,6 +32,14 @@ func NewRateLimiter(rate int, window time.Duration) *RateLimiter {
 		window:   window,
 	}
 	go rl.cleanup()
+	return rl
+}
+
+// NewSessionRateLimiter creates a limiter keyed by valid session user ID, then client IP.
+func NewSessionRateLimiter(db *sql.DB, trustProxy bool, rate int, window time.Duration) *RateLimiter {
+	rl := NewRateLimiter(rate, window)
+	rl.db = db
+	rl.trustProxy = trustProxy
 	return rl
 }
 
@@ -54,12 +66,37 @@ func (rl *RateLimiter) Allow(key string) bool {
 // Wrap applies rate limiting to an http handler
 func (rl *RateLimiter) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !rl.Allow(realIP(r)) {
-			http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
+		if !rl.Allow(rl.requestKey(r)) {
+			w.Header().Set("Retry-After", retryAfterSeconds(rl.window))
+			http.Error(w, "Trop de requêtes. Réessayez plus tard.", http.StatusTooManyRequests)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (rl *RateLimiter) requestKey(r *http.Request) string {
+	if rl.db != nil {
+		if cookie, err := r.Cookie(sessionCookieName); err == nil && cookie.Value != "" {
+			var userID string
+			err := rl.db.QueryRow(
+				`SELECT user_id FROM sessions WHERE session_token = ? AND expires_at > datetime('now')`,
+				cookie.Value,
+			).Scan(&userID)
+			if err == nil && userID != "" {
+				return "user:" + userID
+			}
+		}
+	}
+	return "ip:" + realIP(r, rl.trustProxy)
+}
+
+func retryAfterSeconds(window time.Duration) string {
+	seconds := int64(window / time.Second)
+	if seconds < 1 {
+		seconds = 1
+	}
+	return fmt.Sprintf("%d", seconds)
 }
 
 // cleanup removes expired rate limit counters
@@ -79,15 +116,17 @@ func (rl *RateLimiter) cleanup() {
 }
 
 // realIP gets the client ip address
-func realIP(r *http.Request) string {
-	if ip := r.Header.Get("X-Real-IP"); ip != "" {
-		return ip
-	}
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		if i := strings.Index(forwarded, ","); i != -1 {
-			return strings.TrimSpace(forwarded[:i])
+func realIP(r *http.Request, trustProxy bool) string {
+	if trustProxy {
+		if ip := r.Header.Get("X-Real-IP"); ip != "" {
+			return strings.TrimSpace(ip)
 		}
-		return strings.TrimSpace(forwarded)
+		if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+			if i := strings.Index(forwarded, ","); i != -1 {
+				return strings.TrimSpace(forwarded[:i])
+			}
+			return strings.TrimSpace(forwarded)
+		}
 	}
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
