@@ -40,10 +40,7 @@ func NewModerationHandler(db *sql.DB) *ModerationHandler {
 	}
 }
 
-// errActionHandled signals that the HTTP response is already written.
 var errActionHandled = errors.New("handled")
-
-// --- View data types ---
 
 type ModerationUserRow struct {
 	ID       string
@@ -76,8 +73,6 @@ type ModerationPageData struct {
 	PendingComments []model.PendingContent
 }
 
-// --- Permission guards ---
-
 func (h *ModerationHandler) requireModerator(w http.ResponseWriter, r *http.Request) *model.User {
 	user := userFromSession(r, h.sessions, h.users)
 	if user == nil || !user.CanModerate() {
@@ -95,8 +90,6 @@ func (h *ModerationHandler) requireAdmin(w http.ResponseWriter, r *http.Request)
 	}
 	return user
 }
-
-// --- Report handlers ---
 
 func (h *ModerationHandler) ReportPost(w http.ResponseWriter, r *http.Request) {
 	h.createReport(w, r, model.TargetPost)
@@ -164,8 +157,6 @@ func (h *ModerationHandler) createReport(w http.ResponseWriter, r *http.Request,
 	}
 	http.Redirect(w, r, redirectTo, http.StatusSeeOther)
 }
-
-// --- Dashboard ---
 
 func (h *ModerationHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	user := h.requireModerator(w, r)
@@ -264,8 +255,6 @@ func (h *ModerationHandler) buildReportRows() []ModerationReportRow {
 	return rows
 }
 
-// --- ResolveReport ---
-
 func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request) {
 	moderator := h.requireModerator(w, r)
 	if moderator == nil {
@@ -315,8 +304,6 @@ func (h *ModerationHandler) ResolveReport(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
 
-// applyReportAction exécute l'action de modération. Retourne errActionHandled si la réponse HTTP
-// a déjà été écrite (erreur ou action invalide) — le caller doit alors faire return.
 func (h *ModerationHandler) applyReportAction(
 	w http.ResponseWriter, r *http.Request,
 	actionType model.ActionType, reason string,
@@ -404,8 +391,6 @@ func (h *ModerationHandler) DismissReport(w http.ResponseWriter, r *http.Request
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
 
-// --- Content moderation queue ---
-
 func (h *ModerationHandler) PendingQueue(w http.ResponseWriter, r *http.Request) {
 	moderator := h.requireModerator(w, r)
 	if moderator == nil {
@@ -468,7 +453,7 @@ func (h *ModerationHandler) ApproveContent(w http.ResponseWriter, r *http.Reques
 		CreatedAt:   time.Now(),
 	})
 
-	http.Redirect(w, r, "/moderation/queue", http.StatusSeeOther)
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
 
 func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request) {
@@ -520,10 +505,8 @@ func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request
 
 	h.notify(authorID, moderator.ID, "moderation_content_rejected", "", "")
 
-	http.Redirect(w, r, "/moderation/queue", http.StatusSeeOther)
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
-
-// --- User management ---
 
 func (h *ModerationHandler) ChangeUserRole(w http.ResponseWriter, r *http.Request) {
 	admin := h.requireAdmin(w, r)
@@ -624,8 +607,6 @@ func (h *ModerationHandler) MuteUser(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
-
-// --- Helpers ---
 
 func (h *ModerationHandler) resolveTargetIDs(report *model.Report) (userID, postID, commentID string, err error) {
 	switch report.TargetType {
