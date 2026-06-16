@@ -26,7 +26,7 @@ func main() {
 	loginLimiter := middleware.NewSessionRateLimiter(db, cfg.TrustProxy, 10, 15*time.Minute)
 	writeLimiter := middleware.NewSessionRateLimiter(db, cfg.TrustProxy, 20, time.Hour)
 
-	mux := setupRouter(cfg, db, loginLimiter, writeLimiter)
+	mux := setupRouter(cfg, db, globalLimiter, loginLimiter, writeLimiter)
 	var root http.Handler = mux
 	root = middleware.BasePath(cfg.AppBasePath, cfg.SecureCookies(), root)
 	root = globalLimiter.Wrap(root)

@@ -12,7 +12,7 @@ import (
 )
 
 // setupRouter configures the application routes
-func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *middleware.RateLimiter) *http.ServeMux {
+func setupRouter(cfg config.Config, db *sql.DB, globalLimiter, loginLimiter, writeLimiter *middleware.RateLimiter) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// static files
@@ -34,6 +34,13 @@ func setupRouter(cfg config.Config, db *sql.DB, loginLimiter, writeLimiter *midd
 	errorRenderer := handler.NewErrorRenderer(cfg.TemplatesDir)
 	errorRenderer.SetAuthRepositories(repository.NewSessionRepository(db), repository.NewUserRepository(db))
 	errorRenderer.SetRenderer(renderer)
+
+	tooManyRequests := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		errorRenderer.TooManyRequests(w, r)
+	})
+	globalLimiter.WithErrorHandler(tooManyRequests)
+	loginLimiter.WithErrorHandler(tooManyRequests)
+	writeLimiter.WithErrorHandler(tooManyRequests)
 
 	// authentication routes
 	authHandler := handler.NewAuthHandler(db, cfg.SessionDuration, errorRenderer, renderer)

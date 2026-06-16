@@ -68,6 +68,11 @@ func (r *ErrorRenderer) MethodNotAllowed(w http.ResponseWriter, message string) 
 	r.Render(w, http.StatusMethodNotAllowed, message)
 }
 
+// TooManyRequests renders a rate limit error page
+func (r *ErrorRenderer) TooManyRequests(w http.ResponseWriter, req *http.Request) {
+	r.RenderWithRequest(w, req, http.StatusTooManyRequests, "")
+}
+
 // InternalServerError renders an internal server error
 func (r *ErrorRenderer) InternalServerError(w http.ResponseWriter) {
 	r.Render(w, http.StatusInternalServerError, "Une erreur est survenue.")
@@ -155,6 +160,8 @@ func defaultErrorMessage(statusCode int) string {
 		return "Une erreur est survenue."
 	case http.StatusBadGateway:
 		return "Le fournisseur externe n'a pas pu répondre correctement."
+	case http.StatusTooManyRequests:
+		return "Vous avez envoyé trop de requêtes en peu de temps. Attendez quelques instants avant de réessayer."
 	case http.StatusServiceUnavailable:
 		return "Le service demandé est temporairement indisponible."
 	default:
@@ -179,6 +186,8 @@ func errorHeading(statusCode int) string {
 		return "Erreur serveur"
 	case http.StatusBadGateway:
 		return "Service externe indisponible"
+	case http.StatusTooManyRequests:
+		return "Trop de requêtes"
 	case http.StatusServiceUnavailable:
 		return "Service indisponible"
 	default:

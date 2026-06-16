@@ -3,6 +3,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    env_file:
+      - ../.env
     ports:
       - "${HOST_BIND:-127.0.0.1}:${HOST_PORT:-8080}:8080"
       - "${HOST_BIND:-127.0.0.1}:${HOST_HTTPS_PORT:-8443}:8443"
@@ -24,12 +26,6 @@ services:
       TLS_KEY_FILE: ${TLS_KEY_FILE-/app/certs/key.pem}
       SESSION_DURATION_H: ${SESSION_DURATION_H:-24}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-20}
-      OAUTH_ID: ${OAUTH_ID:-}
-      OAUTH_KEY: ${OAUTH_KEY:-}
-      GOOGLE_OAUTH_ID: ${GOOGLE_OAUTH_ID:-}
-      GOOGLE_OAUTH_KEY: ${GOOGLE_OAUTH_KEY:-}
-      GITHUB_OAUTH_ID: ${GITHUB_OAUTH_ID:-}
-      GITHUB_OAUTH_KEY: ${GITHUB_OAUTH_KEY:-}
       DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY:-}
     restart: unless-stopped
     networks:

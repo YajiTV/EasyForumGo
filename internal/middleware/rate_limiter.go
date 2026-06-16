@@ -16,12 +16,18 @@ type counter struct {
 }
 
 type RateLimiter struct {
-	mu         sync.Mutex
-	counters   map[string]*counter
-	rate       int
-	window     time.Duration
-	db         *sql.DB
-	trustProxy bool
+	mu           sync.Mutex
+	counters     map[string]*counter
+	rate         int
+	window       time.Duration
+	db           *sql.DB
+	trustProxy   bool
+	errorHandler http.HandlerFunc
+}
+
+// WithErrorHandler sets a custom handler called when the rate limit is exceeded
+func (rl *RateLimiter) WithErrorHandler(h http.HandlerFunc) {
+	rl.errorHandler = h
 }
 
 // NewRateLimiter creates a rate limiter
@@ -68,6 +74,10 @@ func (rl *RateLimiter) Wrap(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !rl.Allow(rl.requestKey(r)) {
 			w.Header().Set("Retry-After", retryAfterSeconds(rl.window))
+			if rl.errorHandler != nil {
+				rl.errorHandler(w, r)
+				return
+			}
 			http.Error(w, "Trop de requêtes. Réessayez plus tard.", http.StatusTooManyRequests)
 			return
 		}
