@@ -155,6 +155,10 @@ func (h *PostHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	h.notifyFollowers(post)
 
+	if post.Status == "pending" {
+		http.Redirect(w, r, "/?notice=pending", http.StatusSeeOther)
+		return
+	}
 	http.Redirect(w, r, "/post/"+post.ID, http.StatusSeeOther)
 }
 

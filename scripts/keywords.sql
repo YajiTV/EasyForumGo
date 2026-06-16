@@ -1,3 +1,4 @@
+PRAGMA key='Kx7!qP2$mR9#vN4@eL6w';
 DELETE FROM flagged_keywords;
 INSERT OR IGNORE INTO flagged_keywords (id, word) VALUES
 ('kw-fr-001', 'connard'),

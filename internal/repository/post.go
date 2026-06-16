@@ -55,7 +55,7 @@ func (r *PostRepository) GetAllPaginated(limit, offset int) ([]model.Post, error
 
 // GetByUserID gets stored data
 func (r *PostRepository) GetByUserID(userID string) ([]model.Post, error) {
-	rows, err := r.db.Query(`SELECT id, user_id, title, content, image_path, created_at, updated_at FROM posts WHERE user_id = ? ORDER BY created_at DESC`, userID)
+	rows, err := r.db.Query(`SELECT id, user_id, title, content, image_path, created_at, updated_at FROM posts WHERE user_id = ? AND status = 'approved' ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -75,14 +75,14 @@ func (r *PostRepository) GetByUserID(userID string) ([]model.Post, error) {
 // GetByUserIDPaginated gets a page of a user's posts
 func (r *PostRepository) GetByUserIDPaginated(userID string, limit, offset int) ([]model.Post, error) {
 	return r.queryPosts(`SELECT id, user_id, title, content, image_path, created_at, updated_at
-		FROM posts WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`, userID, limit, max(offset, 0))
+		FROM posts WHERE user_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT ? OFFSET ?`, userID, limit, max(offset, 0))
 }
 
 // GetFollowing gets a page of posts from followed users
 func (r *PostRepository) GetFollowing(userID string, limit, offset int) ([]model.Post, error) {
 	return r.queryPosts(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
 		FROM posts p JOIN user_follows f ON f.followed_id = p.user_id
-		WHERE f.follower_id = ? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, userID, limit, max(offset, 0))
+		WHERE f.follower_id = ? AND p.status = 'approved' ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, userID, limit, max(offset, 0))
 }
 
 // CountFollowing counts posts from followed users
@@ -122,7 +122,7 @@ func (r *PostRepository) GetByCategory(categoryID string) ([]model.Post, error) 
 func (r *PostRepository) GetByCategoryPaginated(categoryID string, limit, offset int) ([]model.Post, error) {
 	return r.queryPosts(`SELECT p.id, p.user_id, p.title, p.content, p.image_path, p.created_at, p.updated_at
 		FROM posts p JOIN post_categories pc ON p.id = pc.post_id
-		WHERE pc.category_id = ? ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, categoryID, limit, max(offset, 0))
+		WHERE pc.category_id = ? AND p.status = 'approved' ORDER BY p.created_at DESC LIMIT ? OFFSET ?`, categoryID, limit, max(offset, 0))
 }
 
 // Search returns posts matching a query and optional category

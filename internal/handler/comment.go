@@ -98,6 +98,10 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		_ = h.notifications.Create(n)
 	}
 
+	if c.Status == "pending" {
+		http.Redirect(w, r, "/post/"+postID+"?notice=pending", http.StatusSeeOther)
+		return
+	}
 	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
 
 }

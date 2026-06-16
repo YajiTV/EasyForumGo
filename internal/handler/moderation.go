@@ -468,7 +468,7 @@ func (h *ModerationHandler) ApproveContent(w http.ResponseWriter, r *http.Reques
 		CreatedAt:   time.Now(),
 	})
 
-	http.Redirect(w, r, "/moderation/queue", http.StatusSeeOther)
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
 
 func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request) {
@@ -520,7 +520,7 @@ func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request
 
 	h.notify(authorID, moderator.ID, "moderation_content_rejected", "", "")
 
-	http.Redirect(w, r, "/moderation/queue", http.StatusSeeOther)
+	http.Redirect(w, r, "/moderation", http.StatusSeeOther)
 }
 
 // --- User management ---
