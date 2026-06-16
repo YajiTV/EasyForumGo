@@ -1,0 +1,179 @@
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/moderation.css">
+{{end}}
+{{define "title"}}Modération{{end}}
+{{define "content"}}
+<div class="moderation-page">
+    <header>
+        <h1>Page Modération</h1>
+    </header>
+<details>
+  <summary>File d'attente — Posts en attente ({{len .PendingPosts}})</summary>
+  {{if .PendingPosts}}
+  <table>
+    <tr>
+      <th>Auteur</th>
+      <th>Titre</th>
+      <th>Contenu</th>
+      <th>Date</th>
+      <th>Actions</th>
+    </tr>
+    {{range .PendingPosts}}
+    <tr>
+      <td>{{.AuthorName}}</td>
+      <td>{{.Title}}</td>
+      <td>{{.Content}}</td>
+      <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+      <td>
+        <form method="POST" action="/moderation/content/{{.ID}}/approve" style="display:inline">
+          <input type="hidden" name="content_type" value="post">
+          <button type="submit" class="btn-primary">Approuver</button>
+        </form>
+        <form method="POST" action="/moderation/content/{{.ID}}/reject" style="display:inline">
+          <input type="hidden" name="content_type" value="post">
+          <input type="text" name="reason" placeholder="Raison" required>
+          <button class="btn-delete" type="submit">Rejeter</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p>Aucun post en attente.</p>
+  {{end}}
+</details>
+
+<details>
+  <summary>File d'attente — Commentaires en attente ({{len .PendingComments}})</summary>
+  {{if .PendingComments}}
+  <table>
+    <tr>
+      <th>Auteur</th>
+      <th>Contenu</th>
+      <th>Date</th>
+      <th>Actions</th>
+    </tr>
+    {{range .PendingComments}}
+    <tr>
+      <td>{{.AuthorName}}</td>
+      <td>{{.Content}}</td>
+      <td>{{.CreatedAt.Format "02/01/2006 15:04"}}</td>
+      <td>
+        <form method="POST" action="/moderation/content/{{.ID}}/approve" style="display:inline">
+          <input type="hidden" name="content_type" value="comment">
+          <button type="submit" class="btn-primary">Approuver</button>
+        </form>
+        <form method="POST" action="/moderation/content/{{.ID}}/reject" style="display:inline">
+          <input type="hidden" name="content_type" value="comment">
+          <input type="text" name="reason" placeholder="Raison" required>
+          <button class="btn-delete" type="submit">Rejeter</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p>Aucun commentaire en attente.</p>
+  {{end}}
+</details>
+
+<details>
+  <summary>Utilisateurs ({{len .Users}})</summary>
+  <table>
+  <tr>
+    <th>Pseudo</th>
+    <th>Mail</th>
+    <th>Rôle</th>
+    <th>Statut</th>
+    <th>Actions</th>
+  </tr>
+  {{range .Users}}
+  <tr>
+    <td>{{.Username}}</td>
+    <td>{{.Mail}}</td>
+    <td>{{.Role}}</td>
+    <td>{{.Status}}</td>
+    <td>
+      {{if $.User.IsAdmin}}
+        {{if eq .Status "banned"}}
+          <form method="POST" action="/admin/user/{{.ID}}/unban" style="display:inline">
+            <button class="btn-delete" type="submit">unban</button>
+          </form>
+        {{else}}
+          <form method="POST" action="/admin/user/{{.ID}}/ban" style="display:inline">
+            <button class="btn-delete" type="submit">ban</button>
+          </form>
+        {{end}}
+      {{end}}
+      {{if eq .Status "muted"}}
+        <form method="POST" action="/admin/user/{{.ID}}/unban" style="display:inline">
+          <button class="btn-delete" type="submit">unmute</button>
+        </form>
+      {{else if ne .Status "banned"}}
+        <form method="POST" action="/admin/user/{{.ID}}/mute" style="display:inline">
+          <button class="btn-delete" type="submit">mute</button>
+        </form>
+      {{end}}
+      <form method="POST" action="/admin/user/{{.ID}}/kick" style="display:inline">
+        <button class="btn-delete" type="submit">kick</button>
+      </form>
+    </td>
+  </tr>
+  {{end}}
+  </table>
+</details>
+
+<details>
+  <summary>Posts signalés ({{len .Posts}})</summary>
+  <table>
+    <tr>
+      <th>Auteur</th>
+      <th>Contenu</th>
+      <th>Date</th>
+      <th>Signalements</th>
+      <th>Actions</th>
+    </tr>
+    {{range .Posts}}
+    <tr>
+      <td>{{.Username}}</td>
+      <td>{{.Post}}</td>
+      <td>{{.Date}}</td>
+      <td>{{.Report}}</td>
+      <td>
+        <form method="POST" action="/post/{{.ID}}/delete" style="display:inline">
+          <button class="btn-delete" type="submit">supprimer</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+</details>
+
+<details>
+  <summary>Traiter les signalements ({{len .Reports}})</summary>
+  <table>
+    <tr>
+      <th>Utilisateur signalé</th>
+      <th>Raison</th>
+      <th>Action</th>
+    </tr>
+    {{range .Reports}}
+    <tr>
+      <td>{{.Username}}</td>
+      <td>{{.Reason}}</td>
+      <td>
+        <form method="POST" action="/moderation/report/{{.ID}}/resolve" style="display:inline">
+          <input type="hidden" name="action_type" value="mute_user">
+          <button class="btn-delete" type="submit">ban temporaire</button>
+        </form>
+        <form method="POST" action="/moderation/report/{{.ID}}/resolve" style="display:inline">
+          <input type="hidden" name="action_type" value="ban_user">
+          <button class="btn-delete" type="submit">ban définitif</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}
+  </table>
+</details>
+</div>
+{{end}}

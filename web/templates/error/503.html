@@ -1,0 +1,14 @@
+{{define "title"}}Service indisponible — Easy{{end}}
+
+{{define "content"}}
+<section class="error-page">
+    <div class="error-content">
+        <p class="error-code">Erreur 503</p>
+        <h1>Service indisponible</h1>
+        <p class="error-message">{{.Message}}</p>
+        <div class="error-actions">
+            <a href="/login" class="btn-primary">Retour à la connexion</a>
+        </div>
+    </div>
+</section>
+{{end}}

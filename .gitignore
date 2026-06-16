@@ -1,0 +1,43 @@
+# Binaries
+forum
+*.exe
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+uploads/*
+!uploads/.gitkeep
+
+# Environment
+.env
+.env.local
+.env.prod
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Docker
+docker-compose.override.yml
+
+# SSL certs (generated locally)
+*.pem
+*.key
+*.crt
+
+.claude
+CLAUDE.md
+Forum.pdf
+.env
+cookies.txt
+cookies.txt
+server
+cookies_admin.txt
+cookies_user.txt

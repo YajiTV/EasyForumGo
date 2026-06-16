@@ -1,0 +1,55 @@
+{{define "title"}}Aide — Easy{{end}}
+
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/pages.css">
+{{end}}
+
+{{define "content"}}
+<!-- help page -->
+<article class="info-page">
+    <header class="info-hero">
+        <span class="info-kicker">Centre d'aide</span>
+        <h1>Comment pouvons-nous vous aider ?</h1>
+        <p class="info-lead">Retrouvez les réponses aux questions courantes pour lire, publier et gérer votre compte sur Easy.</p>
+        <div class="info-actions">
+            <a href="/contact" class="info-button">Contacter l'équipe</a>
+            <a href="/rules" class="info-button secondary">Consulter les règles</a>
+        </div>
+    </header>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Premiers pas</h2></div>
+        <div class="info-grid">
+            <div class="info-card"><h3>Créer un compte</h3><p>Choisissez un nom d'utilisateur, renseignez une adresse e-mail valide et utilisez un mot de passe robuste.</p></div>
+            <div class="info-card"><h3>Publier un post</h3><p>Une fois connecté, sélectionnez « Écrire », ajoutez un titre, un message, au moins une catégorie et éventuellement une image.</p></div>
+            <div class="info-card"><h3>Participer</h3><p>Ouvrez un post pour commenter ou voter. Vous pouvez modifier et supprimer vos propres contenus.</p></div>
+        </div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Compte et connexion</h2></div>
+        <div class="info-grid two-columns">
+            <div class="info-card"><h3>Je ne peux pas me connecter</h3><p>Vérifiez l'adresse e-mail utilisée lors de l'inscription et votre mot de passe. Les identifiants sont sensibles aux erreurs de saisie.</p></div>
+            <div class="info-card"><h3>Ma session a expiré</h3><p>Pour votre sécurité, les sessions ont une durée limitée. Reconnectez-vous simplement depuis la page de connexion.</p></div>
+            <div class="info-card"><h3>Une autre connexion est fermée</h3><p>Easy autorise une seule session active par compte. Une nouvelle connexion remplace automatiquement l'ancienne.</p></div>
+            <div class="info-card"><h3>Modifier mon profil</h3><p>Depuis les paramètres, modifiez votre nom public, votre photo et votre biographie.</p></div>
+        </div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Publications et images</h2></div>
+        <ul class="info-list">
+            <li>Un post doit contenir un titre, un message et au moins une catégorie.</li>
+            <li>Les images acceptées sont les fichiers JPEG, PNG et GIF de 20 Mo maximum.</li>
+            <li>Vous pouvez modifier ou supprimer uniquement vos propres posts et commentaires.</li>
+            <li>Un second clic sur votre vote actif le retire; choisir l'autre vote remplace le précédent.</li>
+        </ul>
+        <div class="info-note">Ne publiez jamais de mot de passe, d'adresse privée ou d'autre information confidentielle.</div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Besoin d'une réponse personnalisée ?</h2><p>Décrivez le problème rencontré, la page concernée et les étapes qui permettent de le reproduire. N'envoyez jamais votre mot de passe.</p></div>
+        <a href="/contact" class="info-button">Ouvrir la page de contact</a>
+    </section>
+</article>
+{{end}}

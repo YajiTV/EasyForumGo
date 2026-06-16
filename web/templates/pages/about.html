@@ -1,0 +1,62 @@
+{{define "title"}}À propos — Easy{{end}}
+
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/pages.css">
+{{end}}
+
+{{define "content"}}
+<!-- about page -->
+<article class="info-page">
+    <header class="info-hero">
+        <span class="info-kicker">À propos</span>
+        <h1>Un forum pensé pour apprendre ensemble</h1>
+        <p class="info-lead">Easy est un espace communautaire consacré à l'informatique, créé par quatre étudiants de première année à Ynov Toulouse Campus.</p>
+        <div class="info-actions">
+            <a href="/" class="info-button">Découvrir les discussions</a>
+            <a href="/rules" class="info-button secondary">Lire les règles</a>
+        </div>
+    </header>
+
+    <section class="info-section">
+        <div class="info-section-heading">
+            <h2>Notre intention</h2>
+            <p>Créer un lieu simple où chacun peut poser une question, documenter une découverte et progresser grâce aux retours de la communauté.</p>
+        </div>
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>Partager</h3>
+                <p>Publier des idées, des ressources et des projets accessibles à tous.</p>
+            </div>
+            <div class="info-card">
+                <h3>Comprendre</h3>
+                <p>Transformer les difficultés techniques en discussions utiles et durables.</p>
+            </div>
+            <div class="info-card">
+                <h3>Progresser</h3>
+                <p>Apprendre à expliquer, argumenter et collaborer avec bienveillance.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading">
+            <h2>L'équipe</h2>
+            <p>Easy est développé par une équipe pluridisciplinaire d'étudiants en B1.</p>
+        </div>
+        <div class="info-grid two-columns">
+            <div class="info-card"><h3>Mathys</h3><p>Cybersécurité, développement front et back.</p></div>
+            <div class="info-card"><h3>Axel</h3><p>Cybersécurité, développement front et back.</p></div>
+            <div class="info-card"><h3>Baptiste</h3><p>Informatique, développement front et back.</p></div>
+            <div class="info-card"><h3>Nine</h3><p>Conception et développement de l'interface.</p></div>
+        </div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading">
+            <h2>Le projet technique</h2>
+            <p>Le forum est construit en Go avec la bibliothèque standard, une base SQLite, des templates HTML, du CSS natif et une exécution reproductible avec Docker.</p>
+        </div>
+        <p>Ce choix volontairement sobre permet de comprendre chaque couche de l'application: routage HTTP, sessions, persistance, validation, sécurité et rendu côté serveur.</p>
+    </section>
+</article>
+{{end}}

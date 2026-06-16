@@ -1,0 +1,91 @@
+{{define "title"}}Recherche — Easy{{end}}
+{{define "extra_css"}}<link rel="stylesheet" href="/static/css/social.css">{{end}}
+{{define "content"}}
+<div class="social-page search-page">
+    <header class="social-list-header">
+        <p>Explorer Easy</p>
+        <h1>Recherche</h1>
+        <p>Trouvez des discussions et des profils dans toute la communauté.</p>
+    </header>
+
+    <form action="/search" method="GET" class="search-controls">
+        <label class="search-query-field" for="search-query">
+            <span>Recherche</span>
+            <input id="search-query" type="search" name="q" value="{{.Query}}" placeholder="Titre, contenu, auteur ou profil">
+        </label>
+        <label>
+            <span>Afficher</span>
+            <select name="type">
+                <option value="all" {{if eq .ResultType "all"}}selected{{end}}>Tout</option>
+                <option value="posts" {{if eq .ResultType "posts"}}selected{{end}}>Posts</option>
+                <option value="users" {{if eq .ResultType "users"}}selected{{end}}>Profils</option>
+            </select>
+        </label>
+        <label>
+            <span>Catégorie de post</span>
+            <select name="category">
+                <option value="">Toutes</option>
+                {{range .Categories}}
+                <option value="{{.ID}}" {{if eq $.CategoryID .ID}}selected{{end}}>{{.Name}}</option>
+                {{end}}
+            </select>
+        </label>
+        <label>
+            <span>Trier par</span>
+            <select name="sort">
+                <option value="relevance" {{if eq .Sort "relevance"}}selected{{end}}>Pertinence</option>
+                <option value="recent" {{if eq .Sort "recent"}}selected{{end}}>Plus récents</option>
+                <option value="popular" {{if eq .Sort "popular"}}selected{{end}}>Plus populaires</option>
+            </select>
+        </label>
+        <button type="submit">Rechercher</button>
+    </form>
+
+    {{if or .Query .CategoryID}}
+    <p class="search-summary">{{if .Query}}Résultats pour « {{.Query}} »{{else}}Résultats de la catégorie sélectionnée{{end}}</p>
+    {{end}}
+
+    {{if ne .ResultType "users"}}
+    <section class="search-results-section">
+        <div class="search-results-heading">
+            <h2>Posts</h2>
+            <span>{{len .Posts}} résultat{{if ne (len .Posts) 1}}s{{end}}</span>
+        </div>
+        <div class="search-posts">
+            {{range .Posts}}
+            <article class="search-post-card {{if .ImagePath}}has-image{{end}}">
+                <div>
+                    <div class="search-post-author">
+                        {{if .AvatarURL}}<img src="{{.AvatarURL}}" alt="Photo de profil de {{.Username}}">{{else}}<span class="author-avatar">{{printf "%.1s" .Username}}</span>{{end}}
+                        <a href="/user/{{.Username}}">{{.Username}}</a>
+                        <span>{{.CreatedAt.Format "02/01/2006"}}</span>
+                    </div>
+                    <h3><a href="/post/{{.ID}}">{{.Title}}</a></h3>
+                    <p>{{.Content}}</p>
+                    <small>{{.LikeCount}} j'aime · {{.DislikeCount}} je n'aime pas</small>
+                </div>
+                {{if .ImagePath}}<a href="/post/{{.ID}}" class="search-post-image"><img src="/uploads/{{.ImagePath}}" alt="Image du post"></a>{{end}}
+            </article>
+            {{else}}<div class="social-empty">Aucun post ne correspond à cette recherche.</div>{{end}}
+        </div>
+    </section>
+    {{end}}
+
+    {{if and (ne .ResultType "posts") (not .CategoryID)}}
+    <section class="search-results-section">
+        <div class="search-results-heading">
+            <h2>Profils</h2>
+            <span>{{len .Users}} résultat{{if ne (len .Users) 1}}s{{end}}</span>
+        </div>
+        <div class="search-users">
+            {{range .Users}}
+            <a href="/user/{{.Username}}" class="social-user-card">
+                {{if .ProfilePicture}}<img src="{{.AvatarURL}}" alt="Photo de profil de {{.Username}}">{{else}}<span class="social-avatar">{{printf "%.1s" .Username}}</span>{{end}}
+                <span><strong>{{.Username}}</strong><small>{{if .Biography}}{{.Biography}}{{else}}Voir le profil{{end}}</small></span>
+            </a>
+            {{else}}<div class="social-empty">Aucun profil ne correspond à cette recherche.</div>{{end}}
+        </div>
+    </section>
+    {{end}}
+</div>
+{{end}}

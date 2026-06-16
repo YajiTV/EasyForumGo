@@ -1,0 +1,61 @@
+{{define "title"}}Modifier le post — Easy{{end}}
+
+{{define "content"}}
+<div class="form-page">
+    <!-- page heading -->
+    <header class="form-header">
+        <p class="form-kicker">Publication</p>
+        <h1 class="form-title">Modifier le post</h1>
+        <p class="form-subtitle">Ajustez le contenu, les catégories ou l'image du post.</p>
+    </header>
+
+    <!-- validation error -->
+    {{if .Error}}
+        <p class="form-error">{{.Error}}</p>
+    {{end}}
+
+    <!-- post form -->
+    <form action="/post/{{.Post.ID}}/edit" method="POST" enctype="multipart/form-data" class="post-form">
+
+        <div class="form-group">
+            <label for="title">Titre</label>
+            <input type="text" id="title" name="title" placeholder="Titre du post" value="{{.Post.Title}}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="content">Contenu</label>
+            <textarea id="content" name="content" rows="12" placeholder="Votre message" required>{{.Post.Content}}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Catégories <span class="label-hint">(au moins une)</span></label>
+            <div class="categories-grid">
+                {{range .Categories}}
+                <label class="category-checkbox">
+                    <input type="checkbox" name="categories" value="{{.ID}}" {{if index $.SelectedCategories .ID}}checked{{end}}>
+                    {{.Name}}
+                </label>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="image">Nouvelle image <span class="label-hint">(optionnel — remplace l'image actuelle)</span></label>
+            {{if .Post.ImagePath}}
+                <div class="current-image-preview">
+                    <img src="/uploads/{{.Post.ImagePath}}" alt="Image actuelle">
+                </div>
+            {{end}}
+            <div class="file-field">
+                <input type="file" id="image" name="image" accept=".jpg,.jpeg,.png,.gif">
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="/post/{{.Post.ID}}" class="btn-secondary">Annuler</a>
+            <button type="submit" class="btn-primary">Enregistrer</button>
+        </div>
+
+    </form>
+</div>
+{{end}}

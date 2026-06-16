@@ -1,0 +1,58 @@
+{{define "title"}}{{.ProfileUser.Username}} — Easy{{end}}
+{{define "extra_css"}}<link rel="stylesheet" href="/static/css/social.css">{{end}}
+{{define "content"}}
+<div class="social-page">
+    <header class="public-profile-header">
+        {{if .ProfileUser.ProfilePicture}}<img src="{{.ProfileUser.AvatarURL}}" alt="Photo de profil de {{.ProfileUser.Username}}">{{else}}<span class="social-avatar social-avatar-large">{{printf "%.1s" .ProfileUser.Username}}</span>{{end}}
+        <div class="public-profile-main">
+            <p class="social-kicker">{{if .IsOwner}}Votre profil{{else}}Profil{{end}}</p>
+            <h1>{{.ProfileUser.Username}}</h1>
+            <p class="social-biography">{{if .ProfileUser.Biography}}{{.ProfileUser.Biography}}{{else}}Aucune biographie pour le moment.{{end}}</p>
+            <small>Membre depuis le {{.ProfileUser.CreatedAt.Format "02/01/2006"}}</small>
+        </div>
+        <div class="social-profile-action">
+            {{if .IsOwner}}
+            <a href="/settings#profile" class="social-button">Modifier le profil</a>
+            <a href="/profile" class="social-button secondary">Mon activité</a>
+            {{else if .User}}
+            <form action="/user/{{.ProfileUser.Username}}/{{if .IsFollowing}}unfollow{{else}}follow{{end}}" method="POST">
+                <button type="submit" class="social-button {{if .IsFollowing}}secondary{{end}}">{{if .IsFollowing}}Ne plus suivre{{else}}Suivre{{end}}</button>
+            </form>
+            {{end}}
+        </div>
+    </header>
+    <nav class="social-stats" aria-label="Statistiques sociales">
+        <span><strong>{{.Stats.PostCount}}</strong> posts</span>
+        <a href="/user/{{.ProfileUser.Username}}/followers"><strong>{{.Stats.FollowerCount}}</strong> abonnés</a>
+        <a href="/user/{{.ProfileUser.Username}}/following"><strong>{{.Stats.FollowingCount}}</strong> abonnements</a>
+    </nav>
+    {{if .Topics}}
+    <section class="public-profile-topics" aria-labelledby="profile-topics-title">
+        <div>
+            <p>Centres d'intérêt</p>
+            <h2 id="profile-topics-title">Publie souvent dans...</h2>
+        </div>
+        <nav aria-label="Thèmes fréquents de {{.ProfileUser.Username}}">
+            {{range .Topics}}
+            <a href="/?category={{.ID}}">
+                <strong>{{.Name}}</strong>
+                {{if .Description}}<span>{{.Description}}</span>{{end}}
+            </a>
+            {{end}}
+        </nav>
+    </section>
+    {{end}}
+    <section class="social-section">
+        <h2>Publications</h2>
+        {{range .Posts}}
+        <article class="social-post">
+            <small>{{.CreatedAt.Format "02/01/2006"}}</small>
+            <h3><a href="/post/{{.ID}}">{{.Title}}</a></h3>
+            <p>{{.Content}}</p>
+            <span>{{.LikeCount}} j'aime · {{.DislikeCount}} je n'aime pas</span>
+        </article>
+        {{else}}<div class="social-empty">Aucune publication pour le moment.</div>{{end}}
+        {{if or .HasPrevious .HasNext}}<nav class="social-pagination" aria-label="Pagination">{{if .HasPrevious}}<a href="?page={{.PreviousPage}}">Précédent</a>{{end}}<span>Page {{.Page}}</span>{{if .HasNext}}<a href="?page={{.NextPage}}">Suivant</a>{{end}}</nav>{{end}}
+    </section>
+</div>
+{{end}}

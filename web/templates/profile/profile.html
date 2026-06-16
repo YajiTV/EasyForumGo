@@ -1,0 +1,112 @@
+{{define "title"}}Mon activité — Easy{{end}}
+
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/profile.css">
+{{end}}
+
+{{define "content"}}
+<div class="profile-page">
+    <!-- profile content -->
+    <section class="profile-content" aria-label="Profil utilisateur">
+        <header class="profile-hero">
+            <div>
+                <p class="profile-kicker">Espace personnel</p>
+                <h1>Mon activité</h1>
+                <p>Retrouvez vos publications, réactions et commentaires.</p>
+            </div>
+        </header>
+
+        <!-- profile navigation -->
+        <nav class="profile-tabs" aria-label="Navigation du profil">
+            <a href="/profile/my-posts" class="{{if eq .ActiveTab "my-posts"}}active{{end}}">Mes posts</a>
+            <a href="/profile/liked-posts" class="{{if eq .ActiveTab "liked-posts"}}active{{end}}">Posts aimés</a>
+            <a href="/profile/my-comments" class="{{if eq .ActiveTab "my-comments"}}active{{end}}">Mes commentaires</a>
+            <a href="/profile/activity" class="{{if eq .ActiveTab "activity"}}active{{end}}">Activité</a>
+        </nav>
+
+        <!-- selected profile section -->
+        <section class="profile-section">
+            <div class="profile-section-header">
+                <h2>{{.SectionTitle}}</h2>
+                {{if eq .ActiveTab "my-comments"}}
+                    <span>{{len .Comments}} commentaire{{if gt (len .Comments) 1}}s{{end}}</span>
+                {{else}}
+                    <span>{{len .Posts}} post{{if gt (len .Posts) 1}}s{{end}}</span>
+                {{end}}
+            </div>
+
+            {{if eq .ActiveTab "my-comments"}}
+                <div class="profile-posts-list">
+                    {{if .Comments}}
+                        {{range .Comments}}
+                        <article class="profile-comment-card">
+                            <div class="profile-post-meta">
+                                <span>{{.CreatedAt.Format "02/01/2006"}}</span>
+                                <a href="/post/{{.PostID}}">{{.PostTitle}}</a>
+                            </div>
+                            <p>{{.Content}}</p>
+                        </article>
+                        {{end}}
+                    {{else}}
+                        <div class="profile-empty">
+                            <h3>{{.EmptyTitle}}</h3>
+                            <p>{{.EmptyMessage}}</p>
+                            <a href="/" class="profile-empty-link">Explorer les posts</a>
+                        </div>
+                    {{end}}
+                </div>
+            {{else}}
+                <div class="profile-posts-list">
+                    {{if .Posts}}
+                        {{range .Posts}}
+                        <article class="profile-post-card {{if .ImagePath}}has-image{{end}}">
+                            <div class="profile-post-body">
+                                <div class="profile-post-meta">
+                                    <span class="profile-author-avatar">{{printf "%.1s" .Username}}</span>
+                                    <span>Par <a href="/user/{{.Username}}">{{.Username}}</a></span>
+                                    <span>{{.CreatedAt.Format "02/01/2006"}}</span>
+                                </div>
+                                <h3><a href="/post/{{.ID}}">{{.Title}}</a></h3>
+                                <p>{{.Content}}</p>
+                                <div class="profile-post-stats">
+                                    <span>{{.LikeCount}} j'aime</span>
+                                    <span>{{.DislikeCount}} je n'aime pas</span>
+                                </div>
+                            </div>
+
+                            {{if .ImagePath}}
+                            <a href="/post/{{.ID}}" class="profile-post-image" aria-label="Lire {{.Title}}">
+                                <img src="/uploads/{{.ImagePath}}" alt="Image du post">
+                            </a>
+                            {{end}}
+                        </article>
+                        {{end}}
+                    {{else}}
+                        <div class="profile-empty">
+                            <h3>{{.EmptyTitle}}</h3>
+                            <p>{{.EmptyMessage}}</p>
+                            <a href="/" class="profile-empty-link">Explorer les posts</a>
+                        </div>
+                    {{end}}
+                </div>
+            {{end}}
+        </section>
+    </section>
+
+    <!-- profile summary -->
+    <aside class="profile-sidebar" aria-label="Résumé du profil">
+        {{if .User.ProfilePicture}}
+            <img src="{{.User.AvatarURL}}" alt="Photo de profil de {{.User.Username}}" class="profile-picture">
+        {{else}}
+            <div class="profile-avatar-placeholder">{{printf "%.1s" .User.Username}}</div>
+        {{end}}
+
+        <h2>{{.User.Username}}</h2>
+        <p>{{if .User.Biography}}{{.User.Biography}}{{else}}Votre profil visible par la communauté.{{end}}</p>
+        <div class="profile-sidebar-actions">
+            <a href="/user/{{.User.Username}}">Voir mon profil</a>
+            <a href="/settings#profile">Modifier</a>
+        </div>
+    </aside>
+</div>
+{{end}}

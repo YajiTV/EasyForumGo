@@ -1,0 +1,25 @@
+{{define "title"}}Supprimer le commentaire — Easy{{end}}
+
+{{define "content"}}
+<div class="form-page delete-confirmation">
+    <!-- confirmation heading -->
+    <div class="form-header">
+        <p class="form-kicker">Confirmation</p>
+        <h1 class="form-title">Supprimer ce commentaire ?</h1>
+        <p class="form-subtitle">Cette action est définitive.</p>
+    </div>
+
+    <!-- comment preview -->
+    <article class="delete-preview">
+        <p>{{.Comment.Content}}</p>
+    </article>
+
+    <!-- confirmation actions -->
+    <form action="/comment/{{.Comment.ID}}/delete" method="POST" class="post-form">
+        <div class="form-actions">
+            <a href="/post/{{.Comment.PostID}}" class="btn-secondary">Annuler</a>
+            <button type="submit" class="btn-delete">Supprimer définitivement</button>
+        </div>
+    </form>
+</div>
+{{end}}

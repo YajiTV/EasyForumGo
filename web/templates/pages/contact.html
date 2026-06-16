@@ -1,0 +1,61 @@
+{{define "title"}}Contact — Easy{{end}}
+
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/pages.css">
+{{end}}
+
+{{define "content"}}
+<!-- contact page -->
+<article class="info-page">
+    <header class="info-hero">
+        <span class="info-kicker">Nous contacter</span>
+        <h1>Parlons de votre demande</h1>
+        <p class="info-lead">Choisissez le canal adapté et donnez-nous les informations nécessaires pour que l'équipe puisse comprendre et traiter votre demande.</p>
+        <div class="info-actions">
+            <a href="https://github.com/YajiTV/EasyForumGo/issues" class="info-button">Ouvrir une demande sur GitHub</a>
+            <a href="/help" class="info-button secondary">Consulter l'aide</a>
+        </div>
+    </header>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Quel est votre besoin ?</h2></div>
+        <div class="info-grid">
+            <div class="info-card"><h3>Problème technique</h3><p>Indiquez la page concernée, les étapes réalisées, le résultat obtenu et le résultat attendu.</p></div>
+            <div class="info-card"><h3>Contenu ou comportement</h3><p>Ajoutez le lien vers le contenu, décrivez précisément le problème et évitez toute confrontation publique.</p></div>
+            <div class="info-card"><h3>Données personnelles</h3><p>Précisez votre nom d'utilisateur et la nature de votre demande sans envoyer de mot de passe.</p></div>
+        </div>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Avant de nous écrire</h2><p>Quelques vérifications peuvent vous apporter une réponse immédiate.</p></div>
+        <ol class="info-steps">
+            <li><strong>Consultez le centre d'aide.</strong> Il couvre les principales questions de compte, session, publication et image.</li>
+            <li><strong>Lisez les règles.</strong> Elles expliquent les contenus acceptés et le fonctionnement de la modération.</li>
+            <li><strong>Préparez les détails utiles.</strong> Un lien, une capture sans donnée sensible et des étapes précises accélèrent le diagnostic.</li>
+        </ol>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Canaux disponibles</h2></div>
+        <dl class="contact-list">
+            <div>
+                <dt>Suivi technique et suggestions</dt>
+                <dd>Utilisez les <a href="https://github.com/YajiTV/EasyForumGo/issues">issues du dépôt GitHub Easy</a> pour signaler un bug reproductible ou proposer une amélioration.</dd>
+            </div>
+            <div>
+                <dt>Demandes liées au forum</dt>
+                <dd>Adressez-vous directement à un membre de l'équipe projet dans le cadre pédagogique de Ynov Campus.</dd>
+            </div>
+            <div>
+                <dt>Urgence de sécurité</dt>
+                <dd>Ne publiez aucune donnée sensible dans une issue publique. Contactez directement l'équipe projet et décrivez uniquement les éléments nécessaires.</dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="info-section">
+        <div class="info-section-heading"><h2>Ce que nous ne vous demanderons jamais</h2></div>
+        <div class="info-note">L'équipe Easy ne vous demandera jamais votre mot de passe, votre jeton de session, une clé privée ou un secret d'accès.</div>
+    </section>
+</article>
+{{end}}

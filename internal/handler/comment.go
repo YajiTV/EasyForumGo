@@ -1,0 +1,273 @@
+package handler
+
+import (
+	"database/sql"
+	"net/http"
+	"strings"
+	"time"
+
+	"EasyForumGo/internal/model"
+	"EasyForumGo/internal/repository"
+	"EasyForumGo/pkg/moderation"
+	"EasyForumGo/pkg/utils"
+	"EasyForumGo/pkg/validator"
+)
+
+const maxCommentFormSize = 16 << 10
+
+type CommentHandler struct {
+	comments      *repository.CommentRepository
+	posts         *repository.PostRepository
+	sessions      *repository.SessionRepository
+	users         *repository.UserRepository
+	notifications *repository.NotificationRepository
+	renderer      *PageRenderer
+	reviews       *repository.ContentReviewRepository
+}
+
+func NewCommentHandler(db *sql.DB, renderer *PageRenderer) *CommentHandler {
+	return &CommentHandler{
+		comments:      repository.NewCommentRepository(db),
+		posts:         repository.NewPostRepository(db),
+		sessions:      repository.NewSessionRepository(db),
+		users:         repository.NewUserRepository(db),
+		notifications: repository.NewNotificationRepository(db),
+		renderer:      renderer,
+		reviews:       repository.NewContentReviewRepository(db),
+	}
+}
+
+// CreateComment creates a new record
+func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
+	user := userFromSession(r, h.sessions, h.users)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	postID := r.PathValue("id")
+	if _, err := h.posts.GetByID(postID); err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxCommentFormSize)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Requête invalide", http.StatusBadRequest)
+		return
+	}
+
+	content := strings.TrimSpace(r.FormValue("content"))
+	if validationErrors := validator.ValidateComment(validator.CommentInput{Content: content}); validationErrors.HasErrors() {
+		http.Error(w, firstValidationMessage(validationErrors), http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now()
+	c := &model.Comment{
+		ID:        utils.NewUUID(),
+		PostID:    postID,
+		UserID:    user.ID,
+		Content:   content,
+		Status:    "approved",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	keywords, err := h.reviews.GetKeywords()
+	if err == nil && moderation.ContainsFlag(content, keywords) {
+		c.Status = "pending"
+	}
+
+	if err := h.comments.Create(c); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	// notification : seulement si ce n'est pas son propre post
+	if post, err := h.posts.GetByID(postID); err == nil && post.UserID != user.ID {
+		n := &model.Notification{
+			ID:        utils.NewUUID(),
+			UserID:    post.UserID,
+			ActorID:   user.ID,
+			Type:      "comment",
+			PostID:    postID,
+			CommentID: c.ID,
+			CreatedAt: time.Now(),
+		}
+		_ = h.notifications.Create(n)
+	}
+
+	if c.Status == "pending" {
+		http.Redirect(w, r, "/post/"+postID+"?notice=pending", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/post/"+postID, http.StatusSeeOther)
+
+}
+
+// DeleteComment deletes an existing record
+func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	user := userFromSession(r, h.sessions, h.users)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	commentID := r.PathValue("id")
+	comment, err := h.comments.GetByID(commentID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if comment.UserID != user.ID && !user.CanModerate() {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	if err := h.comments.Delete(commentID); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	if user.CanModerate() && comment.UserID != user.ID {
+		h.sendModerationNotif(comment.UserID, user.ID, "moderation_delete_comment")
+	}
+
+	http.Redirect(w, r, "/post/"+comment.PostID, http.StatusSeeOther)
+}
+
+type editCommentData struct {
+	User    *model.User
+	Comment *model.Comment
+	Error   string
+}
+
+type deleteCommentData struct {
+	User    *model.User
+	Comment *model.Comment
+}
+
+// ShowDeleteConfirmation renders the requested page
+func (h *CommentHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Request) {
+	user := userFromSession(r, h.sessions, h.users)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	commentID := r.PathValue("id")
+	comment, err := h.comments.GetByID(commentID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if comment.UserID != user.ID && !user.CanModerate() {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	h.renderTemplate(w, "comment/delete_comment.html", deleteCommentData{
+		User:    user,
+		Comment: comment,
+	})
+}
+
+// ShowEditForm renders the requested page
+func (h *CommentHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
+	user := userFromSession(r, h.sessions, h.users)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	commentID := r.PathValue("id")
+	comment, err := h.comments.GetByID(commentID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if comment.UserID != user.ID && !user.CanModerate() {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	h.renderTemplate(w, "comment/edit_comment.html", editCommentData{
+		User:    user,
+		Comment: comment,
+	})
+}
+
+// EditComment updates a comment from the author
+func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
+	user := userFromSession(r, h.sessions, h.users)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	commentID := r.PathValue("id")
+	comment, err := h.comments.GetByID(commentID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	if comment.UserID != user.ID && !user.CanModerate() {
+		http.Error(w, "Interdit", http.StatusForbidden)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxCommentFormSize)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Requête invalide", http.StatusBadRequest)
+		return
+	}
+
+	content := strings.TrimSpace(r.FormValue("content"))
+
+	renderErr := func(msg string) {
+		h.renderTemplate(w, "comment/edit_comment.html", editCommentData{
+			User:    user,
+			Comment: comment,
+			Error:   msg,
+		})
+	}
+
+	if validationErrors := validator.ValidateComment(validator.CommentInput{Content: content}); validationErrors.HasErrors() {
+		renderErr(firstValidationMessage(validationErrors))
+		return
+	}
+
+	comment.Content = content
+	comment.UpdatedAt = time.Now()
+
+	if err := h.comments.Update(comment); err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/post/"+comment.PostID, http.StatusSeeOther)
+}
+
+
+// renderTemplate renders the requested page
+func (h *CommentHandler) sendModerationNotif(userID, actorID, notifType string) {
+	if userID == "" || userID == actorID {
+		return
+	}
+	_ = h.notifications.Create(&model.Notification{
+		ID:        utils.NewUUID(),
+		UserID:    userID,
+		ActorID:   actorID,
+		Type:      notifType,
+		CreatedAt: time.Now(),
+	})
+}
+
+func (h *CommentHandler) renderTemplate(w http.ResponseWriter, name string, data any) {
+	h.renderer.Render(w, name, data)
+}

@@ -1,0 +1,100 @@
+{{define "title"}}Bibliothèque — Easy{{end}}
+
+{{define "extra_css"}}
+<link rel="stylesheet" href="/static/css/profile.css">
+<link rel="stylesheet" href="/static/css/library.css">
+{{end}}
+
+{{define "content"}}
+<div class="library-page">
+    <!-- library navigation -->
+    <aside class="library-panel">
+        <header>
+            <p>Vos listes</p>
+            <h1>Bibliothèque</h1>
+        </header>
+
+        <form action="/library" method="POST" class="library-create-form">
+            <label for="library-name">Nouvelle bibliothèque</label>
+            <div>
+                <input id="library-name" name="name" type="text" maxlength="60" placeholder="À lire plus tard" required>
+                <button type="submit">Créer</button>
+            </div>
+        </form>
+        {{if .Error}}<p class="library-error">{{.Error}}</p>{{end}}
+
+        <nav class="library-list" aria-label="Vos bibliothèques">
+            {{range .Libraries}}
+            <a href="/library/{{.ID}}" class="{{if and $.Selected (eq $.Selected.ID .ID)}}active{{end}}">
+                <strong>{{.Name}}</strong>
+                <span>{{.PostCount}} post{{if gt .PostCount 1}}s{{end}}</span>
+            </a>
+            {{else}}
+            <p>Aucune bibliothèque créée.</p>
+            {{end}}
+        </nav>
+    </aside>
+
+    <!-- selected library -->
+    <section class="library-content">
+        {{if .Selected}}
+        <header class="library-content-header">
+            <div>
+                <p>Bibliothèque</p>
+                <h2>{{.Selected.Name}}</h2>
+                <span>{{.Selected.PostCount}} post{{if gt .Selected.PostCount 1}}s{{end}} enregistré{{if gt .Selected.PostCount 1}}s{{end}}</span>
+            </div>
+            <div class="library-manage">
+                <form action="/library/{{.Selected.ID}}/rename" method="POST">
+                    <input name="name" type="text" value="{{.Selected.Name}}" maxlength="60" required aria-label="Nouveau nom">
+                    <button type="submit">Renommer</button>
+                </form>
+                <form action="/library/{{.Selected.ID}}/delete" method="POST">
+                    <button type="submit" class="library-delete">Supprimer</button>
+                </form>
+            </div>
+        </header>
+
+        <div class="profile-posts-list">
+            {{range .Posts}}
+            <article class="profile-post-card {{if .ImagePath}}has-image{{end}}">
+                <div class="profile-post-body">
+                    <div class="profile-post-meta">
+                        <span class="profile-author-avatar">{{printf "%.1s" .Username}}</span>
+                        <span>Par {{.Username}}</span>
+                        <span>{{.CreatedAt.Format "02/01/2006"}}</span>
+                    </div>
+                    <h3><a href="/post/{{.ID}}">{{.Title}}</a></h3>
+                    <p>{{.Content}}</p>
+                    <div class="profile-post-stats">
+                        <span>{{.LikeCount}} j'aime</span>
+                        <span>{{.DislikeCount}} je n'aime pas</span>
+                        <form action="/library/{{$.Selected.ID}}/post/{{.ID}}/remove" method="POST">
+                            <button type="submit">Retirer</button>
+                        </form>
+                    </div>
+                </div>
+                {{if .ImagePath}}
+                <a href="/post/{{.ID}}" class="profile-post-image" aria-label="Lire {{.Title}}">
+                    <img src="/uploads/{{.ImagePath}}" alt="Image du post">
+                </a>
+                {{end}}
+            </article>
+            {{else}}
+            <div class="library-empty">
+                <h3>Cette bibliothèque est vide</h3>
+                <p>Enregistrez des posts depuis leur page de lecture.</p>
+                <a href="/">Explorer les posts</a>
+            </div>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="library-welcome">
+            <p>Bibliothèque</p>
+            <h1>Organisez les posts à votre façon.</h1>
+            <span>Créez une bibliothèque ou sélectionnez-en une pour retrouver ses posts.</span>
+        </div>
+        {{end}}
+    </section>
+</div>
+{{end}}

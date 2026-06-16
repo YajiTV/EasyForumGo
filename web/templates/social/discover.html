@@ -1,0 +1,35 @@
+{{define "title"}}Découvrir des profils — Easy{{end}}
+{{define "extra_css"}}<link rel="stylesheet" href="/static/css/social.css">{{end}}
+{{define "content"}}
+<div class="social-page">
+    <header class="social-list-header">
+        <p>Communauté</p>
+        <h1>Découvrir des profils</h1>
+        <p>Trouvez des personnes et suivez leurs prochaines publications.</p>
+    </header>
+    <form action="/search" method="GET" class="discover-search">
+        <label for="discover-query">Rechercher par pseudo</label>
+        <div><input id="discover-query" type="search" name="q" value="{{.Query}}" placeholder="Nom d'utilisateur" required><input type="hidden" name="type" value="users"><button type="submit">Rechercher</button></div>
+    </form>
+    {{if .Query}}
+    <section class="discover-section"><h2>Résultats pour « {{.Query}} »</h2>{{template "userCards" .Results}}</section>
+    {{else}}
+    <section class="discover-section"><h2>Profils populaires</h2>{{template "userCards" .Popular}}</section>
+    <section class="discover-section"><h2>Selon vos centres d'intérêt</h2>{{template "userCards" .Suggestions}}</section>
+    {{end}}
+</div>
+{{end}}
+{{define "userCards"}}
+<div class="discover-grid">
+    {{range .}}
+    <article class="discover-card">
+        <a href="/user/{{.Username}}">
+            {{if .ProfilePicture}}<img src="{{.AvatarURL}}" alt="Photo de profil de {{.Username}}">{{else}}<span class="social-avatar">{{printf "%.1s" .Username}}</span>{{end}}
+            <strong>{{.Username}}</strong>
+            <p>{{if .Biography}}{{.Biography}}{{else}}Découvrir ce profil{{end}}</p>
+        </a>
+        <form action="/user/{{.Username}}/follow" method="POST"><input type="hidden" name="redirect" value="/discover"><button type="submit" class="social-button">Suivre</button></form>
+    </article>
+    {{else}}<div class="social-empty">Aucun profil à afficher pour le moment.</div>{{end}}
+</div>
+{{end}}
