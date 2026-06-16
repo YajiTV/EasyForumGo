@@ -21,6 +21,15 @@
     font-weight: 600;
     cursor: pointer;
     background: var(--soft);
+    list-style: none;
+}
+
+.moderation-page details summary::-webkit-details-marker {
+    display: none;
+}
+
+.moderation-page details summary::before {
+    content: "- ";
 }
 
 .moderation-page table {
