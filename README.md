@@ -16,6 +16,16 @@
 
 ---
 
+## ◆ Démo
+
+<div align="center">
+
+<img src="docs/demo.gif" alt="Démo Easy" width="800"/>
+
+</div>
+
+---
+
 ## ◆ Fonctionnalités
 
 <table>
