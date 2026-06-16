@@ -275,7 +275,7 @@ Les clés étrangères SQLite et la suppression en cascade sont activées. Le di
 
 ### Pourquoi Go stdlib uniquement ?
 - → Aucun framework HTTP, routing et middleware maison
-- ⚡ Compilation native, binaire unique, démarrage instantané
+- → Compilation native, binaire unique, démarrage instantané
 - → Maîtrise complète de la stack, rien de magique
 - → Surface d'attaque minimale, dépendances réduites au strict nécessaire
 
