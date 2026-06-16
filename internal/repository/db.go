@@ -37,6 +37,24 @@ func InitDB(dbPath, migrationsDir, encryptionKey string) (*sql.DB, error) {
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		db.Close()
 		if encryptionKey != "" && isNotDatabaseError(err) {
+			if rekeyed, rekeyErr := rekeyLegacySQLCipherDB(dbPath, encryptionKey); rekeyErr != nil {
+				return nil, fmt.Errorf("rekey legacy SQLCipher database after open failure %q: %w", err, rekeyErr)
+			} else if rekeyed {
+				db, err = sql.Open("sqlite3", sqliteDSN(dbPath, encryptionKey))
+				if err != nil {
+					return nil, fmt.Errorf("open rekeyed db: %w", err)
+				}
+				if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+					db.Close()
+					return nil, fmt.Errorf("pragma foreign_keys after rekey: %w", err)
+				}
+				if err := runMigrations(db, migrationsDir); err != nil {
+					db.Close()
+					return nil, fmt.Errorf("migrations: %w", err)
+				}
+				return db, nil
+			}
+
 			if migrationErr := migratePlaintextDBToSQLCipher(dbPath, encryptionKey); migrationErr != nil {
 				return nil, fmt.Errorf("migrate plaintext database to SQLCipher after open failure %q: %w", err, migrationErr)
 			}
@@ -59,6 +77,71 @@ func InitDB(dbPath, migrationsDir, encryptionKey string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func rekeyLegacySQLCipherDB(dbPath, encryptionKey string) (bool, error) {
+	for _, candidate := range legacyEncryptionKeyCandidates(encryptionKey) {
+		db, err := sql.Open("sqlite3", sqliteDSN(dbPath, candidate))
+		if err != nil {
+			return false, fmt.Errorf("open legacy encrypted db: %w", err)
+		}
+		if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+			db.Close()
+			if isNotDatabaseError(err) {
+				continue
+			}
+			return false, fmt.Errorf("pragma foreign_keys with legacy key: %w", err)
+		}
+		if _, err := db.Exec("PRAGMA rekey = " + sqlStringLiteral(encryptionKey)); err != nil {
+			db.Close()
+			return false, fmt.Errorf("rekey db: %w", err)
+		}
+		if err := db.Close(); err != nil {
+			return false, fmt.Errorf("close rekeyed db: %w", err)
+		}
+		log.Printf("Rekeyed SQLCipher database from legacy deployment key")
+		return true, nil
+	}
+	return false, nil
+}
+
+func legacyEncryptionKeyCandidates(encryptionKey string) []string {
+	legacy := composeUnbracedDollarExpansion(encryptionKey)
+	if legacy == "" || legacy == encryptionKey {
+		return nil
+	}
+	return []string{legacy}
+}
+
+func composeUnbracedDollarExpansion(value string) string {
+	var out strings.Builder
+	for i := 0; i < len(value); i++ {
+		if value[i] != '$' {
+			out.WriteByte(value[i])
+			continue
+		}
+		if i+1 >= len(value) || !isEnvNameStart(value[i+1]) {
+			out.WriteByte(value[i])
+			continue
+		}
+		i++
+		for i+1 < len(value) && isEnvNameChar(value[i+1]) {
+			i++
+		}
+	}
+	return out.String()
+}
+
+func isEnvNameStart(c byte) bool {
+	return c == '_' || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
+}
+
+func isEnvNameChar(c byte) bool {
+	return isEnvNameStart(c) || (c >= '0' && c <= '9')
+}
+
+func sqlStringLiteral(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
 }
 
 func migratePlaintextDBToSQLCipher(dbPath, encryptionKey string) error {
