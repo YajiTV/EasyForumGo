@@ -63,13 +63,6 @@
                         <p class="post-card-excerpt">{{stripMD .Content}}</p>
 
                         <div class="post-card-meta">
-                            {{if $.User}}
-                            <form action="/post/{{.ID}}/report" method="POST" class="post-card-report-form">
-                                <input type="hidden" name="category" value="other">
-                                <input type="hidden" name="redirect_to" value="/">
-                                <button type="submit" class="post-card-report-btn" title="Signaler ce post">Signaler</button>
-                            </form>
-                            {{end}}
                             <span class="stat-item" aria-label="{{.LikeCount}} j'aime">
                                 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M7 10v12"></path>

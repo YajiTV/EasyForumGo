@@ -658,3 +658,50 @@
         gap: 6px;
     }
 }
+
+.reading-report-form {
+    margin-left: auto;
+}
+
+.reading-report-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1.5px solid var(--danger);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--danger);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.reading-report-btn .icon {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+
+.reading-report-btn:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+.reading-report-btn--done {
+    border-color: var(--muted);
+    color: var(--muted);
+    cursor: default;
+    opacity: 0.7;
+}
+
+.reading-report-btn--done:hover {
+    background: transparent;
+    color: var(--muted);
+}

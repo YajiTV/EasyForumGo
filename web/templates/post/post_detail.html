@@ -83,6 +83,28 @@
                         <a href="/post/{{.Post.ID}}/edit">Modifier</a>
                         <a href="/post/{{.Post.ID}}/delete" class="danger-link">Supprimer</a>
                     </nav>
+                    {{else}}
+                    {{if .HasReported}}
+                    <span class="reading-report-btn reading-report-btn--done" aria-label="Post déjà signalé">
+                        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                            <line x1="4" x2="4" y1="22" y2="15"></line>
+                        </svg>
+                        Signalé
+                    </span>
+                    {{else}}
+                    <form action="/post/{{.Post.ID}}/report" method="POST" class="reading-report-form">
+                        <input type="hidden" name="category" value="other">
+                        <input type="hidden" name="redirect_to" value="/post/{{.Post.ID}}">
+                        <button type="submit" class="reading-report-btn" title="Signaler ce post">
+                            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                                <line x1="4" x2="4" y1="22" y2="15"></line>
+                            </svg>
+                            Signaler
+                        </button>
+                    </form>
+                    {{end}}
                     {{end}}
                 {{end}}
             </footer>

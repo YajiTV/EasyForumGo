@@ -27,6 +27,7 @@ type PostHandler struct {
 	comments       *repository.CommentRepository
 	likes          *repository.LikeRepository
 	libraries      *repository.LibraryRepository
+	reports        *repository.ReportRepository
 	uploadDir      string
 	maxUploadBytes int64
 	renderer       *PageRenderer
@@ -46,6 +47,7 @@ func NewPostHandler(db *sql.DB, uploadDir string, maxUploadBytes int64, renderer
 		comments:       repository.NewCommentRepository(db),
 		likes:          repository.NewLikeRepository(db),
 		libraries:      repository.NewLibraryRepository(db),
+		reports:        repository.NewReportRepository(db),
 		uploadDir:      uploadDir,
 		maxUploadBytes: maxUploadBytes,
 		renderer:       renderer,
@@ -437,6 +439,7 @@ type PostDetailData struct {
 	Libraries       []model.Library
 	LikeCount       int
 	DislikeCount    int
+	HasReported     bool
 }
 
 // PostDetail handles the request
@@ -477,8 +480,10 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 
 	currentUser := userFromSession(r, h.sessions, h.users)
 	libraries := []model.Library{}
+	hasReported := false
 	if currentUser != nil {
 		libraries, _ = h.libraries.GetByUserID(currentUser.ID)
+		hasReported, _ = h.reports.AlreadyReported(currentUser.ID, model.TargetPost, postID)
 	}
 
 	data := PostDetailData{
@@ -495,6 +500,7 @@ func (h *PostHandler) PostDetail(w http.ResponseWriter, r *http.Request) {
 		Libraries:       libraries,
 		LikeCount:       likes,
 		DislikeCount:    dislikes,
+		HasReported:     hasReported,
 	}
 
 	h.renderer.Render(w, "post/post_detail.html", data)
