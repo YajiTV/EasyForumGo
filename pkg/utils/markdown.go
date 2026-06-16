@@ -2,20 +2,21 @@ package utils
 
 import (
 	"bytes"
+	"html"
 	"html/template"
 	"strings"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/renderer/html"
+	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
 )
 
 var markdownParser = goldmark.New(
 	goldmark.WithExtensions(extension.GFM),
 	goldmark.WithRendererOptions(
-		html.WithHardWraps(),
-		html.WithXHTML(),
+		goldmarkhtml.WithHardWraps(),
+		goldmarkhtml.WithXHTML(),
 	),
 )
 
@@ -35,7 +36,7 @@ func StripMarkdown(content string) string {
 	if err := markdownParser.Convert([]byte(content), &buf); err != nil {
 		return content
 	}
-	text := strings.TrimSpace(strictSanitizer.Sanitize(buf.String()))
+	text := strings.TrimSpace(html.UnescapeString(strictSanitizer.Sanitize(buf.String())))
 	if len([]rune(text)) > 200 {
 		runes := []rune(text)
 		return string(runes[:200]) + "…"
