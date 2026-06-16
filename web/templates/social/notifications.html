@@ -15,7 +15,7 @@
         <ul class="notif-list">
         {{range .Notifications}}
             <li class="notif-item{{if not .IsRead}} notif-item--unread{{end}}">
-                <a href="{{if eq .Type "new_follower"}}/user/{{.ActorUsername}}{{else}}/post/{{.PostID}}{{end}}">
+                <a>
                     <span>
                         <span class="notif-actor">{{.ActorUsername}}</span>
                         {{if eq .Type "post_like"}} a aimé votre post{{end}}
