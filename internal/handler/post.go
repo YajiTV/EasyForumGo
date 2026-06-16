@@ -210,6 +210,8 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	if user.CanModerate() && post.UserID != user.ID {
 		h.sendModerationNotif(post.UserID, user.ID, "moderation_delete_post")
+		http.Redirect(w, r, "/moderation", http.StatusSeeOther)
+		return
 	}
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
