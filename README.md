@@ -2,7 +2,7 @@
 
 # Easy
 
-### Un forum communautaire server-rendered, construit en Go pur & SQLite
+### Un forum communautaire, construit en Go & SQLite
 
 [![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=for-the-badge&logo=go)](https://go.dev/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite)](https://www.sqlite.org/)
