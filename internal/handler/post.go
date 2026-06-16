@@ -196,7 +196,7 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if post.UserID != user.ID {
+	if post.UserID != user.ID && !user.CanModerate() {
 		http.Error(w, "Interdit", http.StatusForbidden)
 		return
 	}
@@ -207,6 +207,10 @@ func (h *PostHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.removeImage(post.ImagePath)
+
+	if user.CanModerate() && post.UserID != user.ID {
+		h.sendModerationNotif(post.UserID, user.ID, "moderation_delete_post")
+	}
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
@@ -226,7 +230,7 @@ func (h *PostHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if post.UserID != user.ID {
+	if post.UserID != user.ID && !user.CanModerate() {
 		http.Error(w, "Interdit", http.StatusForbidden)
 		return
 	}
@@ -260,7 +264,7 @@ func (h *PostHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if post.UserID != user.ID {
+	if post.UserID != user.ID && !user.CanModerate() {
 		http.Error(w, "Interdit", http.StatusForbidden)
 		return
 	}
@@ -296,7 +300,7 @@ func (h *PostHandler) EditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if post.UserID != user.ID {
+	if post.UserID != user.ID && !user.CanModerate() {
 		http.Error(w, "Interdit", http.StatusForbidden)
 		return
 	}
@@ -553,6 +557,19 @@ func (h *PostHandler) handleImageUpload(r *http.Request) (string, error) {
 		return "", errImageServer
 	}
 	return filename, nil
+}
+
+func (h *PostHandler) sendModerationNotif(userID, actorID, notifType string) {
+	if userID == "" || userID == actorID {
+		return
+	}
+	_ = h.notifications.Create(&model.Notification{
+		ID:        utils.NewUUID(),
+		UserID:    userID,
+		ActorID:   actorID,
+		Type:      notifType,
+		CreatedAt: time.Now(),
+	})
 }
 
 func (h *PostHandler) removeImage(path string) {

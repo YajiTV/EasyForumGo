@@ -121,7 +121,7 @@ func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if comment.UserID != user.ID {
+	if comment.UserID != user.ID && !user.CanModerate() {
 		http.Error(w, "Interdit", http.StatusForbidden)
 		return
 	}
@@ -129,6 +129,10 @@ func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 	if err := h.comments.Delete(commentID); err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		return
+	}
+
+	if user.CanModerate() && comment.UserID != user.ID {
+		h.sendModerationNotif(comment.UserID, user.ID, "moderation_delete_comment")
 	}
 
 	http.Redirect(w, r, "/post/"+comment.PostID, http.StatusSeeOther)
@@ -160,7 +164,7 @@ func (h *CommentHandler) ShowDeleteConfirmation(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	if comment.UserID != user.ID {
+	if comment.UserID != user.ID && !user.CanModerate() {
 		http.Error(w, "Interdit", http.StatusForbidden)
 		return
 	}
@@ -186,7 +190,7 @@ func (h *CommentHandler) ShowEditForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if comment.UserID != user.ID {
+	if comment.UserID != user.ID && !user.CanModerate() {
 		http.Error(w, "Interdit", http.StatusForbidden)
 		return
 	}
@@ -212,7 +216,7 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if comment.UserID != user.ID {
+	if comment.UserID != user.ID && !user.CanModerate() {
 		http.Error(w, "Interdit", http.StatusForbidden)
 		return
 	}
@@ -251,6 +255,19 @@ func (h *CommentHandler) EditComment(w http.ResponseWriter, r *http.Request) {
 
 
 // renderTemplate renders the requested page
+func (h *CommentHandler) sendModerationNotif(userID, actorID, notifType string) {
+	if userID == "" || userID == actorID {
+		return
+	}
+	_ = h.notifications.Create(&model.Notification{
+		ID:        utils.NewUUID(),
+		UserID:    userID,
+		ActorID:   actorID,
+		Type:      notifType,
+		CreatedAt: time.Now(),
+	})
+}
+
 func (h *CommentHandler) renderTemplate(w http.ResponseWriter, name string, data any) {
 	h.renderer.Render(w, name, data)
 }

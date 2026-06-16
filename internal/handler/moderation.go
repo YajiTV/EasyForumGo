@@ -462,6 +462,11 @@ func (h *ModerationHandler) RejectContent(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if !moderator.IsAdmin() {
+		http.Error(w, "Seul un admin peut rejeter définitivement du contenu", http.StatusForbidden)
+		return
+	}
+
 	contentID := r.PathValue("id")
 	contentType := r.FormValue("content_type")
 	reason := r.FormValue("reason")
