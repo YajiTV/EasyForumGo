@@ -61,10 +61,28 @@ function Send-TextFile {
         [string]$Content
     )
 
-    $encoded = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Content))
-    $encoded | & ssh -p $Port $Target "umask 077; base64 -d > '$RemotePath'"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to upload $RemotePath."
+    if ($RemotePath -notmatch '^/[a-zA-Z0-9._/-]+$') {
+        throw "Remote path contains unsupported characters: $RemotePath"
+    }
+
+    $localTemp = Join-Path ([IO.Path]::GetTempPath()) "easyforumgo-upload-$([Guid]::NewGuid().ToString('N')).tmp"
+    try {
+        $utf8NoBom = [Text.UTF8Encoding]::new($false)
+        [IO.File]::WriteAllText($localTemp, $Content, $utf8NoBom)
+
+        & scp -P $Port $localTemp "${Target}:$RemotePath"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to upload $RemotePath."
+        }
+
+        & ssh -p $Port $Target "chmod 600 '$RemotePath'"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to secure permissions on $RemotePath."
+        }
+    } finally {
+        if (Test-Path -LiteralPath $localTemp) {
+            Remove-Item -LiteralPath $localTemp -Force
+        }
     }
 }
 
@@ -84,8 +102,31 @@ function Get-EnvValue {
     return $match.Groups[1].Value.Trim().Trim('"').Trim("'")
 }
 
+function Protect-ComposeEnvContent {
+    param([string]$Content)
+
+    $lines = foreach ($line in $Content -split "`r?`n") {
+        if ($line -match '^\s*#' -or $line -notmatch '^(\s*[A-Za-z_][A-Za-z0-9_]*\s*=\s*)(.*)$') {
+            $line
+            continue
+        }
+
+        $prefix = $matches[1]
+        $value = $matches[2].Trim()
+        if ($value.Contains('$') -and -not ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+            $escaped = $value.Trim('"').Replace("'", "''")
+            "$prefix'$escaped'"
+        } else {
+            $line
+        }
+    }
+
+    return ($lines -join "`n")
+}
+
 Assert-Command "pwsh"
 Assert-Command "ssh"
+Assert-Command "scp"
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($EnvFile)) {
@@ -116,6 +157,7 @@ if ($Branch -notmatch '^[a-zA-Z0-9._/-]+$') {
 }
 
 $envContent = [IO.File]::ReadAllText($EnvFile)
+$remoteEnvContent = Protect-ComposeEnvContent $envContent
 $appEnv = Get-EnvValue $envContent "APP_ENV"
 $basePath = Get-EnvValue $envContent "APP_BASE_PATH"
 $publicURL = Get-EnvValue $envContent "APP_PUBLIC_URL"
@@ -175,6 +217,7 @@ fi
 
 echo "==> Installing production environment"
 sudo install -o root -g root -m 600 "$SOURCE_ENV" "$STACK/.env.prod"
+sudo install -o root -g root -m 600 "$SOURCE_ENV" "$STACK/.env"
 
 echo "==> Validating and deploying application"
 cd "$STACK"
@@ -184,8 +227,23 @@ sudo docker compose "${COMPOSE_ARGS[@]}" up -d --build
 sudo docker compose "${COMPOSE_ARGS[@]}" ps
 
 echo "==> Checking application from inside its container"
-sudo docker compose "${COMPOSE_ARGS[@]}" exec -T forum \
-  wget -qO- "http://127.0.0.1:8080${BASE_PATH%/}/" >/dev/null
+HEALTH_URL="http://127.0.0.1:8080${BASE_PATH%/}/"
+for attempt in $(seq 1 30); do
+  if sudo docker compose "${COMPOSE_ARGS[@]}" exec -T forum \
+    wget -qO- "$HEALTH_URL" >/dev/null; then
+    echo "Application check succeeded: $HEALTH_URL"
+    break
+  fi
+
+  if [ "$attempt" -eq 30 ]; then
+    echo "Application check failed after $attempt attempts: $HEALTH_URL" >&2
+    sudo docker compose "${COMPOSE_ARGS[@]}" ps >&2 || true
+    sudo docker compose "${COMPOSE_ARGS[@]}" logs --tail=80 forum >&2 || true
+    exit 1
+  fi
+
+  sleep 2
+done
 
 echo "==> Deployment completed"
 '@
@@ -206,7 +264,7 @@ if ($confirmation -ne "deploy") {
 
 try {
     Write-Host "==> Uploading deployment files"
-    Send-TextFile $target $SshPort $remoteEnv $envContent
+    Send-TextFile $target $SshPort $remoteEnv $remoteEnvContent
     Send-TextFile $target $SshPort $remoteScript $deployScript
 
     $remoteCommand = "bash '$remoteScript' '$RemoteStack' '$repositoryURL' '$Branch' '$remoteEnv' '$basePath'"

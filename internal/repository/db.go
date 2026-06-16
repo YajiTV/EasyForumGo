@@ -2,12 +2,15 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	// go-sqlcipher is a drop-in replacement for go-sqlite3 that adds AES-256 encryption.
 	// It registers itself under the "sqlite3" driver name.
@@ -33,7 +36,21 @@ func InitDB(dbPath, migrationsDir, encryptionKey string) (*sql.DB, error) {
 
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		db.Close()
-		return nil, fmt.Errorf("pragma foreign_keys: %w", err)
+		if encryptionKey != "" && isNotDatabaseError(err) {
+			if migrationErr := migratePlaintextDBToSQLCipher(dbPath, encryptionKey); migrationErr != nil {
+				return nil, fmt.Errorf("migrate plaintext database to SQLCipher after open failure %q: %w", err, migrationErr)
+			}
+			db, err = sql.Open("sqlite3", sqliteDSN(dbPath, encryptionKey))
+			if err != nil {
+				return nil, fmt.Errorf("open encrypted db after migration: %w", err)
+			}
+			if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+				db.Close()
+				return nil, fmt.Errorf("pragma foreign_keys after migration: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("pragma foreign_keys: %w", err)
+		}
 	}
 
 	if err := runMigrations(db, migrationsDir); err != nil {
@@ -42,6 +59,73 @@ func InitDB(dbPath, migrationsDir, encryptionKey string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func migratePlaintextDBToSQLCipher(dbPath, encryptionKey string) error {
+	info, err := os.Stat(dbPath)
+	if err != nil {
+		return err
+	}
+	if info.Size() == 0 {
+		return nil
+	}
+
+	dir := filepath.Dir(dbPath)
+	base := filepath.Base(dbPath)
+	timestamp := time.Now().UTC().Format("20060102T150405Z")
+	encryptedPath := filepath.Join(dir, base+".encrypted-"+timestamp+".tmp")
+	backupPath := filepath.Join(dir, base+".plaintext-backup-"+timestamp)
+
+	plainDB, err := sql.Open("sqlite3", sqliteDSN(dbPath, ""))
+	if err != nil {
+		return fmt.Errorf("open plaintext db for encryption migration: %w", err)
+	}
+	defer plainDB.Close()
+
+	if _, err := plainDB.Exec("PRAGMA foreign_keys = OFF"); err != nil {
+		return fmt.Errorf("disable foreign_keys for encryption migration: %w", err)
+	}
+	if _, err := plainDB.Exec("ATTACH DATABASE ? AS encrypted KEY ?", encryptedPath, encryptionKey); err != nil {
+		os.Remove(encryptedPath)
+		return fmt.Errorf("attach encrypted db for migration: %w", err)
+	}
+	if _, err := plainDB.Exec("SELECT sqlcipher_export('encrypted')"); err != nil {
+		plainDB.Exec("DETACH DATABASE encrypted")
+		os.Remove(encryptedPath)
+		return fmt.Errorf("export encrypted db: %w", err)
+	}
+	if _, err := plainDB.Exec("DETACH DATABASE encrypted"); err != nil {
+		os.Remove(encryptedPath)
+		return fmt.Errorf("detach encrypted db: %w", err)
+	}
+	if err := plainDB.Close(); err != nil {
+		os.Remove(encryptedPath)
+		return fmt.Errorf("close plaintext db before swap: %w", err)
+	}
+
+	if err := os.Rename(dbPath, backupPath); err != nil {
+		os.Remove(encryptedPath)
+		return fmt.Errorf("backup plaintext db: %w", err)
+	}
+	if err := os.Rename(encryptedPath, dbPath); err != nil {
+		if restoreErr := os.Rename(backupPath, dbPath); restoreErr != nil {
+			return fmt.Errorf("install encrypted db: %w; restore plaintext backup: %v", err, restoreErr)
+		}
+		return fmt.Errorf("install encrypted db: %w", err)
+	}
+
+	log.Printf("Migrated plaintext SQLite database to SQLCipher; backup kept at %s", backupPath)
+	return nil
+}
+
+func isNotDatabaseError(err error) bool {
+	for err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "file is not a database") {
+			return true
+		}
+		err = errors.Unwrap(err)
+	}
+	return false
 }
 
 // sqliteDSN builds the SQLite DSN with foreign-key enforcement and optional encryption.
