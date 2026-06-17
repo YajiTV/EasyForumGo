@@ -18,6 +18,9 @@ func setupRouter(cfg config.Config, db *sql.DB, globalLimiter, loginLimiter, wri
 	// static files
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
 	mux.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir(cfg.UploadDir))))
+	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, cfg.StaticDir+"/img/logo.png")
+	})
 
 	// theme routes
 	themeHandler := handler.NewThemeHandler()
